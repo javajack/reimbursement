@@ -1,0 +1,112 @@
+---
+title: Build Plan and Roadmap
+description: A phased sequence from MVP to integration depth to vendor/AP adjacency, with certification timing for a two-person team.
+---
+
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Build the moat in the order that money arrives, not the order that looks impressive. A two-person team has one scarce resource: weeks of focused engineering. So the roadmap front-loads the two surfaces that actually decide deals (Tally-native sync and India compliance), partners out everything that needs a balance sheet or a license, and defers every trust-signal cost until a paying deal funds it. The verdict is <span class="pill pill--build">Build</span>, but only along this exact sequence; broaden too early and the wedge collapses. See the [final scored decision](/business/verdict/) for why.
+
+## The capacity reality
+
+Two people cannot build payments, train OCR models, integrate five ERPs, and clear SOC 2 in year one. The binding constraint is not capital; it is that OCR edge cases, Tally connection failures, compliance, and per-account support for many small customers can swallow a tiny team and push it into unsustainable services work. Every phase below is scoped around that ceiling, and the build-vs-buy line is drawn to keep it.
+
+| Surface | Decision | Why |
+| --- | --- | --- |
+| Money movement (payouts) | Partner | RazorpayX / Cashfree at ~₹1.75-5/txn. Licensing (non-bank PPI net worth ₹5 cr rising to ₹15 cr) is closed to indies. |
+| OCR / extraction model | Buy / wrap | Vision-LLM API at ~USD 0.0005-0.003/doc. Build only the GST validation and reconciliation layer (the real value-add). |
+| Tally-native sync | Build | The moat. Painful XML-over-HTTP (port 9000), no cloud API, which is exactly why competitors skip it. |
+| Certifications | Buy, sequenced | ISO 27001 first (~₹5 L); SOC 2 deferred until a US deal funds it. |
+
+<p class="source-note">Sources: RBI PPI Master Directions (govt); vendor LLM pricing pages; Tally integration docs (vendor). Per the build-vs-partner analysis (our synthesis, high confidence).</p>
+
+:::tip[The one engineering bet]
+Spend the protected build hours on Tally-native two-way sync plus GST ITC reconciliation. Everything else is wrapping, configuring, or partnering. This is the only surface where building (not buying) creates defensibility.
+:::
+
+## The phased sequence
+
+The roadmap moves through five phases. Phases 0 and 1 prove the wedge and reach revenue; Phase 2 deepens integration so the product survives as more than receipt-capture; Phase 3 opens the larger AP-adjacent market; Phase 4 unlocks enterprise.
+
+| Phase | Focus | Scope (what ships) | Build vs partner |
+| --- | --- | --- | --- |
+| 0 | Design partners | 3-5 finance-led SMBs, real policies and Tally files, paper LOIs. No code shipped to scale. | Build (discovery) |
+| 1 | MVP | WhatsApp + mobile + email capture, vision-LLM OCR with GST extraction, configurable rule engine, maker-checker FSM, Tally sync, bank-file payout, immutable audit trail. | Build core; partner OCR API |
+| 2 | Integration depth | Zoho Books sync, payroll disbursal hooks, RazorpayX optional payout, GST ITC / GSTR-2B reconciliation, WhatsApp Business API at scale. | Build sync; partner payout + WhatsApp BSP |
+| 3 | Vendor / AP adjacency | Vendor reimbursement, TDS 194C/194J tagging, RCM flags, MSME 45-day / Sec 43B(h) clock. | Build (the larger market) |
+| 4 | Cert + enterprise | ISO 27001, VAPT, SSO/SAML, DPDP posture documented; SOC 2 only when a US deal funds it. | Buy (cert), build (SSO) |
+
+<p class="source-note">Sequencing is our own derivation from the MVP cut line in the thesis (medium confidence). Phase 1 timeline ~3-6 months for a small team.</p>
+
+### Phase 0: design partners
+
+Before writing the rule engine, lock 3-5 design partners that match the lead ICP (finance-led, 50-500 employees, Tally-first, field-or-travel-heavy). Use their real expense policies to validate the rule actions and their actual Tally company files to de-risk the integration. This phase ships almost no code; it ships conviction and the first paper LOIs. Skipping it is how a two-person team builds the wrong rule engine.
+
+### Phase 1: the MVP
+
+Phase 1 is the [MVP cut line](/product/mvp-scope/) made concrete. Ship the smallest thing a CFO will pay for: capture in, a defensible approval, an entry in Tally, money out by file.
+
+<Steps>
+
+1. **Capture.** WhatsApp + mobile + email ingestion. Vision-LLM OCR with GST field extraction (GSTIN, tax split, line items). Wrap an API; do not train a model.
+
+2. **Rules.** Configurable rule engine, six actions (allow / flag / warn / cap / block / route), line-item-then-claim rollup. Layer deterministic checks (GSTIN Luhn-mod-36, arithmetic, perceptual-hash duplicate, EXIF) before any auto-approval, because AI-generated receipt fraud rose to ~14% of fraudulent docs in ~12 months (AppZen, vendor, medium confidence).
+
+3. **Maker-checker.** Approval FSM with a rupee-tiered Delegation-of-Authority matrix and SLA escalation. This is the single most India-specific buying requirement; treat it as a first-class feature, not a setting.
+
+4. **Onboarding.** Employee self-registration plus admin maker-checker on the master; PAN and bank penny-drop whitelisting (~₹3/successful, Setu, vendor, high confidence).
+
+5. **Tally + payout.** Tally two-way sync (the moat). Payout via bank-file hand-off so funds never touch an account the SaaS controls. Immutable audit trail throughout.
+
+</Steps>
+
+:::danger[Regulatory invariant, every phase]
+Funds must never touch an account the SaaS owns or controls. Phase 1 uses file hand-off; Phase 2 adds a regulated partner (RazorpayX) that initiates from its own account. Get a written legal opinion before go-live. This is a product invariant, not a phase milestone. See [money movement](/compliance/money-movement/).
+:::
+
+### Phase 2: integration depth
+
+Pure receipt-capture-and-approve is thin, and Zoho already anchors price near zero. Survival requires depth. Phase 2 adds Zoho Books sync, payroll disbursal hooks (the wedge for HRMS-first buyers), RazorpayX as an optional payout rail, GST ITC and GSTR-2B reconciliation (which turns soft ROI into a hard rupee number for the CFO, though the headline ITC-leakage pain stats are vendor-sourced and dramatized, medium confidence), and the WhatsApp Business API at production scale (~₹0.115/utility message effective 1 Jan 2026; service-window replies have moved to per-message pricing; vendor, medium confidence). This is the phase that makes the product sticky. See [integrations and the survival question](/business/integrations/).
+
+### Phase 3: vendor and AP adjacency
+
+The highest expected value sits in the adjacent market. AP automation is larger and faster-growing (~USD 6.17B in 2025, ~12.4% CAGR; Mordor, analyst, medium confidence), GST-mandate-driven, and validated by a new India-native entrant (Mysa, 2025). Phase 3 extends the same engine to vendor reimbursements: TDS tagging (194C 1%/2%, 194J 10%/2%, version-dated by financial year), RCM flags for rent-a-cab / GTA / legal / unregistered suppliers, and an MSME 45-day / Sec 43B(h) payment clock. None of this needs new licensing; it reuses the capture, rules, and ledger plumbing.
+
+### Phase 4: certification and enterprise
+
+Certification is a wall, not a feature, so cross it only when a deal pays for the crossing.
+
+<Tabs>
+
+<TabItem label="ISO 27001 (first)">
+
+Get ISO 27001 first: ~₹5 L year one, ~₹60K/year ongoing, 12-16 week timeline (Codesecure / TCSA, vendor, high confidence). It is the India and EU buyer's preferred signal and the cheaper entry. Pair it with DPDP posture documented and marketed as a product feature. Add VAPT and SSO/SAML alongside.
+
+</TabItem>
+
+<TabItem label="SOC 2 (deferred)">
+
+Defer SOC 2 Type 1 (~₹6-14 L year one, ~12 weeks). ~90% of US enterprise security questionnaires ask for it (TCSA, vendor, high confidence), so it is only worth the spend once a US-HQ enterprise deal is on the table to fund it. Buying it before that deal is premature capital burn for a two-person team.
+
+</TabItem>
+
+</Tabs>
+
+:::caution[The SOC 2 trap]
+A predictable failure mode is hitting the SOC 2 / ISO 27001 plus DPDP wall on the first mid-market deal (₹5-14 L and months of work) with no runway. The fix is sequencing: ISO 27001 early and cheap, SOC 2 only when revenue demands it. See [risks and failure modes](/business/risks/).
+:::
+
+## What we explicitly will not do early
+
+Deferring is half the roadmap. Out of scope until a paying deal funds it: own corporate cards, PPI or float; live Aadhaar auth; deep ERP (SAP / NetSuite / Dynamics); travel booking; bespoke fraud ML; and native-app polish. Each of these is a capital or capacity sink that competes with the one bet that matters. The discipline of saying no is what keeps a two-person team alive through Phase 2.
+
+## Sources
+
+- [RBI FAQs on Prepaid Payment Instruments](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812) (govt), PPI net-worth and licensing; the reason to partner payouts.
+- [Best Payout APIs in India 2025 (Bulkpe)](https://bulkpe.in/blog/best-payout-apis-in-india2025) (vendor), RazorpayX / Cashfree per-payout pricing.
+- [Tally integration documentation](https://help.tallysolutions.com/integrate-with-tallyprime/) (vendor), XML/TDL/ODBC methods, no cloud API; the moat's difficulty.
+- [SOC 2 vs ISO 27001 for Indian Startups (TCSA)](https://www.tcsa.in/resources/soc-2-vs-iso-27001-indian-startups) (vendor), cert sequencing, costs, buyer expectations.
+- [SOC 2 Type 2 Compliance Cost in India (Codesecure)](https://codesecure.in/blogs/soc-2-type-2-compliance-cost-india) (vendor), India-specific SOC 2 cost and timeline.
+- [AP Automation Market (Mordor Intelligence)](https://www.mordorintelligence.com/industry-reports/ap-automation-market) (analyst), adjacent AP market size and CAGR.
+- [WhatsApp Business API Pricing India (Whautomate)](https://whautomate.com/whatsapp-business-api-pricing-india) (vendor), per-message and BSP platform pricing.
+- [GST e-Invoicing above ₹5 crore (ClearTax)](https://cleartax.in/s/e-invoicing-businesses-above-rs-5-crore-turnover) (primary), the digitization tailwind underpinning Phase 3.

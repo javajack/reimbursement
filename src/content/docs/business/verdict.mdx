@@ -1,0 +1,86 @@
+---
+title: "Final Verdict: Worth Building?"
+description: A scored decision across market, defensibility, regulation and economics, with the conditions that flip it.
+---
+
+Build it, but only one specific thing. The answer is <span class="pill pill--build">Conditional Build</span>: a software-only, Tally-native, WhatsApp-first reimbursement product for sub-200-employee Indian SMBs and field-heavy verticals, with money movement partnered out and monetised on software seats. The same effort aimed at a horizontal Zaggle clone, a card-and-float business, or a price war against Zoho scores <span class="pill pill--avoid">Avoid</span>. The market is real and the wedge is defensible; the trap is the temptation to broaden it.
+
+This page scores the decision across seven dimensions, states the verdict, then names the precise conditions that flip it from Build to Caution or Avoid. For the condensed one-pager (not the scorecard) see the [executive summary](/overview/executive-summary/); for what actually ships first see the [MVP scope](/product/mvp-scope/).
+
+## The scorecard
+
+Scores are out of 5 (5 = strongly favourable to an indie team). They reflect our synthesis of the feasibility and market research, not a sourced index. Each comment carries the load-bearing reason.
+
+| Dimension | Score | Comment |
+| --- | --- | --- |
+| Market attractiveness | 3 / 5 | Real but oversold. India SMB expense-software TAM is a derived ~USD 150-300M with SAM ~USD 80-150M (our derivation, low confidence). No tier-1 analyst publishes an India-only figure. "Fast-growing" is fair (~14-18% range); "large" is not. |
+| Competitive intensity | 2 / 5 | Crowded and funded. Zaggle (listed, ~₹1,303 cr FY25 revenue), Happay (now MakeMyTrip), Volopay, plus Pluxee in the adjacent benefits-card lane (not a direct reimbursement-software rival), and Zoho anchoring price near zero. Horizontal window is narrowing as the category consolidates. |
+| Defensibility / moat | 4 / 5 | Tally-native two-way sync (XML-over-HTTP port 9000) plus GST ITC capture and WhatsApp-first field UX is genuinely hard to copy and genuinely under-served. Each moat is individually shallow; stacked, they hold. |
+| Regulatory burden | 3 / 5 | Manageable if you stay a technology provider. DPDP and ISO 27001 are real but bounded costs. The burden spikes only if you touch money or cards. The invariant keeps the score from dropping. |
+| Unit economics | 3 / 5 | Workable on seats, fragile on price. OCR at ~USD 0.0005-0.003/doc and payouts at ~₹1.75-5/txn are cheap; the risk is drifting into low-margin services at the ₹79-149/user/mo point. |
+| Founder fit | 4 / 5 | A 2-person team can build this in ~3-6 months by buying OCR, partnering payouts, and investing the scarce engineering on Tally. Fit collapses if the team tries to also be a fintech. |
+| Exit potential | 4 / 5 | The category's exit path is proven: Happay to CRED then MakeMyTrip, Fyle to Sage (2025). Clean accounting/ERP integration keeps the asset acquisition-ready by design. |
+
+<p class="source-note">Scores: our synthesis (low-medium confidence). Underlying figures from the canonical set and the feasibility and market-size research (analyst, vendor, and derived as labelled).</p>
+
+The unweighted average sits around 3.3 / 5. That is not a ringing "yes" and it should not be read as one. The number that matters is the spread: defensibility, founder-fit and exit score high precisely because they reward the narrow play, while competitive intensity and market size punish the broad one. The verdict lives in that spread.
+
+## The verdict
+
+<span class="pill pill--build">Conditional Build</span>, with the condition load-bearing, not decorative.
+
+The reasoning, in one breath: incumbents win on distribution, bank partnerships, and card interchange plus float (roughly 75-80% of Zaggle's revenue is interchange, vendor-disclosed), not on better software. An indie team cannot reach that revenue pool without RBI licensing (non-bank PPI net worth ₹5 cr rising to ₹15 cr) or a bank partner. So you compete only where software still decides the deal: India-native compliance depth, Tally integration, field and mobile UX, and reimbursement speed.
+
+:::tip[The wedge that earns the Build]
+Tally-native two-way sync is the single biggest deal-maker and deal-breaker (~70-80% Indian SMB accounting, vendor-claimed, not independently audited). It is painful (desktop, on-prem, XML-over-HTTP) precisely because that pain deters competitors. OCR and cards are table-stakes; Tally and GST ITC are the moat. See [the whitespace](/market/whitespace/).
+:::
+
+## The conditions that flip it
+
+Each of these turns the verdict negative. They are the predictable failure modes from the feasibility research, restated as gates.
+
+| Condition | Flips to | Why it breaks |
+| --- | --- | --- |
+| Trying to go horizontal | <span class="pill pill--avoid">Avoid</span> | A "better expense app" has no wedge against funded, consolidating incumbents (Happay to MakeMyTrip; Volopay and Kodo with USD 9-33M raised). The horizontal window is closing, not opening. |
+| Building cards / PPI / float | <span class="pill pill--avoid">Avoid</span> | The interchange pool needs RBI licensing or a bank partner and a balance sheet. You lose to float economics you structurally cannot match. RBI's Feb 2024 clampdown on card-based B2B via intermediaries makes it worse. |
+| Under-pricing into services | <span class="pill pill--caution">Caution</span> | At ₹79-149/user/mo with high support load, a 2-person team drifts into low-margin implementation work. Cap services; monetise seats, not hours. |
+| No Tally depth | <span class="pill pill--avoid">Avoid</span> | Remove Tally and you are a thin receipt-capture-and-approve tool that Zoho already anchors near zero. Tally depth is the difference between a product and a feature. |
+
+:::danger[Regulatory invariant, not negotiable]
+Funds must never touch an account the SaaS owns or controls. Use file hand-off to the customer's own corporate bank, a regulated partner (RazorpayX or Cashfree) initiating from its own escrow, or connected banking on the customer's current account. Hold or pool funds and you trigger PA (net worth ₹15 cr at application, ₹25 cr by year 3) or PPI licensing. Get a written legal opinion before go-live.
+:::
+
+Two further caution flags worth naming. Hitting the certification wall (ISO 27001 ~₹5 L, SOC 2 ~₹6-14 L) on a first mid-market deal with no runway can stall the company; sequence ISO 27001 first and defer SOC 2 until a US-HQ deal funds it. And broadening the surface prematurely (deep ERP, own cards, travel booking) before a paying deal funds it converts a tight roadmap into an unbounded one.
+
+## Who should build this
+
+<span class="pill pill--build">Build</span> if you are:
+
+- A small, finance-literate, India-based team willing to do the unglamorous Tally engineering that foreign tools (Fyle/Sage integrates QuickBooks, Xero, NetSuite, but not Tally) refuse to.
+- Comfortable monetising on software seats at the Zoho-anchored ladder (~₹79-149/user/mo annual, approvers free, 5-user minimum) and partnering all money movement.
+- Patient with a realistic indie SOM of ~USD 0.5-2M ARR over three years (our derivation, low confidence), and treating maker-checker, GST ITC, and a single vertical as first-class features.
+- Planning, eventually, to extend toward vendor-payments and AP automation, a larger and GST-mandate-driven market, which is also where the [whitespace](/market/whitespace/) compounds.
+
+## Who should not
+
+<span class="pill pill--avoid">Do not build</span> if you are:
+
+- Hoping to out-fund Zaggle, Happay, or Volopay on a horizontal spend-management play. You will not, and the unit economics on the card layer are closed to you.
+- Drawn to corporate cards, PPI, or float as the business model. That is a licensed, capital-intensive fintech, not an indie SaaS.
+- Unwilling to invest in Tally-native sync, or planning to win on price alone against Zoho's bundled, near-zero floor. Without compliance depth, there is no moat and no margin.
+- Expecting a large, ready-made market. The India-only software market is fast-growing but modest, the pain stats are largely vendor-sourced and dramatized, and employee-voice evidence is under-sampled (primary interviews are recommended before building).
+
+The honest one-liner: this is a good business for the right two people doing exactly one narrow thing, and a bad business for almost everyone trying to do more. Hold the line on the wedge and the verdict holds at <span class="pill pill--build">Build</span>. Start the build sequence at the [MVP scope](/product/mvp-scope/).
+
+## Sources
+
+- [Zaggle FY25 results and interchange split (Finvezto / Compass)](https://compass.finvezto.com/p/zaggle-prepaid-ocean-services-consistently) (analyst)
+- [Zaggle Q4FY24 investor presentation](https://ipo.zaggle.in/wp-content/uploads/2024/05/investor-presentation-zaggle-Q4FY24.pdf) (primary)
+- [RBI FAQs on Prepaid Payment Instruments](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812) (govt)
+- [Tally integration (XML/TDL/ODBC, no cloud API)](https://help.tallysolutions.com/integrate-with-tallyprime/) (vendor)
+- [Tally India SMB accounting share (6sense)](https://6sense.com/tech/enterprise-resource-planning-erp/tally-erp-market-share) (vendor / ERP install-base; Tally share is vendor-claimed, not independently audited)
+- [Mordor Intelligence: Travel & Expense management market (global, APAC, SME)](https://www.mordorintelligence.com/industry-reports/travel-and-expense-management-market) (analyst)
+- [Zoho Expense India pricing (SMB price anchor)](https://www.zoho.com/in/expense/pricing/) (vendor)
+- [Fyle / Sage Expense Management pricing and integrations](https://www.fylehq.com/pricing) (vendor)
+- [CRED acquires Happay at ~USD 180M (Inc42)](https://inc42.com/buzz/cred-acquires-corporate-expense-management-startup-happay-at-180-mn-valuation/) (analyst)
+- [RBI halts card-based B2B payments via intermediaries (Business Today)](https://www.businesstoday.in/latest/economy/story/rbi-says-card-based-b2b-payments-stopped-for-violating-payment-and-settlement-systems-act-417735-2024-02-15) (govt)

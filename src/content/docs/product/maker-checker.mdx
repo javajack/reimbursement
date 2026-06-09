@@ -1,0 +1,166 @@
+---
+title: Maker-Checker Approval Engine
+description: The four-eyes state machine, the rupee-tiered Delegation-of-Authority matrix, SLA escalation and delegation.
+---
+
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Maker-checker is the single most India-specific buying requirement, and the clearest credibility signal you can send to a Finance Controller or auditor. Treat it as a first-class state machine with rupee-tiered routing, not a toggle in settings. <span class="pill pill--build">Build</span> the four-eyes rule, a finite state machine, a Delegation-of-Authority (DoA) matrix, SLA escalation, delegation-on-leave, line-item partial approval, and an append-only audit log are all in the MVP cut.
+
+This page specifies that engine. The claim lifecycle that feeds it (capture to payout) lives at [/product/workflow/](/product/workflow/); the policy checks that run before approval live at [/product/rule-engine/](/product/rule-engine/).
+
+## The four-eyes principle
+
+Maker-checker (the four-eyes principle) is described across India finance-ops sources as the "golden rule of Indian financial control": the person who initiates a claim must differ from the person who authorizes and records it. It enforces segregation of duties across the four classic functions: custody, authorization, record-keeping, and reconciliation.
+
+:::danger[Non-negotiable invariant]
+The initiator (Maker) can never authorize their own claim. No self-approval, no matter the amount, no matter the role. A CFO who submits a claim is a Maker for that claim and routes to a peer or the board delegate. Enforce this in the state machine, not in policy copy.
+:::
+
+This separation is what auditors test in an Internal Financial Controls (IFC) or statutory review. A claim that lacks receipts, an approval trail, or clean separation between fees and reimbursement is routinely disallowed at tribunal. The engine exists to manufacture that defensible trail automatically.
+
+<p class="source-note">Source: MYND (segregation of duties), Volopay, Wikipedia maker-checker (vendor / reference, high confidence on the principle).</p>
+
+## Roles
+
+| Role | Who | Powers |
+| --- | --- | --- |
+| Maker | Claimant or booker (employee, field agent, AP clerk filing on behalf) | Create, edit in DRAFT, submit, cancel own draft, respond to queries |
+| Checker / Approver L1..Ln | Line manager, dept head, CFO, routed by amount | Approve, reject, partially approve specific lines, query (send back) |
+| Finance / Payout | AP or treasury | Move APPROVED to PENDING_PAYMENT, execute payout, mark PAID, initiate clawback |
+| Auditor | Internal or statutory | Read-only view of claims, documents, and the full audit trail; export only |
+
+The Maker-versus-Checker split maps directly onto the persona research: the Finance/AP executive is usually the Maker who validates documents and prepares payout, while the Finance Controller and CFO are the Checkers and budget owners. Build the role model around that reality.
+
+## The finite state machine
+
+States and the role-gated transitions between them. This is a synthesized canonical model assembled from multiple vendor descriptions; there is no single authoritative spec, so treat it as a reference design to configure, not a standard to certify against. <span class="pill pill--med">Medium</span>
+
+| From state | Event / action | To state | Gate (who can fire it) |
+| --- | --- | --- | --- |
+| DRAFT | Submit | SUBMITTED | Maker |
+| DRAFT | Discard | CANCELLED | Maker |
+| SUBMITTED | Pick up / open | UNDER_REVIEW | Checker at the routed level |
+| UNDER_REVIEW | Query / send back | QUERIED (SENT_BACK) | Checker |
+| UNDER_REVIEW | Approve all lines | APPROVED | Checker (if final level) |
+| UNDER_REVIEW | Approve some lines, reject others | PARTIALLY_APPROVED | Checker |
+| UNDER_REVIEW | Reject whole claim | REJECTED | Checker |
+| QUERIED | Resubmit with edits | SUBMITTED | Maker |
+| PARTIALLY_APPROVED | Approve reduced amount at final level | APPROVED | Checker |
+| PARTIALLY_APPROVED | Route rejected delta back | QUERIED | Checker |
+| APPROVED | Release to payout | PENDING_PAYMENT | Finance |
+| PENDING_PAYMENT | Execute disbursement | PAID | Finance |
+| PAID | Reconcile, net advances, close | SETTLED (CLOSED) | Finance |
+| PAID / SETTLED | Recover overpayment or disallowed claim | RECOVERY (CLAWBACK) | Finance |
+| RECOVERY | Recovered via netting or payroll deduction | SETTLED | Finance |
+| Any pre-payout | Cancel | CANCELLED | Maker (own draft) or Checker |
+
+A few rules that the table implies and you must enforce in code:
+
+- A claim above the level-1 ceiling cannot reach APPROVED until every threshold-required level has acted. Approval is the conjunction of all required levels, not the last click.
+- QUERIED preserves full history: the claim returns to the Maker with the approver's note, prior approvals are retained, and the resubmission re-enters review without erasing the trail.
+- CANCELLED (Maker discards own claim), REJECTED (Checker declines the claim), and RECOVERY are the "off-happy-path" terminals. Keep them distinct so the audit log never has to infer intent, and so a maker abandon is never conflated with a checker decline.
+- PARTIALLY_APPROVED is a real state, not a UI nicety. It pairs with the line-item data model (see [/product/rule-engine/](/product/rule-engine/)) where one bill mixes reimbursable and non-reimbursable, GST-eligible and blocked-ITC lines.
+
+## The Delegation-of-Authority matrix
+
+Approval authority in India follows a tiered DoA matrix denominated in rupees. The routing tier is decided by claim amount; the four-eyes rule is decided by identity. Both must hold.
+
+The example tiers below are the ones India finance-ops guidance actually cites. They are illustrative defaults, configurable per org, not statutory limits.
+
+| Tier | Approver role | Authorizes up to | Routes onward when |
+| --- | --- | --- | --- |
+| L1 | Line / junior manager | Rs 10,000 | Amount above Rs 10,000 |
+| L2 | Department head | Rs 1,00,000 | Amount above Rs 1,00,000 |
+| L3 | Finance Controller | Org-defined (for example Rs 5,00,000) | Above the controller ceiling |
+| L4 | CFO | High-value sign-off | Per board policy |
+| L5 | Board / MD delegate | Exceptional | Terminal |
+
+<p class="source-note">Source: MYND, HROne (India finance-ops / HRMS vendor guidance, high confidence on tier structure; rupee figures are example defaults, not law).</p>
+
+:::note[How routing composes]
+Routing is cumulative, not either-or. A Rs 1,50,000 claim does not skip to L3; it passes L1, then L2, then L3 in sequence, each level adding an approval. Multi-level routing runs up to roughly five levels deep, threshold-driven by expense range.
+:::
+
+## SLA timers and auto-escalation
+
+Each approval step carries an SLA timer measured in business hours or days. The timer is the antidote to the most common manager pain in the research: field-sales managers approving via WhatsApp because the in-app queue stalls, which breaks the audit trail and creates bottlenecks. Manual approval turnaround in Indian setups is cited by an HRMS vendor (HROne, directional, not audited) at 8 to 12 days against a sub-48-hour target. <span class="pill pill--med">Medium</span>
+
+<Steps>
+
+1. **Assign on entry to UNDER_REVIEW.** Start the per-step clock when the claim lands in an approver's queue.
+
+2. **Auto-remind.** At a configurable fraction of the SLA, nudge the approver (and optionally the Maker).
+
+3. **Auto-escalate on breach.** If the approver does not act within the window, escalate to the next level or notify a named escalation owner. Log the breach.
+
+4. **Optional auto-approve below threshold.** For low-value claims only, an org may opt into auto-approval on SLA breach. Keep this off by default and never above the L1 ceiling: it dilutes the four-eyes guarantee.
+
+</Steps>
+
+:::caution[Auto-approve is a loaded gun]
+Auto-approve-on-breach is convenient and dangerous. Scope it to small amounts, gate it behind explicit per-org opt-in, and stamp every auto-approval in the audit log as system-actor, never as the absent approver. Reimbursement fraud leakage is directionally cited at 4 to 8 percent of spend (HRMS-vendor, low-to-medium confidence; like most such pain stats it is vendor-marketing and likely dramatized, so treat it as indicative, not audited); a sloppy auto-approve widens exactly that gap.
+:::
+
+## Delegation on leave
+
+Approvers go on leave; claims must not stall. Each approver can name a deputy and a date window so claims route to the delegate while the primary is away. Delegation rules must explicitly cover managers on holiday, which the India guidance calls out as a routine failure point.
+
+The delegation event itself (who delegated to whom, for which window) is recorded in the audit trail. The deputy must still be a different person from the Maker: delegation never creates a self-approval loophole.
+
+## Line-item partial approval
+
+Approve some lines, reject or query others, on the same claim. This reduces the approved amount and routes the rejected delta back to the Maker without killing the whole claim.
+
+```text
+Claim #4821 (Maker: R. Sharma)
+  Line 1  Cab fare (business travel)      Rs 1,240   APPROVE
+  Line 2  Hotel (room tariff)             Rs 6,800   APPROVE
+  Line 3  Mini-bar (alcohol)              Rs   950   REJECT  (non-reimbursable)
+  Line 4  Client dinner                   Rs 2,100   QUERY   (missing GSTIN)
+=> Claim state: PARTIALLY_APPROVED, approved Rs 8,040, delta Rs 3,050 back to Maker
+```
+
+This is the workflow expression of the line-item data model: each line carries its own reimbursable flag, tax code, and ITC eligibility, so the approver acts at line granularity, not on an all-or-nothing header.
+
+## The append-only audit requirement
+
+Every state change writes one immutable, timestamped record: actor, action, timestamp, and before/after. The log is append-only. It must not depend on external email, because auditors require an in-system, exportable trail and view-only access to source documents.
+
+:::danger[Retention is statutory, not optional]
+Retain the trail and the underlying documents for 72 months (6 years) from the GSTR-9 annual-return due date under CGST Section 36, extended to one year after final disposal of any litigation if that is later. Build litigation-hold so a claim under appeal cannot be purged. Full mechanics are at [/compliance/audit-retention/](/compliance/audit-retention/).
+:::
+
+Two integration choices that keep the log defensible:
+
+<Tabs>
+
+<TabItem label="System events">
+
+Capture transitions, SLA breaches, escalations, delegations, auto-approvals (as system-actor), partial-approval deltas, and clawbacks. Each row is write-once.
+
+</TabItem>
+
+<TabItem label="Auditor access">
+
+Ship a read-only Auditor role with one-click export and view-only access to invoices and the trail. This is what survives an IFC or GST ITC audit; tribunals disallow claims that lack it.
+
+</TabItem>
+
+</Tabs>
+
+## Why this is the wedge, not a feature
+
+Incumbents treat approval flows as configuration. For an India-first product the maker-checker engine, the rupee DoA matrix, and the immutable trail are the credibility that gets you past Finance and Internal Audit, the two stakeholders who decide the deal. Pair it with GST ITC capture and Tally sync and the soft ROI becomes a hard rupee number. Keep the engine config-driven and versioned: tax classifications shift under the Income-tax Act 2025 transition, and a hardcoded workflow ages badly.
+
+## Sources
+
+- [Maker Checker for Expense Approvals (Volopay)](https://www.volopay.com/expense-management/maker-checker-workflow-for-expense-approvals/) (vendor), states, roles, auto-approval parameters.
+- [Multi-Level Approval Workflow for Reimbursement (Volopay)](https://www.volopay.com/blog/multi-level-approval-for-reimbursement/) (vendor), up to five-level threshold routing.
+- [Setting Up Expense Approval Workflows in India (MYND)](https://www.myndsolution.com/best-practices/setting-up-expense-approval-workflows-in-expense-and-travel-management-in-india/) (vendor), rupee DoA tiers, CFO sign-off, GST ITC gating.
+- [Managing Segregation of Duties in Finance Operations (MYND)](https://www.myndsolution.com/best-practices/managing-segregation-of-duties-in-finance-operations-in-india/) (vendor), four-eyes as the golden rule of Indian financial control.
+- [Expense Management Software India (HROne)](https://hrone.cloud/blog/expense-management-software-india-hr) (vendor), TAT, fraud leakage, delegation-on-leave, off-system exception pain.
+- [Expense Approval Workflow Design (Billdock)](https://billdock.io/blog/expense-approval-workflow-design) (vendor), partial review and exception handling.
+- [Period of Retention of Accounts, Section 36 (A R Dhorajiya)](https://ardhorajiya.com/period-of-retention-of-accounts-section-36-of-gst/) (primary), 72-month retention with litigation extension.
+- [Section 36, CBIC GST Act explorer](https://taxinformation.cbic.gov.in/content-page/explore-act/1000306/1000001) (govt), primary CGST Section 36 text.
+- [Maker-checker (Wikipedia)](https://en.wikipedia.org/wiki/Maker-checker) (reference), neutral definition of the four-eyes principle.

@@ -1,0 +1,115 @@
+---
+title: Data Protection and Security
+description: DPDP Act 2023 obligations for a SaaS holding PAN, bank and salary data, plus the certifications buyers expect.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+A reimbursement product holds the exact data DPDP cares about: employee and vendor PAN, bank accounts, salary-adjacent expense histories. The right mental model is narrow and load-bearing. For your customers you are a Data Processor; for your own staff you are a Data Fiduciary. The penalty headlines (up to Rs 250 crore) are statutory ceilings, not typical fines, and the law is phasing in, with full data-fiduciary obligations landing around May 2027. Treat security as a product feature with a deadline, lead with ISO 27001, and you clear the IT/Security gate that kills first enterprise deals. <span class="pill pill--build">Build</span> <span class="pill pill--high">High</span>
+
+## Your role under DPDP: Processor, not Fiduciary (mostly)
+
+The distinction decides who carries liability. When you process a customer's employee and vendor data on their instructions, you are a Data Processor and the fiduciary duties (notice, consent capture, principal rights) flow primarily to the customer, your buyer. For your own employees' personal data, you are the Data Fiduciary and own those duties directly.
+
+Two precision points the marketing version of this law gets wrong, both confirmed in our fact-check at <span class="pill pill--high">High</span> confidence:
+
+- DPDP does **not** itself govern Aadhaar. Aadhaar sits under the Aadhaar Act 2016 and UIDAI. This matters because private entities cannot freely run live Aadhaar authentication; use DigiLocker or offline XML and keep PAN as the primary identity key. See [onboarding and KYC](/product/onboarding-kyc/) for the verification design.
+- DPDP has **no** GDPR-style sensitive-data tier. PAN, bank and salary data are all just "personal data." There is no separate, higher bar for the financial fields, which is convenient to state but means the baseline duties apply to everything you hold.
+
+:::note[Why the role split matters commercially]
+
+As a Processor you reduce your own direct fiduciary exposure, but your buyer's DPDP risk becomes their reason to interrogate your security. The questionnaire is the deal gate, not a hypothetical fine on you.
+
+:::
+
+## The penalty schedule: ceilings, not invoices
+
+The Schedule under Sec 33 sets maxima per violation type. The Data Protection Board sets the actual amount on nature, gravity, duration, volume and sensitivity of data, and harm caused. Violations can also stack across tiers. Read the table as a ranked exposure map, not a price list.
+
+| Violation (DPDP Schedule) | Maximum penalty | Relevance to a reimbursement SaaS |
+| --- | --- | --- |
+| Failure of reasonable security safeguards, Sec 8(5) | Up to Rs 250 crore | The ceiling, and the tier most tied to a breach of PAN/bank data |
+| Failure to notify a personal data breach, Sec 8(6) | Up to Rs 200 crore | Makes your 72-hour process a compliance artefact, not a courtesy |
+| Children's-data obligations, Sec 9 | Up to Rs 200 crore | Low relevance; workforce data, not children |
+| Significant Data Fiduciary obligations, Sec 10 | Up to Rs 150 crore | Only if designated an SDF (unlikely for a small SMB tool) |
+| Breach of any other provision (residual) | Up to Rs 50 crore | Catch-all for the remaining duties |
+
+<p class="source-note">Source: DPDP Act 2023 Schedule, Sec 33 (primary, high confidence). Amounts are statutory maxima set by the Data Protection Board case by case, not typical fines.</p>
+
+:::caution[Do not launder the ceiling into a likely fine]
+
+DPDP enforcement is nascent: the Board only became operational from late 2025 and SMB-scale penalties are untested. The realistic near-term cost is buyer-questionnaire friction and stalled deals, not a Rs 250 crore invoice. Quote the number as a ceiling, every time.
+
+:::
+
+## The obligations you actually build
+
+These are the duties that turn into code, contracts and runbooks. Build for the stricter interpretation now to avoid rework before the ~May 2027 deadline.
+
+| Obligation | What it means in the product |
+| --- | --- |
+| Consent | Free, specific, informed, unconditional, affirmative; captured at the point of data collection, purpose-bound |
+| Itemized notice | Plain-language statement of what you collect and why, per purpose |
+| Purpose limitation | Use PAN/bank/expense data only for the reimbursement purposes consented to |
+| Retention and erasure | Delete when the purpose ends, balanced against statutory record-keeping (see below) |
+| Reasonable security safeguards | Encryption, access controls, log retention; the evidence base for avoiding the Sec 8(5) ceiling |
+| Breach notification | Intimate the Board without delay, detailed report within 72 hours, and notify affected individuals without delay |
+
+The breach rule is broader than GDPR. There is no risk-based de-minimis threshold, so an India breach process notifies affected individuals on essentially every qualifying incident, plus the Board on the 72-hour clock.
+
+:::danger[Retention and DPDP pull in opposite directions: statute wins]
+
+DPDP says erase when the purpose ends. Indian tax and company law say keep records for years. The reimbursement default is to retain to the longest applicable statutory window (8 financial years under Companies Act Sec 128, GST 72 months, Income Tax 6 years from AY end) on a documented legal-obligation basis, then erase. Do not delete financial records to satisfy a DPDP erasure request. The mechanics live in [audit and retention](/compliance/audit-retention/).
+
+:::
+
+## The timeline: notified, but phasing in
+
+The law is real but staggered. Building today against the ~May 2027 endpoint is the cheap path; retrofitting later is not.
+
+| Milestone | Date | Status |
+| --- | --- | --- |
+| DPDP Rules 2025 notified in the Gazette | 14 Nov 2025 | Done; Board and definitions live |
+| Consent-manager registration (approx 12 months) | ~Nov 2026, est. | Phasing |
+| Full data-fiduciary obligations (notice, consent, rights, breach, retention, security) | Approx May 2027 | ~18-month runway |
+
+<p class="source-note">Source: DPDP Rules 2025 (govt notification, high) and EY/India Briefing implementation analyses (analyst, medium). Treat the ~May 2027 date as approximate.</p>
+
+One more relief for a small team: data residency is permissive today. Rule 15 uses a negative-list (blacklist) model, so personal data may be transferred outside India unless the Central Government restricts a specific country. No blanket localization mandate applies to an ordinary (non-SDF) fiduciary. This is a tail risk to watch, not a build constraint now.
+
+## What buyers actually demand: certifications, in order
+
+DPDP fines are the abstract risk. The concrete one is the buyer's IT/Security reviewer, who blocks the deal until you can evidence "reasonable security safeguards." Certifications are how you pass that gate without a months-long bespoke audit each time.
+
+<Steps>
+
+1. **ISO 27001 first.** Roughly Rs 5 lakh in year one, plus a modest annual surveillance-audit cost (indicative around Rs 60k per year, medium confidence), 12 to 16 weeks. It is the India-and-EU-preferred standard and the cheapest credible signal. Get this before your first enterprise pitch.
+
+2. **VAPT (vulnerability assessment and penetration testing).** Periodic security testing is expected across India buyers and effectively required for regulated sectors (RBI, SEBI, CERT-In). It is also direct evidence of the Sec 8(5) safeguards.
+
+3. **SOC 2 Type II later.** Roughly Rs 6 lakh to Rs 14 lakh and a 12-week-plus timeline. The large majority of US enterprise security questionnaires ask for it (vendor-sourced, medium confidence). Defer until a US-headquartered enterprise deal funds it; do not pre-spend.
+
+</Steps>
+
+<p class="source-note">Source: Codesecure and TCSA India SaaS compliance-cost analyses (analyst/vendor, medium confidence). Costs are indicative; get current quotes before budgeting.</p>
+
+:::tip[Sequencing is the whole point]
+
+ISO 27001 plus DPDP-as-a-marketed-feature clears most Indian enterprise and EU questionnaires for around Rs 5 lakh. SOC 2 only earns its Rs 6 to 14 lakh when a US-HQ buyer's questionnaire demands it. Spending on SOC 2 first is a classic indie cash-burn mistake. This certification wall is one of the named [risks and failure modes](/business/risks/): hitting it on your first mid-market deal with no runway.
+
+:::
+
+## Bottom line
+
+DPDP makes security non-optional, but the law is survivable for a small team that builds for it deliberately. Be honest that you are a Processor for customers and a Fiduciary for staff, carry the consent/purpose/retention/breach duties as features, retain financial records to statute over a naive erasure default, and lead with ISO 27001. The penalty ceilings are real but abstract; the IT/Security questionnaire is the concrete blocker, and a clean certification posture is what gets you past it.
+
+## Sources
+
+- [DPDP Act 2023 Penalty Schedule, Sec 33](https://www.dpdpa.com/theschedule.html) (primary). Rs 250 cr / Rs 200 cr / Rs 150 cr / Rs 50 cr maxima.
+- [MeitY: Digital Personal Data Protection Act, 2023 (PDF)](https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf) (govt). Primary law text.
+- [PIB: DPDP Rules, 2025 Notified (PDF)](https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/nov/doc20251117695301.pdf) (govt). Notification 14 Nov 2025.
+- [India Briefing: DPDP Rules 2025 compliance](https://www.india-briefing.com/news/dpdp-rules-2025-india-data-protection-law-compliance-40769.html/) (analyst). Phased timeline.
+- [EY: Transforming data privacy, DPDP Rules 2025](https://www.ey.com/en_in/insights/cybersecurity/transforming-data-privacy-digital-personal-data-protection-rules-2025) (analyst). The ~May 2027 full-obligation deadline.
+- [MediaNama: Data breach reporting timeline under DPDP Rules 2025](https://www.medianama.com/2025/11/223-data-breach-reporting-timeline-of-dpdp-rules-2025-explained/) (analyst). The 72-hour-plus-without-delay notice.
+- [Codesecure: SOC 2 Type 2 compliance cost in India](https://codesecure.in/blogs/soc-2-type-2-compliance-cost-india) (vendor). SOC 2 cost and timeline.
+- [TCSA: SOC 2 vs ISO 27001 for Indian startups](https://www.tcsa.in/resources/soc-2-vs-iso-27001-indian-startups) (analyst). ISO-first sequencing, ~Rs 5 L, VAPT expectations.

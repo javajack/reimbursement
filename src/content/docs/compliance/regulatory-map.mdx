@@ -1,0 +1,123 @@
+---
+title: Regulatory Map
+description: The four regimes that govern reimbursement (GST, Income Tax, TDS, plus pointers to RBI and DPDP) and their product implications.
+---
+
+Four regimes decide whether a rupee of reimbursement is clean, creditable, and deductible: GST (input-tax-credit eligibility), Income Tax (company deductibility plus employee taxability), TDS on vendor payments, and record retention. Two more, RBI on money movement and DPDP on data, set the rails around them and get their own pages. The product job is to model each as an independent overlay, because a single line item can be reimbursable, ITC-blocked, and a taxable perquisite all at once.
+
+This page is the index. The clause-level engine behaviour lives in [/product/non-reimbursables/](/product/non-reimbursables/); the controls and retention mechanics live in [/compliance/audit-retention/](/compliance/audit-retention/).
+
+## The four regimes at a glance
+
+The table below is the spine. Each regime governs a different question and forces a different feature.
+
+| Regime | What it governs | Key sections | Product implication |
+| --- | --- | --- | --- |
+| GST | Whether the buyer can claim input tax credit on the expense | CGST Sec 17(5)(a) and (b) | GSTIN validation, eligible-vs-blocked ITC tagging per line, GSTR-2B reconciliation |
+| Income Tax (company) | Whether the expense is deductible for the business | Sec 37(1) "wholly & exclusively" | Deductibility flag; auto-disallow personal, capital, penalty, CSR, freebies-to-professionals |
+| Income Tax (employee) | Whether the reimbursement is taxable salary/perquisite | Sec 10(14) per-diem, Sec 10(5) LTA, Rule 3 | Surface taxable balance to payroll; per-diem on actuals; gift cap; car perquisite values |
+| TDS on vendor payments | Withholding on non-employee/vendor reimbursements | 194C, 194J, 194H (+ GST RCM) | Auto-compute TDS by section; flag reverse-charge cases; version-date rates by FY |
+| Record retention | How long vouchers and books must survive | Companies Act Sec 128; GST Sec 36; IT 6-yr | Default to longest (8 years); immutable trail + litigation hold |
+
+<p class="source-note">Source: CGST Act Sec 17(5), Income Tax Act Secs 37/10/Rule 3, Secs 194C/194J/194H, Companies Act Sec 128, CGST Sec 36, corroborated via ClearTax/Taxmann/TaxGuru and the CBIC statute (govt/primary, high confidence). Re-verify clause wording against the live statute before hard-coding.</p>
+
+:::tip[The wedge]
+GST ITC capture is what turns soft ROI into a hard rupee number for the CFO. Get GSTIN validation, Sec 17(5) blocked-vs-eligible tagging, and GSTR-2B reconciliation right, and recovered ITC becomes a measurable rupee line a CFO can underwrite. This is table-stakes for the India buyer, not a nice-to-have.
+:::
+
+## GST: input tax credit and Sec 17(5)
+
+GST decides one thing only: can the company claim the tax it paid on the expense as credit. Most T&E categories are blocked. <span class="pill pill--high">High</span> confidence on the clause map below; the statute is corroborated, not freshly fetched from the primary source.
+
+- Clause (a) blocks ITC on motor vehicles for transport of persons with approved seating capacity not more than 13 (including driver). Exceptions: resale, passenger transport, driving training.
+- Clause (b) blocks food and beverages, outdoor catering, beauty and health services, leasing/renting/hiring of motor vehicles (rent-a-cab), life and health insurance, club/fitness membership, and travel benefits to employees on vacation (LTC/LTA).
+
+:::caution[The nuance that trips up most rule engines]
+"Travel benefits extended to employees on vacation" means leave or home-travel concession (LTC/LTA), NOT ordinary business travel. ITC on air and rail booked for actual work is generally available and is not blocked by Sec 17(5). Do not blanket-block business travel; you will strip out legitimate credit.
+:::
+
+Two provisos restore ITC. The same-category-outward-supply proviso applies to the clause (b)(i) group (a tour operator hiring cabs onward, a restaurant buying food). The obligatory-under-law proviso was extended to all of clause (b) effective 1 February 2019. Default both to false in the rule engine so ITC stays blocked unless a company explicitly justifies it.
+
+## Income Tax: deductibility and employee taxability
+
+Two separate overlays sit under one Act. They do not move together.
+
+### Company deductibility (Sec 37)
+
+Sec 37(1) allows a deduction only for spend laid out wholly and exclusively for business, and not capital, personal, or covered elsewhere. Disallowed: personal expense, capital outlay, fines and penalties (including traffic challans), CSR spend (Explanation 2 to Sec 37), and freebies to medical professionals (CBDT Circular 5/2012, widened by Finance Act 2022 Explanation 3). These map cleanly to default non-reimbursable categories.
+
+### Employee taxability (Sec 10, Rule 3)
+
+The reimbursement can be fully reimbursable yet still taxable in the employee's hands. The table below carries the load-bearing numbers.
+
+| Item | Rule | Treatment | Value |
+| --- | --- | --- | --- |
+| Per-diem / daily allowance | Sec 10(14) / Rule 2BB | Exempt only to the extent actually spent; unspent balance is taxable salary | Actuals-based |
+| LTA | Sec 10(5) / Rule 2B | Domestic fare only; 2 journeys per 4-year block; old regime only | Fare only |
+| Car running/maintenance perquisite | Rule 3 | Fixed perquisite; nil if wholly official with logbook + employer certificate | Rs 1,800/mo (`<=`1.6L) or Rs 2,400/mo (`>`1.6L), + Rs 900/mo driver |
+| Gifts / vouchers to employees | Rule 3(7)(iv) | Aggregate exempt up to the cap; excess taxable; cash gifts fully taxable | Rs 5,000 per financial year |
+
+<p class="source-note">Source: Income Tax Act Secs 10(14)/10(5), Rules 2BB/2B/3, corroborated via incometaxindia.gov.in / ClearTax / TaxGuru (govt/primary, high confidence; the Rule 3 car/driver rupee values (Rs 1,800/2,400/900) are practitioner-corroborated, medium confidence, verify against the current notification; the ~Rs 7,000/month fuel-allowance "cap" is a practitioner interpretation, low confidence, model against actuals).</p>
+
+The product takeaway: treat per-diem on an actuals or declaration basis and surface the unspent balance to payroll as taxable, rather than assuming the full advance is tax-free. See [/product/edge-cases/](/product/edge-cases/) for advances and per-diem handling.
+
+## TDS and GST reverse charge on vendor payments
+
+The moment a reimbursement is to a vendor rather than an employee, withholding and reverse charge enter. This is the underserved adjacency that opens the path to AP automation. Rates changed materially in 2024-2025, so every value is dated by financial year.
+
+| Section | Covers | Rate | Threshold |
+| --- | --- | --- | --- |
+| 194C | Contractors | 1% (Individual/HUF), 2% (others) | Rs 30,000 single / Rs 1,00,000 aggregate per year |
+| 194J | Professional / technical services | 10% professional, 2% technical | Rs 50,000 (FY 2025-26, raised from Rs 30,000) |
+| 194H | Commission / brokerage | 2% (from 1 Oct 2024; was 5%) | Rs 20,000/FY (from 1 Apr 2025; was Rs 15,000) |
+| No PAN | Any of the above | 20% | n/a |
+
+<p class="source-note">Source: incometaxindia.gov.in TDS rates and ClearTax / Bajaj Finserv TDS chart (govt/primary corroborated, high confidence). The 194J threshold of Rs 50,000 applies from FY 2025-26 (Finance Act 2025, raised from the prior Rs 30,000); confirm each rate and threshold against the Finance Act and notifications for the relevant FY.</p>
+
+GST reverse charge (RCM) shifts the GST liability to the company for notified services and unregistered-supplier purchases. The T&E-relevant cases are rent-a-cab (where the supplier elects RCM), Goods Transport Agency (GTA), legal services from advocates, and purchases from unregistered suppliers. Aggregator cab rides (Ola/Uber) fall under Sec 9(5), so the platform pays. The company self-invoices and can claim offsetting ITC where Sec 17(5) does not block it.
+
+:::caution[Do not blanket-apply RCM]
+RCM is service- and notification-specific. Rent-a-cab RCM depends on the supplier's GST-rate election; it is not automatic. Flag candidates for review, reference current notifications, and let Finance confirm. The engine should not auto-book RCM on every cab bill.
+:::
+
+## Record retention: the longest clock wins
+
+Three laws set three periods. Default to the longest so all three are satisfied at once.
+
+| Law | Period | Anchor |
+| --- | --- | --- |
+| Companies Act Sec 128 | 8 financial years | Preceding the current year; longer if investigation ordered |
+| GST Sec 36 | 72 months (6 years) | From the annual-return due date; +1 year after final disposal if proceedings pending |
+| Income Tax | 6 years | From the end of the relevant assessment year |
+
+<p class="source-note">Source: Companies Act 2013 Sec 128, CGST Act Sec 36, Income Tax retention rule, via CAIRR / AUBSP / incometaxmanagement.com (govt/primary corroborated, high confidence).</p>
+
+The binding longest is 8 years (Companies Act). Build retention to that, with an immutable audit trail and a litigation-hold mechanism that freezes deletion during any appeal, investigation, or proceeding. Mechanics live in [/compliance/audit-retention/](/compliance/audit-retention/).
+
+## Version-dating is not optional
+
+The single most important engineering instruction: store an effective-from and effective-to range on every rate, threshold, and clause, and resolve by the financial year of the expense. The 2024-2025 churn alone (194H cut to 2% on 1 Oct 2024, 194J threshold raised to Rs 50,000 in FY 2025-26, 194H threshold raised to Rs 20,000 on 1 Apr 2025) means a flat constant will silently mis-withhold the moment the calendar turns.
+
+:::danger[Carry the caveat, do not launder it]
+The CBIC and Income Tax primary pages were intermittently un-fetchable during research; clause wording here is corroborated via ClearTax, Taxmann, TaxGuru, and IndianKanoon. Re-verify against the live statute before hard-coding any clause or rate into the production rule engine. Several values (TDS rates/thresholds, a draft 2026 car-perquisite revision) are in active flux.
+:::
+
+## The other two regimes
+
+Two regimes are large enough to warrant their own pages and are only pointed to here.
+
+- RBI and money movement: the funds-never-touch-our-account invariant, Payment Aggregator vs PPI licensing, and the compliant partner architecture live in [/compliance/money-movement/](/compliance/money-movement/).
+- DPDP Act 2023 and data protection: data-processor status, the breach-notification clock, retention/erasure obligations, and why live Aadhaar auth stays out of scope live in [/compliance/data-protection/](/compliance/data-protection/).
+
+## Sources
+
+- [Section 17(5) of CGST Act, official CBIC statute](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/acts/2017_CGST_act/active/chapter5/section17_v1.00.html) (primary, verify live: TLS error at fetch)
+- [Section 17(5) in the CGST Act, IndianKanoon](https://indiankanoon.org/doc/134183062/) (primary)
+- [Section 17(5) of CGST Act, blocked credit, ClearTax](https://cleartax.in/s/section-175-of-cgst-act) (analyst)
+- [Section 37 of the Income Tax Act, ClearTax](https://cleartax.in/s/section-37-of-income-tax) (analyst)
+- [Prescribed allowances, Rule 2BB, Income Tax Department](https://incometaxindia.gov.in/rules/income-tax%20rules/103120000000006985.htm) (govt)
+- [Valuation of perquisites, Rule 3, Income Tax Department](https://incometaxindia.gov.in/Rules/Income-Tax%20Rules/103120000000007059.htm) (govt)
+- [TDS rates, Income Tax Department](https://www.incometaxindia.gov.in/w/tds-rates-1) (govt)
+- [TDS rate chart, ClearTax](https://cleartax.in/s/tds-rate-chart) (analyst)
+- [Section 128 books of account, Companies Act 2013, CAIRR](https://ca2013.com/128-books-of-account-etc-to-be-kept-by-company/) (primary)
+- [Period of retention, GST Section 36, AUBSP](https://www.aubsp.com/cgst-act-section-36-explained/) (analyst)

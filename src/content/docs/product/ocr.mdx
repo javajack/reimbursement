@@ -1,0 +1,112 @@
+---
+title: OCR and Bill Digitization
+description: A cost-aware document-AI stack for messy Indian GST invoices, with layered receipt-fraud detection.
+---
+
+OCR is table-stakes, not a moat, so do not overbuild it. The right call for an indie team is LLM-vision as the primary extractor at sub-cent per document, a free deterministic GST and fraud layer on every receipt, and PaddleOCR kept around as a no-cost fallback. Spend the saved engineering on the things that actually decide deals: Tally sync, the [rule engine](/product/rule-engine/), and maker-checker. The verdict for this layer is <span class="pill pill--build">Build cheap</span>, never by building a bespoke parser.
+
+## The digitization layer has three jobs
+
+A receipt entering the system from WhatsApp, mobile, or email must be turned into trustworthy structured data before any rule fires. That decomposes into three distinct jobs, and conflating them is how teams overspend.
+
+1. **Extract.** Pull fields from a messy image or PDF: merchant, date, amounts, tax split, line items.
+2. **GST-validate.** Confirm the Indian-specific structure: GSTIN format, HSN/SAC, CGST/SGST/IGST split, place of supply, and (where present) the e-invoice IRN and QR.
+3. **Detect fraud.** Catch duplicates, tampering, arithmetic that does not add up, and the new category of AI-generated fakes.
+
+Extraction is a buy decision. GST-validation and fraud detection are mostly free deterministic code, and that is exactly where an India-first product earns trust with Finance and auditors.
+
+## What digitization costs
+
+The cost spread across approaches is two to four orders of magnitude. This is the single most important fact for [unit economics](/business/unit-economics/): pick wrong here and OCR becomes a line item that eats margin at India SMB price points.
+
+| Approach | Example | Cost per doc | Notes |
+| --- | --- | --- | --- |
+| LLM-vision (Flash tier) | Gemini 2.5 Flash-Lite / Flash | ~USD 0.0005-0.003 | Sub-cent; native multilingual + handwriting; JSON output |
+| LLM-vision (cheap Claude) | Claude Haiku 4.5 | ~USD 0.0015-0.002 effective | Batch API 50% off; prompt-cache the GST schema |
+| Dedicated parser | Textract AnalyzeExpense | USD 8-10 / 1,000 | USD 10/1k first tier, USD 8/1k after 1M pages; no GST fields |
+| Dedicated parser | Google Document AI Expense/Invoice | USD 10 / 1,000 | USD 0.10 per 10 pages; strong on clean structured docs |
+| Dedicated parser | Azure Document Intelligence | USD 10 / 1,000 | Drops to ~USD 0.53/1k only at 8M/month commitment |
+| Open-source OCR | PaddleOCR (PP-OCRv4) | Free + GPU/ops | Strongest free engine for Indian scripts; lowest CER in tests |
+
+<p class="source-note">Source: AWS, Google Cloud, Azure, and Gemini official pricing pages, 2026 (vendor, high confidence). Per-doc LLM-vision figures are our derivation from token prices and typical single-page invoice token counts (medium confidence): validate against your own token counts before committing a cost model.</p>
+
+The India-tuned SaaS parsers (Nanonets at roughly USD 1.20-1.80 per invoice, Veryfi at USD 0.08 per receipt with a hard USD 500/month floor, Mindee at roughly EUR 0.04 per page; vendor pricing pages, medium confidence) bundle GST parsing and fraud features but cost 400x to 3,000x more per document than Flash-tier vision. At low volume the Veryfi floor alone makes it a non-starter. Reserve these only for specific bundled fraud features you cannot build yourself.
+
+:::tip[The cost lever]
+LLM-vision beats USD 8-10 per 1,000 dedicated parsers by 5-20x and removes the separate OCR step entirely. End-to-end third-party benchmarks land Claude/Gemini-class extraction at roughly USD 1.50-2.00 per 1,000 invoices (third-party benchmark, medium confidence). That is the difference between OCR being a rounding error and OCR being a margin problem.
+:::
+
+## Accuracy is not the marketing number
+
+Vendors quote 94-99% field-level accuracy. That is real, but only on clean printed invoices. The Indian field reality is worse, and you must budget for it.
+
+| Input | Field accuracy | Confidence |
+| --- | --- | --- |
+| Clean printed invoice (leading APIs) | 94-99% | <span class="pill pill--med">Medium</span> |
+| Clean receipt (generic OCR) | 95-98% | <span class="pill pill--med">Medium</span> |
+| Faded / crumpled thermal paper | low-to-mid 80s | <span class="pill pill--med">Medium</span> |
+| Hindi / Devanagari (generic OCR) | often garbage or skipped | <span class="pill pill--low">Low</span> |
+| Hindi / Devanagari (India-tuned) | ~95% claimed | <span class="pill pill--low">Low</span> |
+
+<p class="source-note">Source: Koncile, ReceiptExtract, BharatOCR benchmarks, 2025 (vendor/analyst, medium-low confidence). Vendor numbers typically overstate real-world Indian-bill performance by 3-8 points.</p>
+
+Practical consequence: thermal-paper auto-rickshaw and kirana bills, the bread-and-butter of field reimbursement, are exactly the inputs where accuracy sags into the low 80s. Plan for human-in-the-loop review on low-confidence documents from day one. Do not promise touchless processing on the worst inputs.
+
+## The deterministic fraud and validation layer
+
+This is the cheap, India-specific work that actually differentiates the product. Every check below is near-zero cost to run and catches both extraction errors and tampering. Run all of them before any auto-approval.
+
+| Check | What it catches | Cost |
+| --- | --- | --- |
+| GSTIN checksum (Luhn mod-36) | Malformed or invented GSTINs | Free, offline |
+| E-invoice QR + IRN cross-check | Tampered B2B invoices above 5cr turnover | Free, deterministic |
+| Arithmetic reconciliation | Line items + taxes that do not equal the total | Free |
+| Perceptual-hash duplicate | Same receipt claimed twice | Cheap, in-house |
+| EXIF / metadata analysis | Missing or inconsistent creation traces | Cheap, in-house |
+
+The GST e-invoice QR is the highest-value free signal. It encodes 8 fields (supplier and recipient GSTIN, invoice number and date, value, line-item count, main HSN, and the IRN hash). Any edit to the printed copy creates a mismatch the official verifier catches. Since e-invoicing is mandatory for B2B above a 5 crore rupee turnover threshold (1 Aug 2023), a missing QR on a large vendor bill is itself a risk signal worth surfacing in the workflow.
+
+:::caution[Single signals are evadable]
+Perceptual-hash and EXIF checks fail against a determined fraudster who screenshots a forged image, re-embeds it in a fresh PDF, and strips metadata. That defeats hash matching and EXIF rules in one move. Layer the signals (metadata plus image composition plus duplicate patterns plus external cross-reference); never rely on any one alone.
+:::
+
+### The AI-generated-receipt arms race
+
+This is the fast-moving threat. Per AppZen, AI-generated fakes went from roughly 0% of fraudulent documents in 2024 to about 14% by September 2025. They are near-perfect and effectively indistinguishable to a human reviewer. Detection is a continuous-retraining arms race, and a small team will struggle to fund a bespoke detector. The pragmatic stance: escalate suspicious documents to an LLM detector or a specialized vendor signal rather than building enterprise-grade fraud ML in the MVP. Treat AI-fake detection as a watch-and-escalate capability, marked <span class="pill pill--flag">Flag</span>, not a solved problem.
+
+## The recommended stack
+
+<span class="pill pill--build">Build</span> this, in this order of cost.
+
+```text
+1. Extract:   Gemini 2.5 Flash-Lite/Flash  (primary, sub-cent/doc)
+              -> strict JSON schema keyed to GST fields
+              (GSTIN, HSN/SAC, IRN, place-of-supply, CGST/SGST/IGST, total)
+2. Cross-check: PaddleOCR self-hosted     (free fallback on low-confidence docs)
+3. Validate:  GSTIN checksum + QR/IRN decode + arithmetic + HSN sanity  (free)
+4. Fraud:     pHash duplicate + EXIF, escalating flagged docs to an LLM detector
+5. Route:     human review on low-confidence or flagged docs only
+```
+
+The non-negotiable rule: LLM-vision can hallucinate, transpose totals, or invent a GSTIN. Wrap it in **schema validation plus deterministic GST, QR, and arithmetic cross-checks before any auto-approval**. This is the architectural guardrail that makes a cheap extractor safe enough for Finance.
+
+:::danger[Schema validation gates auto-approval]
+No extracted document reaches auto-approval without passing strict JSON schema validation and the deterministic GST/QR/arithmetic checks. An unvalidated LLM output is a guess, and a guess must not move money. This connects directly to the [rule engine](/product/rule-engine/), which consumes the validated fields, and to [maker-checker](/product/maker-checker/), which catches what slips through.
+:::
+
+Two more cost levers worth taking: prompt-cache the fixed GST-extraction system prompt across documents (cache-read is roughly 0.1x input on Claude), and use the Batch API at 50% off for non-real-time bulk reprocessing. Both materially cut input cost at volume without changing the architecture.
+
+One caveat to carry: receipts contain PII and financial data, and sending them to US-hosted LLM endpoints raises DPDP-Act and client-contract questions. For sensitive customers, evaluate regional endpoints or self-hosted PaddleOCR. See [data protection](/compliance/data-protection/) for the obligations this triggers.
+
+## Sources
+
+- [AWS Textract Pricing](https://aws.amazon.com/textract/pricing/) (vendor): AnalyzeExpense and DetectDocumentText per-page tiers.
+- [Google Cloud Document AI Pricing](https://cloud.google.com/document-ai/pricing) (vendor): Expense/Invoice parser and Enterprise OCR pricing.
+- [Gemini Developer API Pricing](https://ai.google.dev/gemini-api/docs/pricing) (vendor): Flash and Flash-Lite token pricing for the sub-cent/doc derivation.
+- [Claude API Pricing](https://platform.claude.com/docs/en/about-claude/pricing) (vendor): Haiku 4.5 pricing, Batch and prompt-caching discounts.
+- [ClearTax: GST e-Invoice QR Code Generation](https://cleartax.in/s/gst-e-invoice-qr-code-generation) (primary): QR 8 fields, IRN generation, e-invoicing threshold timeline.
+- [GST e-Invoice System (IRP)](https://einvoice1.gst.gov.in/) (govt): official IRN registration and verification source.
+- [AppZen: Detecting AI-Generated Fake Receipts](https://www.appzen.com/resources/ai-generated-fake-receipts) (vendor): the ~14% AI-generated-fraud figure and detection methodology.
+- [TurboLens: Image Forgery Detection for Receipts](https://www.turbolens.io/blog/2026-05-16-image-forgery-detection-for-receipts-invoices-and-claims-documents) (analyst): why pHash/EXIF are evadable and layering is required.
+- [Koncile: Top OCR Tools for Invoices 2025](https://www.koncile.ai/en/ressources/top-10-ocr-tools-for-invoices-2025) (analyst): field-accuracy ranges and vendor caveats.
+- [InvoiceDataExtraction: Open Source OCR for Invoices](https://invoicedataextraction.com/blog/open-source-ocr-invoice-extraction) (analyst): PaddleOCR vs Tesseract CER benchmark.

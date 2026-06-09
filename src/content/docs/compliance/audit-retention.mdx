@@ -1,0 +1,92 @@
+---
+title: Audit Trail, Controls and Retention
+description: The immutable audit trail, segregation of duties, and statutory document retention the product must enforce.
+---
+
+The controls layer is where this product earns the trust of a Finance Controller and a statutory auditor, and it is cheap to build relative to what it returns. Ship an append-only, immutable audit trail on every transition and every rule firing, a read-only Auditor role with one-click export, segregation of duties wired into maker-checker, and a retention engine that defaults to the longest applicable period, 8 financial years, with a litigation-hold override. None of this is differentiating on a feature grid. All of it is table-stakes for being allowed into a regulated finance workflow, and skipping it is how an indie product gets disqualified in the security review.
+
+:::tip[Why bother when it is invisible]
+Controls are insurance, not features. The audit trail costs a few weeks of engineering and almost nothing to run, yet it is the first thing an auditor or a DPDP-conscious buyer asks to see. Treat it as a credibility signal you can demo, not a back-office log nobody opens. <span class="pill pill--build">Build</span>
+:::
+
+## The audit trail: append-only, immutable, total
+
+Every meaningful event in the system writes one immutable record. The trail is append-only: no edit, no delete, no soft-delete that hides history. A correction is a new event that supersedes, never a mutation of the old one. This is a hard requirement for statutory audit, where auditors expect a complete, timestamped trail that does not depend on external email to reconstruct who did what.
+
+Two event classes must be captured with full fidelity.
+
+**State transitions** on the claim and on the master data (employee, bank account, GSTIN, approver hierarchy). The maker-checker finite state machine moves a claim through DRAFT, SUBMITTED, UNDER_REVIEW, the approve/reject/partial/queried branches, PENDING_PAYMENT, PAID and SETTLED, plus CANCELLED and RECOVERY/CLAWBACK. Each transition logs actor, action, timestamp, and a before/after snapshot of the changed fields. The full lifecycle and role gating live in [the maker-checker design](/product/maker-checker/).
+
+**Rule firings** from the policy engine. When a line item hits a rule, log the rule id and version, the input snapshot, the action taken (allow / flag / warn / cap / block / route), and, critically, any approver override with the reason text. An override without a captured reason is a control failure; the reason field is mandatory on override.
+
+| Event field | What it captures | Why it matters |
+| --- | --- | --- |
+| `actor` | User id + role at time of action | Attributes the action; pairs with delegation records |
+| `action` | The transition or rule outcome | The verb (submit, approve, override, pay) |
+| `timestamp` | Server time, immutable | Statutory audit needs reliable chronology |
+| `before` / `after` | Field-level snapshot | Shows exactly what changed |
+| `rule_id` + `rule_version` | Which rule, which version fired | Defends a decision against a versioned policy |
+| `input_snapshot` | Line-item state the rule saw | Reproduces the decision later |
+| `override_reason` | Mandatory text on any override | Turns a bypass into an accountable act |
+
+<p class="source-note">Source: synthesized from maker-checker FSM and audit-trail findings (Volopay, Billdock, Mysa); our own derivation of the schema (medium confidence).</p>
+
+:::caution[Version your rules, not just your data]
+A rule decision made in March 2026 must be explainable in 2034 against the rule as it stood in March 2026, not today's rule. Tax rates and thresholds move every financial year (TDS 194H went 5% to 2% on 1 Oct 2024; the 194J threshold rose to ₹50,000 in FY2025-26). Stamp every firing with `rule_version` and keep the historical rule definitions, or the trail cannot reproduce its own verdict.
+:::
+
+## The Auditor role and one-click export
+
+Ship a first-class read-only Auditor role. It sees claims, line items, attached invoices, the rule firings and the full trail, and it can mutate nothing. Internal auditors and the external statutory auditor get view-only access to invoices and an exportable trail; this is exactly what the audit guidance calls for. Pair it with one-click export of the trail and the underlying documents for a chosen entity, period and GSTIN, in a format an auditor can take away (CSV plus the document bundle). Export is not a nice-to-have: it is how the trail leaves the building during an audit or an assessment.
+
+## Segregation of duties, tied to maker-checker
+
+Segregation of duties (SoD) is the principle that no single person can both create and approve the spend that moves money. Maker-checker, the 4-eyes control that Indian Finance teams treat as a buying requirement, is the enforcement mechanism. The product must make the SoD constraints structural, not advisory.
+
+Enforce at minimum:
+
+- A maker cannot be the checker on their own claim. Self-approval is blocked at the FSM, not flagged after the fact.
+- Approval authority is rupee-tiered through a Delegation-of-Authority matrix, routed up multiple authority levels by amount (see [the maker-checker design](/product/maker-checker/) for the level structure). Higher amounts demand higher authority.
+- The Finance/Payout role that releases the bank file is distinct from the approver who sanctioned the claim.
+- Delegation on leave routes a claim to a named deputy for a defined window, and the delegation itself is an audit event (who delegated to whom, when, for how long). A delegate's approval is attributed to the delegate, not the absent approver.
+
+:::danger[Segregation of duties is a control, not a setting]
+If an administrator can quietly grant one user both maker and checker rights on the same claim, the 4-eyes control is theatre. The combination must be prevented or, where a deliberate exception exists, itself logged as a high-severity audit event with a reason. Maker-checker and a clean DoA matrix are the single most India-specific Finance buying requirement; treat them as load-bearing.
+:::
+
+## Retention: default to the longest applicable period
+
+Three statutes set three different clocks. The product cannot pick one; it must satisfy all of them, which means defaulting to the longest, then extending for litigation. <span class="pill pill--high">High</span>
+
+| Statute | Retention period | Clock starts |
+| --- | --- | --- |
+| Companies Act 2013, Sec 128 | 8 financial years | The 8 financial years immediately preceding the current year (longer if investigation ordered) |
+| GST, CGST Sec 36 | 72 months (6 years) | Due date of the annual return (GSTR-9) |
+| Income Tax | 6 years | End of the relevant assessment year |
+
+<p class="source-note">Source: Companies Act Sec 128 (ca2013.com); CGST Sec 36 (AUBSP, TaxGuru); Income Tax 6-year rule (govt / corroborating). Primary CBIC/Income-Tax pages were intermittently un-fetchable; re-verify against the live statute (high confidence on the periods).</p>
+
+The 8-year Companies Act window is the binding constraint for a company assessee, so default document and trail retention to 8 financial years. That single default satisfies the 72-month GST and 6-year Income-Tax windows simultaneously and removes a class of "which rule applies" bugs. The GST clock is the subtle one: 72 months runs from the GSTR-9 due date (31 December following the financial year), not from the invoice date, so the effective hold on a given document is longer than a naive six years from purchase. Anchor the GST clock correctly or under-retain.
+
+### Litigation hold
+
+Retention is not just a timer that deletes on expiry. CGST Sec 36 extends retention to one year after final disposal of any appeal, revision, proceeding or investigation, whichever is later. The product needs an explicit litigation-hold mechanism: a flag, set at the entity, GSTIN or claim grain, that freezes deletion regardless of the standard clock and is released only deliberately. Without it, an automated retention job can purge evidence the company is legally bound to keep, which converts a routine cron into a compliance incident.
+
+:::note[What the engine actually enforces]
+Two cooperating rules. (1) A non-deletion guarantee inside the 8-year window, enforced by the store, not by policy. (2) A litigation-hold override that suspends expiry until explicitly lifted. Deletion after expiry should itself be a logged audit event, so even the act of forgetting is on the record.
+:::
+
+## How this connects
+
+The retention categories and the statutory map sit alongside the broader [regulatory map](/compliance/regulatory-map/), which carries the GST Sec 17(5), Income-Tax and TDS detail that the rule engine versions and the trail records. The SoD enforcement is the operational face of [maker-checker](/product/maker-checker/). And because the trail and document vault hold personal and financial data, retention here must reconcile with the erasure and purpose-limitation obligations covered under [data protection](/compliance/data-protection/): retain what statute demands, no longer, and be able to prove both.
+
+## Sources
+
+- [Period of Retention of Accounts, Section 36 of GST (AUBSP)](https://www.aubsp.com/cgst-act-section-36-explained/) (primary-corroborating)
+- [Accounts and records under GST, retention period (TaxGuru)](https://taxguru.in/goods-and-service-tax/accounts-other-records-gst-retention-period.html) (primary-corroborating)
+- [Section 36, CBIC GST Act explorer](https://taxinformation.cbic.gov.in/content-page/explore-act/1000306/1000001) (govt)
+- [Section 128, Books of account, Companies Act 2013 (CAIRR)](https://ca2013.com/128-books-of-account-etc-to-be-kept-by-company/) (primary-corroborating)
+- [Period of Retention under GST Sec 36 / Income Tax 6-year rule](https://incometaxmanagement.com/Pages/Tax-Ready-Reckoner/GST-India/66-Period-of-Retention-of-Accounts-under-GST-Section-36-of-the-CGST-Act.html) (primary-corroborating)
+- [Taxability of Reimbursement of Expenses to Employees (Mysa)](https://www.mysa.io/blogs/taxability-reimbursement-expenses-employees-india) (vendor)
+- [Maker Checker for Expense Approvals (Volopay)](https://www.volopay.com/expense-management/maker-checker-workflow-for-expense-approvals/) (vendor)
+- [Expense Approval Workflow Design (Billdock)](https://billdock.io/blog/expense-approval-workflow-design) (vendor)

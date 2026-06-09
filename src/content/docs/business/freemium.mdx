@@ -1,0 +1,103 @@
+---
+title: Is Freemium Viable?
+description: When a free tier works in low-ACV India B2B, the conversion to expect, and the COGS trap to avoid.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Yes, but only with a deliberately tight free tier and a single, obvious paid trigger. <span class="pill pill--build">Build</span> A generous free plan is a slow leak: every free user who scans receipts and triggers payouts carries real per-transaction cost, and at India ACVs you cannot subsidise that at scale. Cap users, cap OCR scans, gate payouts, and treat the free tier as a funnel, not a product.
+
+The model is proven in India. Zoho runs a free tier (up to 3 users) under a low-price paid ladder and won the category against far better-funded global incumbents. Copy the structure, not the generosity.
+
+## The verdict in one table
+
+| Question | Answer | Confidence |
+|---|---|---|
+| Should we offer a free tier? | Yes, tightly capped | <span class="pill pill--high">High</span> |
+| Free-to-paid conversion to plan for | 2-5% | <span class="pill pill--med">Medium</span> |
+| Biggest risk | Per-transaction COGS on free users | <span class="pill pill--high">High</span> |
+| Hard rule | No payouts on the free tier | <span class="pill pill--high">High</span> |
+
+The conversion band is the global B2B freemium benchmark (1-5% for broad-market tools, 8-12% for strong, tightly targeted ones). India-specific free-to-paid data for expense tools is not separately published, so we apply the global range with stated uncertainty rather than launder it into a precise India number.
+
+<p class="source-note">Source: ChartMogul SaaS Conversion Report; First Page Sage (analyst, medium confidence). India-specific conversion not published.</p>
+
+## Why freemium works here at all
+
+Two conditions have to hold for freemium to pay off, and both do in this market.
+
+First, the variable cost per free user must be small enough to absorb. It is, if you constrain the right features. OCR via LLM-vision runs roughly USD 0.0005-0.003 per document (Gemini Flash-Lite, Claude Haiku), or USD 8-10 per 1,000 docs on a dedicated parser like Textract AnalyzeExpense. A capped free user scanning a few dozen receipts a month costs cents, not rupees.
+
+Second, the paid trigger must be both valuable and unavoidable. In a reimbursement product the natural trigger is money movement: the moment a customer wants to actually pay employees or vendors, not just track claims. That is also the most cost-bearing feature, which is exactly why it belongs behind the paywall.
+
+:::tip[The design principle]
+Put the cheap, sticky features (capture, OCR up to a cap, basic approvals) in free. Put the expensive, high-value features (payouts, multi-stage approvals, accounting sync, GST and policy reports) in paid. The free tier should make the paid trigger feel inevitable.
+:::
+
+## What the free tier should and should not include
+
+Mirror Zoho's structure, then gate on India-specific value rather than racing it to the bottom on price. See [/business/pricing/](/business/pricing/) for the full ladder.
+
+| Capability | Free | Paid |
+|---|---|---|
+| Users | 3-5 cap | per active submitter |
+| Receipt capture (WhatsApp/mobile/email) | Yes | Yes |
+| OCR autoscans | Capped (~20-50/mo) | Higher / metered |
+| Approvals | Single-stage | Multi-stage maker-checker |
+| Payouts (bank file / RazorpayX) | No | Yes |
+| Tally / Zoho Books sync | No | Yes |
+| GST ITC and policy reports | No | Yes |
+
+The OCR cap is the load-bearing limit. Set it generously and a free user filing for a busy field team can quietly consume hundreds of scans a month. Set it at a tight ceiling (Zoho's free plan allows 20 autoscans) and the cost is bounded by construction.
+
+## The COGS trap
+
+This is the part most indie founders underestimate. On a free tier, you eat every per-transaction cost yourself, and three of them are real money.
+
+| Variable cost | Indicative rate | Source label |
+|---|---|---|
+| OCR (LLM-vision) | USD 0.0005-0.003/doc | vendor pricing, medium |
+| OCR (dedicated parser) | USD 8-10 / 1,000 docs | vendor pricing, medium |
+| Bank payout | ~₹1.75-5 per transaction (RazorpayX 250 free/mo) | indicative |
+| Bank penny-drop verification | ~₹3 per successful, +18% GST | Setu published, high |
+
+<p class="source-note">Source: Gemini / Claude API pricing for the LLM-vision OCR row; AWS Textract pricing for the dedicated-parser row; RazorpayX billing docs; Setu (vendor/primary, medium confidence). Figures are per-unit and scale with usage.</p>
+
+The danger is not the headline rate; it is the multiplication. A single enthusiastic free user who onboards a 10-person team, scans 200 receipts, penny-drops 10 bank accounts, and pushes 50 payouts has cost you real rupees while paying nothing. Multiply across a popular free tier and the OCR/payout line item stops being a rounding error.
+
+:::danger[Hard rule]
+Payouts never ship on the free tier. Payouts and penny-drop verification are the costliest per-transaction features and the clearest paid trigger. Keeping them paid solves the COGS problem and the conversion problem at once.
+:::
+
+The defence is simple: model worst-case free-user behaviour before launch, not average. Assume the loudest free user, not the median one, and confirm the cost still rounds to noise at your free-tier caps. Then instrument actual usage and tighten caps if reality exceeds the model. The full cost stack and margin math live in [/business/unit-economics/](/business/unit-economics/).
+
+## How to convert without a sales team
+
+At India SMB ACVs you cannot afford an outbound motion to chase free users (outbound/SDR CAC runs ₹2-4 lakh, unaffordable here). Conversion has to be product-led.
+
+<Steps>
+
+1. Cap the free tier so a real team hits a wall (user count or OCR scans) within weeks, not years.
+
+2. Surface the paid trigger in-product: when a free user tries to pay someone, that is the upgrade prompt.
+
+3. Nudge in-app, not via a rep: show the GST ITC or faster-payout value the free tier withholds.
+
+4. Use the CA, Tally-partner, and content/SEO channels (the lowest-CAC routes) to bring qualified free users in, then let the product close them. See [/business/gtm/](/business/gtm/).
+
+</Steps>
+
+## Bottom line
+
+Freemium is viable and recommended, but it is a constrained instrument, not a growth hack. Win the category the way Zoho did: a small, genuinely free tier that demonstrates value, a paid trigger built around money movement and India compliance, and disciplined caps that keep per-transaction COGS bounded. Plan for 2-5% conversion, instrument it from day one, and never let payouts or unmetered OCR live on the free plan.
+
+## Sources
+
+- [Zoho Expense Pricing (India)](https://www.zoho.com/in/expense/pricing/) (vendor): free tier limits (3 users, 20 autoscans), INR ladder, 5-user minimum.
+- [ChartMogul SaaS Conversion Report](https://chartmogul.com/reports/saas-conversion-report/) (analyst): B2B free-to-paid conversion benchmarks.
+- [SaaS Freemium Conversion Rates (First Page Sage)](https://firstpagesage.com/seo-blog/saas-freemium-conversion-rates/) (analyst): 3-5% good, 8-12% great freemium conversion.
+- [Zoho Business Model (GrowthX)](https://growthx.club/blog/zoho-business-model) (vendor): bootstrapped PLG + freemium India exemplar.
+- [AWS Textract Pricing](https://aws.amazon.com/textract/pricing/) (vendor): OCR per-page and AnalyzeExpense receipt pricing.
+- [Google Cloud Vision Pricing](https://cloud.google.com/vision/pricing) (vendor): OCR free tier and per-1,000 unit pricing.
+- [RazorpayX Fees and Taxes (Docs)](https://razorpay.com/docs/x/manage-teams/billing/) (vendor): 250 free payouts/month, per-payout fee.
+- [CAC Benchmarks for Indian B2B SaaS (upGrowth)](https://upgrowth.in/cac-benchmarks-indian-b2b-saas-arr-band-2026/) (analyst): channel-level CAC including outbound vs content/SEO.

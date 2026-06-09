@@ -1,0 +1,107 @@
+---
+title: Integrations and the Survival Question
+description: Why Tally integration is the make-or-break, the table-stakes stack, and whether the product survives standalone.
+---
+
+Pure receipt-capture-and-approve does not survive on its own for long. Zoho already anchors that workflow near zero price, so a thin capture-and-route tool is a feature, not a company. What keeps the product alive is integration depth, and in India that means one connector above all others: Tally. Get Tally right and you have a durable wedge a globally-built rival cannot easily copy; ship without it and Finance walks. The verdict: <span class="pill pill--build">Build</span>, but integration-first, not capture-first.
+
+## Does it survive standalone? No, not for long
+
+The standalone receipt-and-approve loop is structurally weak. The data is undifferentiated, the price floor is set by Zoho, and switching cost is near zero until your data starts flowing into the customer's accounting and payroll systems. Stickiness comes from being wired into the systems of record. That is why this page treats integration as the survival question, not a feature checklist.
+
+Survival requires two things: integration depth (Tally first, then Zoho Books and payroll) and a credible expansion path toward AP automation and vendor payments. Both also keep the product acquisition-ready, which is how this category actually exits. Happay went to CRED and then its expense business to MakeMyTrip; Fyle went to Sage and became Sage Expense Management. The buyers were a travel suite and an accounting suite. Clean integration is the exit, not just the moat. See [the wedge and the whitespace](/market/whitespace/) for why India-native integration is the defensible core.
+
+## Table-stakes vs nice-to-have
+
+Rank the stack by whether a deal dies without it, not by engineering interest. The accounting tier is where deals are won or lost; everything else accelerates or smooths.
+
+| Integration | Tier | Why | Confidence |
+| --- | --- | --- | --- |
+| Tally two-way sync | Table-stakes #1 | ~70-80% of Indian SMB accounting; kills dual data entry | <span class="pill pill--high">High</span> |
+| Zoho Books | Table-stakes #2 | A leading cloud challenger; clean REST API | <span class="pill pill--med">Medium</span> |
+| HRMS / payroll | Strategic #2 | Employee master + reimburse-via-payroll, the dominant India path | <span class="pill pill--high">High</span> |
+| Email | Mandatory | Universal capture and approval channel | <span class="pill pill--high">High</span> |
+| QuickBooks Online | Table-stakes (narrow) | Easy API, but Intuit exited India; export/global-HQ SMBs only | <span class="pill pill--med">Medium</span> |
+| Busy / Marg | Mid-market | Trading, pharma, distribution SMBs; desktop, Tally-like pain | <span class="pill pill--med">Medium</span> |
+| Slack / Teams approvals | Mid-market | In-chat Approve/Deny with audit trail | <span class="pill pill--high">High</span> |
+| WhatsApp | India differentiator | Field-staff capture and approvals; cost and policy risk | <span class="pill pill--high">High</span> |
+| SSO (SAML/OIDC + SCIM) | Enterprise only | Procurement requirement upmarket; nice-to-have for SMB | <span class="pill pill--med">Medium</span> |
+| SAP / NetSuite / Dynamics | Enterprise only | Sales-led, 500+ employees; defer until demanded | <span class="pill pill--med">Medium</span> |
+| Corporate cards / bank feeds | Optional / partner | Separate spend-management play; partner, do not build | <span class="pill pill--med">Medium</span> |
+
+<p class="source-note">Sources: dataman.in (citing Gartner/McKinsey), Happay, Fyle/Sage, 6sense, Whautomate (vendor / analyst-cited). Tally share is vendor-claimed, not independently audited.</p>
+
+## Tally is the single biggest deal-maker
+
+Three facts converge into one conclusion. First, Tally runs the accounting for roughly 70-80% of Indian SMBs (vendor-claimed and trade-press repeated, NOT independently audited; the 80% headline traces to a Tally corporate profile, and Wikipedia cites no share figure at all). Treat the magnitude as directionally dominant and the precise percentage as a marketing claim. Second, eliminating dual data entry into the books is the most cited buying requirement among Indian Finance teams. Third, Tally's architecture makes a robust connector genuinely hard, so a working one is a moat that competitors keep failing to clear.
+
+The differentiation is real and observable. Fyle, now Sage Expense Management, lists Sage Intacct, QuickBooks, NetSuite and Xero on its integrations page and does not list Tally. Globally-built expense tools under-serve the Tally-centric market, which is exactly the gap an India-first indie should drive into.
+
+:::tip[The wedge]
+A bulletproof Tally connector is the single highest-leverage thing you can build. It is the most common reason Indian SMB and mid-market deals are won or lost, and its difficulty is precisely why the moat holds.
+:::
+
+### How Tally integration actually works
+
+Tally is a desktop, on-premise application with no official cloud REST API. Integration runs through a local HTTP server (default port 9000) that accepts TDL-formatted XML, an `ENVELOPE` of `HEADER` and `BODY` carrying Import, Export or Execute actions over TDL-defined collections. Your app POSTs XML to the Tally host to read and write vouchers, ledgers and reports.
+
+```text
+Your cloud SaaS  -->  local bridge agent  -->  http://<Tally-IP>:9000  -->  TallyPrime
+   (REST/JSON)         (REST/JSON to TDL XML)        (XML over HTTP)        (on-prem desktop)
+```
+
+Two other paths exist and both are lesser. ODBC is read-only, cannot do cross-company joins, and is officially deprecated from TallyPrime 4.0 onward in favour of the HTTP interface, so treat it as legacy BI extraction, not a primary write path. File-drop XML import (dropping XML into a watched folder) works but is brittle for two-way sync. The community helper worth knowing is TallyConnector, an open-source C#/.NET NuGet library that wraps the XML API so you work with objects instead of raw TDL. It is not a Tally product and it reduces pain rather than adding it.
+
+The protocol is not exotic. The difficulty is operational, and that is the part to engineer hard.
+
+| Operational constraint | Implication |
+| --- | --- |
+| Desktop, always-on | Tally must be running with the gateway service up, or sync silently stalls |
+| Static IP, port 9000 reachable | Firewall, antivirus and NAT exceptions per deployment; dynamic IPs break it |
+| Cloud-to-on-prem gap | Ship a small local agent, or support Tally-on-Cloud (RDP/hosted) reachability |
+| HTTP 200 on failure | Tally returns 200 even when an import fails; the error is buried in the response XML |
+| No concurrent writes | Serialize writes, queue and retry; never fire parallel voucher posts |
+| Per-company data folders | Multi-company setups need per-company folder registration |
+
+:::caution[Build the connector for the failure modes, not the happy path]
+Parse the response XML for errors rather than trusting the HTTP status, serialize and queue writes, and ship a local bridge agent that survives dynamic IPs and firewalls. The connector's value is its reliability under these conditions, which is exactly where rivals fall down.
+:::
+
+## The rest of the table-stakes stack
+
+After Tally, the rest of the stack is far easier and ranks by buyer segment.
+
+### Accounting, beyond Tally
+
+Zoho Books is table-stakes #2: a leading cloud challenger with a clean REST API and a natural fit if you sit in the Zoho ecosystem. QuickBooks Online is easy to integrate but narrow in relevance because Intuit exited the standalone India product, so its value concentrates in export-oriented or global-HQ SMBs. Busy and Marg matter for trading, pharma and distribution mid-market and carry Tally-like desktop friction. SAP, Oracle NetSuite and Microsoft Dynamics are enterprise-only; defer them until a paying enterprise deal funds the work.
+
+### HRMS and payroll: the second strategic layer
+
+Payroll integration is the second investment because it does two jobs: it supplies the employee master (employee IDs, cost centers, bank details) for auto-onboarding, and it enables reimburse-via-payroll, the dominant Indian reimbursement path where approved claims are paid through the salary run. Prioritise GreytHR and Zoho People/Payroll for SMB, Keka for mid-market, and RazorpayX Payroll (a unified HRIS API exposing the employee directory plus bank details). A unified HRIS aggregator can cover the long tail cheaply. This wiring is what makes the [claim-to-pay workflow](/product/workflow/) feel native rather than bolted on.
+
+### SSO and comms
+
+SSO via SAML/OIDC plus SCIM provisioning (Microsoft Entra, Okta, Google Workspace) is an enterprise and mid-market procurement requirement, not an SMB default; offer Google sign-in on day one because it is cheap and high-value, and add SCIM only when closing deals that demand automated provisioning. For comms, email is mandatory, Slack and Teams approval cards are mid-market table-stakes, and WhatsApp is the uniquely Indian differentiator for field-staff capture and approvals.
+
+:::caution[WhatsApp carries cost and policy volatility]
+WhatsApp approvals must run through a BSP (Gupshup, Interakt) on template-based messages. Meta's India per-message rates effective 1 Jan 2026 are about ₹0.115 for utility/authentication and ₹0.8631 for marketing, plus a 10-30% BSP markup (vendor-published, medium confidence). Meta can reclassify a utility template to the costlier marketing tier (effective 9 Apr 2025), and from July 2025 it moved to per-message pricing and generic survey-style prompts default to the marketing tier. Build approval prompts strictly as utility templates and budget for reclassification risk.
+:::
+
+## The survival verdict and the expansion path
+
+The standalone product is a wedge, not a destination. <span class="pill pill--caution">Caution</span> sold as isolated receipt-capture it gets commoditised by Zoho and stays acquisition-bait at best. <span class="pill pill--build">Build</span> it integration-first, anchored on a bulletproof Tally connector with Zoho Books and payroll close behind, and it becomes sticky, defensible and acquisition-ready.
+
+The expansion path is vendor-reimbursement adjacency leading into AP automation and vendor payments: a larger, GST-mandate-driven market reachable from the same accounting and payroll integrations you already built. That is the growth story that turns survival into a real business. The sequencing of these connectors is laid out in the [build plan and roadmap](/business/roadmap/), and the integration posture feeds directly into the [final scored verdict](/business/verdict/).
+
+## Sources
+
+- [Tally Software India 2025 (cites Gartner 75%, McKinsey 78%)](https://dataman.in/tally-software-india-2025/) (vendor/SEO, republishes analyst figures)
+- [Integration with TallyPrime](https://help.tallysolutions.com/integrate-with-tallyprime/) (primary, Tally official)
+- [XML Integration](https://help.tallysolutions.com/xml-integration/) (primary, Tally official; XML over HTTP port 9000)
+- [Integration using ODBC Interface](https://help.tallysolutions.com/using-odbc-interface/) (primary, Tally official; ODBC read-only and deprecated)
+- [TallyConnector C#/.NET library](https://github.com/Accounting-Companion/TallyConnector) (primary, community open-source wrapper)
+- [Tally Prime Reconciliation Automation](https://www.terra-insight.com/insights/tally-prime-reconciliation-automation-india/) (vendor; HTTP-200-on-failure, no concurrency)
+- [Sage Expense Management (Fyle) Integrations](https://www.fylehq.com/product/integrations) (primary; lists no Tally integration)
+- [Zoho Payroll Expense Integration](https://www.zoho.com/in/payroll/help/employer/integrations/integrations-expense.html) (primary, vendor; reimburse-via-payroll)
+- [RazorpayX Payroll HRIS API](https://truto.one/integrations/detail/razorpayxpayroll) (vendor; employee directory + bank details)
+- [WhatsApp Business API Pricing India 2026](https://whautomate.com/whatsapp-business-api-pricing-india) (vendor; Meta per-message rates, BSP markup)

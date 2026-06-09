@@ -1,0 +1,85 @@
+---
+title: Buying Committee and ICP
+description: Who actually buys across SMB to enterprise, the HR-versus-Finance question, and the recommended ICP.
+---
+
+Sell to Finance, not HR, in the 50 to 500 employee band. Finance owns the maker-checker control, the GST and TDS treatment, and the payout, and that is where the pain converts into a hard rupee number a CFO will sign for. HR co-owns the experience layer (claim intake, turnaround time as a KPI, payroll-cycle disbursal), and ownership is genuinely shared in India, so the right move is a per-deal qualifier that routes the pitch rather than a single global answer.
+
+<span class="pill pill--build">Lead ICP</span> Finance-led, 50 to 500 employees, Tally or ERP-first, field-or-travel-heavy. <span class="pill pill--med">Medium</span> confidence on the segmentation: it is synthesized from HRMS-vendor content (biased toward HR ownership), finance-ops content (biased toward Finance ownership), and general B2B SaaS committee research, not India-specific committee studies. Treat it as directional and validate with primary interviews.
+
+## The buying committee by segment
+
+The economic buyer moves up the org chart as headcount grows; the champion and the blocker stay roughly constant. SMB deals close on one signature, mid-market needs Finance plus an HR co-sponsor, and enterprise drags in an 11 to 20 person committee that an indie team should simply not chase early.
+
+| Segment (employees) | Economic buyer | Champion | Blocker |
+| --- | --- | --- | --- |
+| SMB (10 to 200) | Owner / founder | Finance/AP person or office manager drowning in manual reconciliation | Price vs spreadsheets; "Tally already does this" |
+| Mid-market (200 to 2000) | CFO / Finance Head, often with HR co-sponsor | Finance/AP lead or HR-Ops lead | IT/Security (DPDP, SSO); Finance demanding proven Tally/payroll integration |
+| Enterprise (2000+) | CFO + Finance Controller (committee) | Internal Audit / Finance Controller | Procurement, IT/Security, Internal Audit; the full 11 to 20 person sign-off |
+
+<p class="source-note">Source: segmentation synthesized from ZoomInfo, DemandWorks, Smarketers (general B2B SaaS, medium confidence); India persona detail from HROne and MYND (HRMS/finance-ops vendor blogs, directional). Enterprise committee size 11 to 20 per Smarketers, 2025.</p>
+
+The **maker-checker** (4-eyes) split defines the two Finance personas. The Finance/AP executive is the Maker who validates documents, checks GST ITC eligibility and TDS treatment, and prepares the payout. The Finance Controller or CFO is the Checker and budget owner. Approval authority follows a rupee-tiered Delegation of Authority matrix (illustratively: junior manager up to Rs 10,000, department head up to Rs 1,00,000, high-value to the CFO). Build that matrix as a first-class feature, not a setting. See [maker-checker and the DoA state machine](/product/maker-checker/).
+
+## The HR-versus-Finance question: a 2-question qualifier
+
+Ownership is contested, not exclusive. Finance owns GL posting, GST/TDS compliance, the maker-checker control, and audit. HR increasingly owns the employee-experience layer in mid-market firms (roughly 100 to 5,000 employees), where reimbursement turnaround time sits in the same HR inbox as leave and attendance and correlates with field-sales attrition. Do not over-claim a single owner. Resolve it per deal with two questions.
+
+:::tip[The 2-question qualifier]
+
+1. **Who owns the expense policy today?** If HR/HR-Ops wrote and enforces it, the HR-Ops lead is your champion. If Finance/AP owns it, Finance is your champion.
+2. **Where does payout happen, payroll or AP?** Payroll disbursal points to an HRMS-first stack and an HR champion. AP/bank-file or vendor payout points to a Finance/Tally-first stack and a Finance champion.
+
+:::
+
+The answers route the pitch and pick the wedge.
+
+| Stack signal | Champion | The wedge to lead with |
+| --- | --- | --- |
+| HRMS-first (Keka, Zoho People, Darwinbox), payroll disbursal | HR-Ops lead | Native payroll-cycle disbursal and employee experience (TAT, mobile capture) |
+| Tally/ERP-first, AP or bank-file payout, corporate cards | Finance/AP lead | Tally-native sync plus GST ITC capture and TDS section mapping |
+
+For an indie team, default to the Finance fork. Read [the full persona set](/users/personas/) and jobs-to-be-done behind each champion.
+
+## Why the Finance-led 50 to 500 ICP
+
+Three reasons, all rupee-denominated, which is exactly why this ICP closes.
+
+- **Finance owns the controls buyers actually pay for.** Maker-checker with a rupee-tiered DoA matrix is the single most India-specific buying requirement and a credibility signal to Finance and auditors. HR cannot sign for it; Finance can.
+- **The pain converts to hard rupees.** When invoices lack the company GSTIN, the embedded GST on the affected line items leaks as unclaimed Input Tax Credit (commonly up to 18% of those items' taxable value, not 18% of total spend) absent a validated approval gate (MYND, vendor-sourced, <span class="pill pill--low">Low</span> confidence, treat as directional). GSTIN validation plus eligible-vs-blocked ITC flagging under Sec 17(5) turns a soft ROI into a number a CFO can defend. TDS section mapping (194C/194J) and pure-agent vendor-reimbursement handling extend the same logic.
+- **The 50 to 500 band buys software, not committees.** Below 50, the owner often decides Tally is enough. Above 500, you hit the 11 to 20 person committee, the SOC 2 wall, and procurement. The 50 to 500 band has a real Finance owner, a quantifiable problem, and a short enough cycle for a small team.
+
+Pitch HR-experience benefits (faster reimbursement, one-payroll-cycle settlement) as the secondary win, not the headline. The headline is ITC recovery, maker-checker, and Tally. This aligns with [the thesis wedge](/market/whitespace/) and [the executive-summary verdict](/overview/executive-summary/).
+
+:::caution[Soft pain stats, label them]
+The headline pains (manual TAT of 8 to 12 days, 4 to 8% fraud leakage, embedded GST on affected line items leaking as ITC, ~48% of Indian firms lacking T&E fraud detection, ~10 hours/month lost per employee) come from HRMS and finance-ops vendor blogs (HROne, FieldAssist, MYND, Fortune Business Insights). They have an incentive to dramatize. Two of these are not corroborated by the dossier's own research: the ~48% fraud-detection figure (Fortune Business Insights blog, <span class="pill pill--low">Low</span> confidence) and the ~10 hours/month per employee figure (vendor blog; the thesis cites 40 to 60 hours/month at the finance-team level, not 10 hours per employee). Use all of these as directional, label them vendor-sourced, and do not launder them into audited facts.
+:::
+
+## Buying triggers and objections
+
+Triggers are what make a prospect start looking; objections are what stalls the deal. Both are Finance-weighted in our ICP.
+
+| Buying triggers | Top objections |
+| --- | --- |
+| Field-sales attrition from delayed reimbursement (out-of-pocket cash strain) | Weak or unproven Tally/ERP/payroll integration ("show data flowing into our ERP") |
+| GST ITC leakage: embedded GST on affected line items unclaimed, up to 18% of those items' taxable value (vendor-sourced) | Rigid approval workflows that break during reorgs |
+| Audit finding or fraud (~48% of Indian firms reportedly lack T&E fraud detection; Fortune Business Insights, vendor-sourced, low confidence, not thesis-corroborated) | Data security and DPDP (IT/Security blocker) |
+| Month-end close pain (spreadsheet/CSV-to-ERP reportedly adds 3 to 4 days; vendor-sourced, low confidence) | Price vs spreadsheets, and "Tally already does this" |
+
+<p class="source-note">Source: triggers and objections from HROne, FieldAssist, MYND, Navan, Payhawk (vendor blogs, 2025 to 2026, directional/medium confidence).</p>
+
+Two blockers deserve early disarming. IT/Security gates on the DPDP Act 2023 (Rules notified 14 Nov 2025, substantive data-fiduciary obligations phased to ~May 2027; penalty ceiling Rs 250 crore for security-safeguard failure). Pre-empt it with SSO, role-based access, an immutable timestamped audit trail, and DPDP-aligned data-processor terms; lead with ISO 27001 and defer SOC 2. Finance gates on integration proof: show live data landing in Tally, which is the near-mandatory India SMB requirement and the one foreign tools (Fyle/Sage, USD-priced, no Tally) cannot match.
+
+Price and packaging for this committee live in [pricing and packaging](/business/pricing/); the channel motion (CA-accountant and Tally-reseller referral, founder-led WhatsApp/email, no early outbound SDR) lives in [the go-to-market plan](/business/gtm/).
+
+## Sources
+
+- [Expense Management Software India: HR-led ownership, personas, TAT/fraud/ITC](https://hrone.cloud/blog/expense-management-software-india-hr) (vendor, directional)
+- [Setting Up Expense Approval Workflows in India (MYND)](https://www.myndsolution.com/best-practices/setting-up-expense-approval-workflows-in-expense-and-travel-management-in-india/) (vendor, DoA tiers and maker-checker)
+- [Maker-checker (4-eyes principle)](https://en.wikipedia.org/wiki/Maker-checker) (primary, neutral definition)
+- [What Is Expense Management Software? Field Sales (FieldAssist)](https://www.fieldassist.com/blog/what-is-expense-management-software-top-systems-india) (vendor, field-agent pains)
+- [The Real Differences Between SMB, Midmarket, and Enterprise AEs (ZoomInfo)](https://pipeline.zoominfo.com/sales/difference-between-smb-midmarket-enterprise-account-executives) (analyst, segment buyer differences)
+- [Mapping the B2B Buying Committee / ABM (Smarketers)](https://thesmarketers.com/blogs/buying-committee-marketing-abm/) (analyst, committee size 11 to 20)
+- [Decoding the DPDP Act 2023 and Rules 2025 (EY India)](https://www.ey.com/en_in/insights/cybersecurity/decoding-the-digital-personal-data-protection-act-2023) (analyst, DPDP timeline and penalties)
+- [Enterprise Expense Management Software Buyer's Guide (Navan)](https://navan.com/blog/enterprise-expense-management-software) (vendor, objections)
+- [Expense Management Software Market Size (Fortune Business Insights)](https://www.fortunebusinessinsights.com/expense-management-market-107094) (analyst, fraud and productivity stats)

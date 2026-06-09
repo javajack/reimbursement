@@ -1,0 +1,91 @@
+---
+title: Executive Summary
+description: "The verdict in one page: a conditional build for a Tally-native, WhatsApp-first SMB reimbursement product, and why."
+---
+
+<span class="pill pill--build">Build</span> <span class="pill pill--caution">Conditional</span>
+
+Build it, but only as a narrow wedge: a software-only, **Tally-native, WhatsApp-first reimbursement product for sub-200-employee Indian SMBs and field-heavy verticals**, with money movement partnered out and revenue earned on software seats, not card float. Do NOT build a horizontal Zaggle / Happay / Volopay clone, and do NOT build a card-issuing or float business. The card pool is closed to an indie team; the software pool is not.
+
+## What the product is
+
+One loop, run for both employees and vendors: capture, then extract, then decide, then approve, then pay, then post.
+
+```text
+capture (WhatsApp / mobile / email)
+  -> OCR + GST field extraction (GSTIN, ITC eligibility, line items)
+  -> configurable rule engine (allow / flag / warn / cap / block / route)
+  -> maker-checker approval (rupee-tiered Delegation-of-Authority + SLA escalation)
+  -> payout from a configurable source bank account (bank file hand-off or partner API)
+  -> two-way accounting sync (Tally first, then Zoho Books)
+```
+
+The vendor-reimbursement side (TDS under 194C/194J, RCM, the MSME 45-day / Sec 43B(h) clock) is the adjacency that points at the larger, mandate-driven AP-automation market. Treat it as a deliberate path, not a feature checkbox.
+
+## The verdict and why
+
+Incumbents do not win on better software. Zaggle, the listed bellwether (FY25 revenue ~₹1,303 cr, +68% YoY), earns roughly 75 to 80 percent of revenue from card interchange and program fees; SaaS subscriptions are only about 3 percent of revenue (Zaggle 9MFY24 investor deck, vendor-stated, <span class="pill pill--low">Low</span> confidence on the precise share). That float-and-interchange pool needs RBI licensing (non-bank PPI net worth ₹5 cr rising to ₹15 cr) or a bank partner. An indie team cannot match those unit economics and should not try.
+
+So compete where software still decides the deal. The wedge is India-native compliance and integration depth, which is hard to copy precisely because it is unglamorous.
+
+:::tip[The wedge]
+
+Tally-native two-way sync is the single biggest deal-maker. Tally is ~70 to 80 percent of Indian SMB accounting (vendor-claimed, not independently audited). Its interface is painful (desktop, on-prem, XML-over-HTTP on port 9000), which is exactly why foreign cloud tools like Fyle/Sage skip it. Pair it with GST ITC capture, WhatsApp/field capture, and cash-advance settlement. See [the whitespace](/market/whitespace/).
+
+:::
+
+The price umbrella is real. Zoho anchors the floor (Free up to 3 users; Standard ₹99/user/mo, ₹79 annual; Premium ₹199/₹149; min 5 users, plus GST). Foreign tools price in USD: Fyle/Sage ~USD 11.99 to 14.99/user/mo, roughly 10x the India software point. Do not undercut Zoho on raw price; win on India reimbursement workflow.
+
+## The market in one paragraph
+
+Small but genuinely fast-growing, not large. No tier-1 analyst publishes an India-only expense-software number, so treat any single "India market USD X" headline as suspect. Our defensible synthesis: India expense/T&E software is ~USD 120 to 350M today (point ~USD 150 to 250M), growing ~14 to 18 percent CAGR [our synthesis + adversarial check, medium]. MRFR's ~USD 593M-by-2025 figure is an outlier ceiling, not consensus. A bottoms-up build (~50k to 150k addressable companies x ~USD 1.3 to 2.5k ACV) lands at ~USD 150 to 300M TAM, SAM ~USD 80 to 150M, with a realistic 3-year indie SOM of ~USD 0.5 to 2M ARR [our derivation, low-medium]. The global frame: expense-management software ~USD 8.33 to 8.48B (2025 to 26), a range spanning two analysts (Fortune Business Insights ~8.33B, Mordor ~8.48B), with APAC the fastest region ~17.1 percent CAGR [analyst, medium]. Full numbers and method live at [market size](/market/size/).
+
+:::note[MVP cut line: get the over-ask right]
+
+**IN (3 to 6 months, small team):** WhatsApp + mobile + email capture; LLM-vision OCR with GST field extraction; configurable rule engine (allow / flag / warn / cap / block / route) with line-item-then-claim rollup; maker-checker FSM with rupee-tiered DoA and SLA escalation; PAN + bank penny-drop whitelisting; line-item partial approval; GST ITC tagging; Tally + Zoho Books sync; payout via bank file hand-off (optional RazorpayX); immutable audit trail; per-active-submitter pricing with a small free tier.
+
+**OUT (defer until a paying deal funds it):** own corporate cards / PPI / float; SOC 2; live Aadhaar auth; deep ERP (SAP/NetSuite/Dynamics); travel booking; multi-entity ISD/cross-charge; bespoke fraud ML; native-app polish.
+
+The full feature matrix is at [MVP scope](/product/mvp-scope/).
+
+:::
+
+## Five reasons to build
+
+| # | Reason | Evidence | Confidence |
+|---|--------|----------|------------|
+| 1 | Software-only wedge incumbents under-serve | Card players chase mid-market float deals; foreign tools skip Tally and price in USD | <span class="pill pill--high">High</span> |
+| 2 | Tally-native sync is hard, so it is defensible | XML-over-HTTP port 9000, on-prem, no cloud API; Fyle/Sage and most rivals do not integrate it | <span class="pill pill--high">High</span> |
+| 3 | GST ITC capture converts soft ROI to hard rupees | Sec 17(5) eligibility, GSTR-2B reconciliation give the CFO a real number | <span class="pill pill--med">Medium</span> |
+| 4 | Cheap, India-native distribution and unit cost | WhatsApp capture removes app-install friction; OCR via LLM-vision ~USD 0.0005 to 0.003/doc | <span class="pill pill--med">Medium</span> |
+| 5 | Clean exit path via integration depth | Happay went to MakeMyTrip; Fyle went to Sage; travel and accounting suites buy expense tools | <span class="pill pill--high">High</span> |
+
+<p class="source-note">Sources: Zaggle investor materials, Tally docs, our cost-stack derivation (mixed: primary / vendor / our derivation).</p>
+
+## Three ways it fails
+
+1. **You compete on cards or float.** Structurally unwinnable against ~75 to 80 percent interchange economics without RBI licensing or a bank partner. Stay a technology provider.
+2. **You drift into low-margin services.** At the ₹99 to 199 point with heavy onboarding and Tally/OCR edge-case support, a 2-person team can be dragged into consulting. Cap implementation; monetize seats.
+3. **You hit the trust wall undercapitalized.** ISO 27001 (~₹5 L), DPDP, and eventually SOC 2 plus VAPT gate the first mid-market deal. Sequence ISO 27001 first; defer SOC 2 until a US-HQ deal funds it.
+
+:::danger[The product invariant that never moves]
+
+Funds must NEVER touch an account the SaaS owns or controls. Use file hand-off to the customer's own bank, a regulated partner (RazorpayX/Cashfree) initiating from its own escrow, or connected banking on the customer's current account. Pooling funds triggers Payment Aggregator (net worth ₹15 cr at application) or PPI licensing. Get a written legal opinion before go-live. See [money movement](/compliance/money-movement/).
+
+:::
+
+## Who should build it
+
+A small, finance-literate, India-based team that can stomach the Tally integration grind and sell founder-led through CA firms, Tally resellers, and Zoho/Tally marketplace listings. The lead ICP: finance-led companies, 50 to 500 employees, Tally/ERP-first, field-or-travel-heavy. The economic buyer is the CFO, Finance Controller, or owner-founder; the champion is the Finance/AP or HR-Ops person drowning in manual reconciliation. Not for a team that wants to issue cards, raise large, or build horizontal breadth. The full scored decision is at [the verdict](/business/verdict/).
+
+## Sources
+
+- [Zaggle Q4FY24 Investor Presentation](https://ipo.zaggle.in/wp-content/uploads/2024/05/investor-presentation-zaggle-Q4FY24.pdf) (primary): interchange ~75 to 80 percent of revenue.
+- [Zaggle results, INDmoney](https://www.indmoney.com/stocks/zaggle-prepaid-ocean-services-ltd-share-price/results) (vendor/aggregator): FY25 revenue, SaaS per-user pricing.
+- [Mordor Intelligence, Expense Management Software Market](https://www.mordorintelligence.com/industry-reports/expense-management-software-market) (analyst): global ~USD 8.48B, APAC fastest.
+- [Fortune Business Insights, Expense Management Market](https://www.fortunebusinessinsights.com/expense-management-market-107094) (analyst): global ~USD 8.33B; smaller India breakout.
+- [Zoho Expense India pricing](https://www.zoho.com/in/expense/pricing/) (vendor): the SMB price anchor.
+- [Fyle / Sage Expense Management pricing](https://www.fylehq.com/pricing) (vendor): USD pricing, no Tally integration.
+- [RBI FAQs, Prepaid Payment Instruments](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812) (govt): PPI net-worth thresholds.
+- [Tally, Integration with TallyPrime](https://help.tallysolutions.com/integrate-with-tallyprime/) (primary): XML/TDL/ODBC, no cloud API.
+- [MakeMyTrip to Acquire Happay from CRED (BusinessWire)](https://www.businesswire.com/news/home/20241118432629/en/MakeMyTrip-to-Acquire-Happay-Expense-Management-Platform-from-CRED) (primary): exit-path evidence.

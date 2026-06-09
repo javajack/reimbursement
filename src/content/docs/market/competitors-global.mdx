@@ -1,0 +1,86 @@
+---
+title: Global Benchmarks and the Feature Bar
+description: What Ramp, Brex, Navan, Pleo, Spendesk and Concur set as table-stakes, and why they cannot easily serve India.
+---
+
+The global leaders set the software bar, and it is high: AI receipt OCR, real-time policy enforcement on virtual and physical cards, automated accounting sync, approvals, and increasingly AP automation and travel in one platform. None of that is a moat in India. A foreign issuer cannot directly issue INR corporate cards, so the card layer (the global hero feature) is exactly the part a foreign player cannot ship locally without an RBI-licensed partner. That redraws the board: OCR, cards and approvals are <span class="pill pill--info">table-stakes</span>, and the genuine India differentiator is compliance and rails, not the card.
+
+## The feature bar the leaders set
+
+US "all-in-one" platforms (Ramp, Brex, Navan), European card-led players (Pleo, Spendesk, Payhawk, Mesh), and legacy/standalone expense tools (SAP Concur, Expensify) have converged on one consistent feature set. Industry roundups now treat AI receipt OCR, ML auto-categorization, real-time card controls, customizable approvals, and touchless accounting sync as essential, not premium. On OCR specifically, vendors advertise 99%+ extraction on clean printed receipts, but real-world India accuracy falls to the low-to-mid 80s on faded thermal, handwritten and Devanagari documents; see [bill digitization and fraud](/product/ocr/) for the honest range. _(vendor/marketing roundups, medium confidence: these blogs carry commercial bias, so read the bar as directional.)_
+
+| Player | Origin | Hero features | India card issuance |
+| --- | --- | --- | --- |
+| Ramp | US, card-led | Free unlimited virtual/physical cards (1.5% cashback, no annual fee), AI OCR, real-time limits, accounting sync | Not confirmed (India status unverified) |
+| Brex | US, card-led | Multi-currency cards across many countries, AI OCR, multi-currency budgets | No: reimbursement-only in India |
+| Navan | US, travel + expense + card | Travel booking + corporate card + expense + AI assistant; India entity via Tripeur | Partial footprint; no local INR card evidenced |
+| Pleo | EU, card-led | Mastercard cards, 50+ currencies, OCR, approvals | No: EU/UK-only, not in India |
+| Spendesk | EU, procure-to-pay | Cards + AP + expense + procurement; international pay via Wise | No: EEA/UK customers only |
+| Payhawk | EU, card-led | Cards, multi-entity, real-time sync, NetSuite/Dynamics/Xero | No: cards for UK and US entities only |
+| Mesh | Global, T&E + cards | Virtual/physical cards, real-time controls, auto-categorization, travel | Via Zaggle partnership, not direct |
+| SAP Concur | Enterprise T&E | Expense + Travel + Invoice, multi-currency, India portal | Not a card issuer; GST needs custom workflows |
+| Expensify | Global, SMB | SmartScan OCR, auto-categorization, ACH reimbursement, QuickBooks/NetSuite | Not a card issuer; sells in INR, GST clunky |
+
+<p class="source-note">Source: vendor product/help pages and Capterra India listings, 2025 (vendor, high-to-medium confidence; European India-absence claims rest on help pages, not explicit vendor statements).</p>
+
+The bar is real and worth meeting. But notice what it is built around: a corporate card that funds spend up front and enforces policy at swipe. That is the part that does not cross the border.
+
+## The hard India constraint
+
+A foreign issuer cannot directly issue INR corporate cards. Card and PPI issuance requires an India-incorporated, RBI-authorized issuer (banks under RBI approval; non-bank PPIs as companies incorporated under the Companies Act and authorized under the Payment and Settlement Systems Act 2007), and INR foreign-exchange conversion must run through FEMA-licensed entities. _(RBI/FEMA, high confidence.)_ The RBI 2025 credit-card directions and draft PPI rules tighten capital, KYC and limits further.
+
+:::danger[Regulatory invariant]
+Issuing INR corporate cards needs an RBI-authorized bank or a non-bank PPI plus FEMA-compliant FX. A foreign platform cannot ship its hero card feature into India without a domestic regulated partner. See [the compliant money-movement architecture](/compliance/money-movement/).
+:::
+
+This single constraint explains every global player's India posture:
+
+- **Brex** added India "global reimbursements" in INR in its Spring 2025 release (early access): repay employees in local currency, fundable from a local Indian bank account, with an INR payout cap of ₹5,00,00,000 (₹5 crore) and a minimum of ₹1. It is reimbursement-only. No local card issuance. _(Brex support docs, high confidence; "early access" scope may change.)_
+- **Mesh** entered India in May 2025 through a partnership with listed Indian player Zaggle, rather than building local infrastructure. Mesh's global clients tap Zaggle's card and forex ecosystem inside India; Indian MNCs use Mesh abroad. This is the template: partner the regulated layer. _(PR Newswire, high confidence.)_
+- **Navan** is the most India-committed US player, having acquired Bangalore TMC Tripeur in April 2023 and operating Navan Labs India, but reviewers flag USD-default currency behavior at checkout. _(FinTech Futures + Capterra India, high/medium.)_
+- **Pleo, Spendesk, Payhawk** do not operate in India as a market. Pleo is EU/UK-only (14 countries). Spendesk serves EEA/UK customers (it can pay into India, but does not sell there). Payhawk cards are UK and US entity-only. _(vendor help pages, medium confidence.)_
+
+The pattern is consistent: the card is the moat that keeps them out, so they either skip India, go reimbursement-only, or partner a domestic issuer.
+
+## Where the global tools are actually weak
+
+Even the players that do sell in India are thin on India-native compliance. Expensify sells in INR (roughly ₹350-450/user/month per Capterra India listing, may be stale) with strong SmartScan OCR, but a reviewer reports "we had to build custom workflows for GST compliance, not ideal for India." _(Capterra India / Asanify, high.)_ SAP Concur runs concur.co.in and supports multi-currency, but India commentary says GST input-tax-credit handling typically needs custom workflows. _(secondary commentary, medium: the primary Concur India page returned 403 on fetch, so native GST depth is inferred, not confirmed.)_ Emburse, Rydoo and Webexpenses appear in India comparison lists but show no evidenced GST/ITC localization or Tally sync.
+
+This is the opening. The work these tools do well (OCR, card controls, approvals, ERP sync to QuickBooks/NetSuite/Xero) is precisely the work that does not earn a rupee of input-tax credit for an Indian CFO.
+
+## Table-stakes vs the India differentiator
+
+The wedge is not the card and not the OCR. Both are table-stakes; you must meet the bar, but meeting it wins nothing. The differentiator is India-native compliance and local rails, exactly where global tools are weakest. See [the wedge and gaps](/market/whitespace/) for the full wedge and [how the India incumbents stack up](/market/competitors-india/) for the local picture.
+
+| Capability | Status | Why |
+| --- | --- | --- |
+| AI receipt OCR / auto-categorization | <span class="pill pill--info">Table-stakes</span> | Every leader ships it; LLM-vision makes it cheap. See [/product/ocr/](/product/ocr/) |
+| Real-time policy on corporate cards | <span class="pill pill--info">Table-stakes</span> | The global hero feature, but card issuance needs an RBI partner |
+| Approvals / maker-checker | <span class="pill pill--info">Table-stakes</span> | Expected everywhere; India needs rupee-tiered DoA depth |
+| Accounting sync | <span class="pill pill--info">Table-stakes</span> | Global tools default to QuickBooks/NetSuite/Xero, not Tally |
+| GSTIN + CGST/SGST/IGST + HSN/SAC capture | <span class="pill pill--build">Differentiator</span> | Global tools do not extract or validate this natively |
+| GSTR-2B / ITC reconciliation | <span class="pill pill--build">Differentiator</span> | Turns soft ROI into a hard rupee number for the CFO |
+| TDS on vendor reimbursements (194C/194J/194H) | <span class="pill pill--build">Differentiator</span> | Underserved; most global tools do employee expense only |
+| Tally + Zoho Books two-way sync | <span class="pill pill--build">Differentiator</span> | The single biggest deal-maker for sub-200-employee SMBs |
+| UPI / IMPS / NEFT local payouts | <span class="pill pill--build">Differentiator</span> | Global tools reimburse via ACH; India needs local rails |
+
+<p class="source-note">Source: our synthesis from Mysa, Happay and Zoho India docs, 2025-26 (our derivation + vendor, medium confidence).</p>
+
+:::tip[The takeaway]
+Do not try to out-Ramp Ramp. Meet the OCR/approvals/sync bar, partner or defer the card, and win on what they structurally cannot do well: GST ITC capture, TDS, Tally-native sync, and UPI payouts. Tally is ~70-80% of Indian SMB accounting (vendor-claimed, not independently audited), and global tools default away from it.
+:::
+
+The verdict for an indie team: <span class="pill pill--build">Build</span> the compliance-and-rails wedge, <span class="pill pill--caution">partner</span> the card layer (as Mesh did with Zaggle), and <span class="pill pill--avoid">avoid</span> trying to issue cards or hold float yourself.
+
+## Sources
+
+- [Brex, Global reimbursements (support)](https://www.brex.com/support/global-reimbursements) (vendor): INR payout cap ₹5 crore, reimbursement-only India scope
+- [Brex, Spring Release 2025](https://www.brex.com/spring-2025) (vendor): India and Israel local-currency reimbursements, early access
+- [PR Newswire, Zaggle x Mesh Payments partnership](https://www.prnewswire.com/news-releases/zaggle-x-mesh-payments--announce-strategic-partnership-to-power-global-spend-management-302454861.html) (primary): May 2025 India entry via partnership
+- [FinTech Futures, Navan acquires Tripeur](https://www.fintechfutures.com/m-a/navan-acquires-indian-travel-expense-management-firm-tripeur) (analyst): April 2023 Bangalore TMC acquisition
+- [Pleo, FAQ (supported countries)](https://www.pleo.io/en/faq) (vendor): EU/UK-only list, India absent
+- [Payhawk, Pricing and Plans](https://payhawk.com/en-us/pricing-and-plans) (vendor): cards for UK and US entities only
+- [Capterra India, Expensify](https://www.capterra.in/software/97594/expensify) (vendor): INR pricing ₹350-450/user/month
+- [Asanify, Best expense management software 2025](https://asanify.com/blog/human-resources/best-expense-management-software-2025/) (vendor): Expensify GST custom-workflow reviewer quote
+- [SimplyBiz, RBI PPI compliance requirements](https://simplybiz.in/rbi-reporting-requirements-and-compliances-for-prepaid-payment-instruments-ppis-in-india/) (primary): non-bank PPI must be India-incorporated, RBI-authorized; FEMA FX
+- [TaxGuru, RBI Credit/Debit Card Directions 2025](https://taxguru.in/rbi/reserve-bank-india-commercial-banks-credit-cards-debit-cards-issuance-conduct-directions-2025.html) (govt): 2025 card issuance rules

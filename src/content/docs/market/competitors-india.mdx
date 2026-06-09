@@ -1,0 +1,96 @@
+---
+title: "Competitive Landscape: India"
+description: The four camps of Indian incumbents, a player-by-player table, and the whitespace they leave.
+---
+
+The Indian field is crowded but stratified, and the stratification is the opportunity. Incumbents win on distribution, bank partnerships, and card interchange plus float, not on superior reimbursement software. Roughly 75-80% of Zaggle's revenue is card interchange, not SaaS fees. Most apparent competitors are card businesses in an expense-software costume; the few pure-software players either anchor near-zero price (Zoho) or have left the building (Fyle to Sage, Happay's expense business to MakeMyTrip). That leaves a real seam for a software-only, India-native reimbursement product. <span class="pill pill--build">Build</span>
+
+## The four camps
+
+The market sorts into four camps with different economics. Understanding which camp a "competitor" sits in tells you how they make money, and therefore where they cannot follow you.
+
+| Camp | How they monetise | Who they serve | Can an indie compete? |
+| --- | --- | --- | --- |
+| Pure expense SaaS | Per-user/month seats | SMB to mid-market | Yes, on India depth, not price |
+| Card-led spend management | Interchange, FX, float; software given away | Funded startups, mid-market | Not on their terms; avoid card economics |
+| Benefits / prepaid cards | PPI float, FBP tax-saving wallets | HR-led benefits buyers | Adjacent, not the same job |
+| Banks | Corporate card interchange | Mid-market, enterprise corporates | They lack workflow software entirely |
+
+:::tip[Where software still decides]
+Compete where the incumbents are weakest: India-native compliance depth (GST ITC, GSTIN validation), native Tally two-way sync, field/mobile and WhatsApp capture, and reimbursement speed. Cards and OCR are table-stakes; do not try to out-card a card business. See [the wedge](/market/whitespace/).
+:::
+
+### Camp 1: pure expense SaaS
+
+Zoho Expense is the price and feature leader for small business, and it is the floor you cannot undercut on raw price: Free up to 3 users, Standard ₹99/user/mo (₹79 annual), Premium ₹199 (₹149 annual), minimum 5 users, plus GST. [vendor page, high] Fyle and SutiExpense and ExpenseOnDemand round out the camp. Fyle was India-founded and card-agnostic, with clever Indian bank-SMS parsing, but Sage acquired it in July 2025 and rebranded it Sage Expense Management; its focus now skews to the Sage and US ecosystem. SutiExpense bills per active submitter (approvers and admins free) from roughly ₹600/user/mo historically. ExpenseOnDemand bills modularly on usage.
+
+### Camp 2: card-led spend management
+
+Volopay, EnKash, Kodo, Karbon, and RazorpayX bundle a corporate card with "free" expense software and monetise interchange, FX, and float. This is structurally cheaper than any SaaS-only price for funded startups, which is exactly why you should not chase that segment on price. EnKash is the standout: it holds Payment Aggregator, BBPOU, and a 2025 PPI licence, a regulatory stack an indie cannot replicate without capital and years. That licensing moat is the point: it is also the wall you do not need to climb if you stay a [technology provider and never touch funds](/compliance/money-movement/).
+
+### Camp 3: benefits and prepaid cards
+
+Zaggle, Pluxee (formerly Sodexo), and Pazcare serve meal, fuel, and Flexible Benefit Plan tax-saving wallets. This is HR-led benefits, adjacent to but distinct from T&E reimbursement. Zaggle is the listed bellwether and a useful proxy for the camp's economics: a card-and-float business with an expense product ("Save") attached, not the reverse.
+
+### Camp 4: banks
+
+ICICI, HDFC, Axis, and SBI offer corporate cards with reporting bolted on via Visa Spends Clarity and Mastercard SmartData. There is no real workflow software here: MCC restrictions, per-card limits, consolidated statements, and card-data exports, but no maker-checker, no GST ITC tagging, no Tally sync. The brief's premise of an "ICICI iExpense" product does not hold up; "iExpenses" is a generic Oracle EBS module name, not an ICICI offering.
+
+## Player-by-player
+
+Public pricing is transparent only for the pure-SaaS camp. The card-led players quote-gate their pricing because the headline is the float and interchange, not the seat.
+
+| Player | Camp | Segment | Public pricing | Funding / status | India features |
+| --- | --- | --- | --- | --- | --- |
+| Zoho Expense | Pure SaaS | SMB to mid | Free `<=3`; Std ₹99 (₹79 yr); Prem ₹199 (₹149 yr) | Profitable Zoho group | GST capture, Zoho Books, Tally import, mileage |
+| Fyle / Sage | Pure SaaS | SMB to mid | ~USD 11.99-14.99/user/mo (US-listed) | Acquired by Sage Jul 2025; ~USD 15.4M raised pre-deal | Bank-SMS parsing, real-time card feeds |
+| SutiExpense | Pure SaaS | SMB to mid | from ~₹600/submitter/mo (historical) | Private | AI fraud checks, card reconciliation |
+| ExpenseOnDemand | Pure SaaS | SME / mid | Modular, usage-based | Private | Multi-entity, multi-currency, delegated approvals |
+| Volopay | Card-led | Startups to mid | Quote-only | ~USD 33.5M raised | Virtual/physical cards, multi-currency wallets |
+| EnKash | Card-led | Startups to enterprise | Quote-only | ~USD 23M; holds PA + BBPOU + PPI | Corporate cards, UPI petty-cash wallets |
+| Kodo | Card-led | Funded startups / SMB | Quote-only | ~USD 9.5M (YC + Brex) | Tally/Zoho/Oracle/SAP, AP automation |
+| Karbon | Card-led | Startups / SMB | Quote-only | ~USD 38.3M raised, incl ₹55 cr debt (single aggregator, soft) | WhatsApp capture, vendor payments, forex |
+| RazorpayX | Card-led / neobank | Startups to mid | Card up to ₹1,499 reg + ₹1,499 annual; 1.99% FX | Part of Razorpay | Current accounts, payroll, vendor payouts |
+| Zaggle | Benefits / listed | Mid to enterprise | Card-economics led | Listed Sep 2023 (NSE: ZAGGLE); FY25 rev ~₹1,303 cr (+68%), PAT ~₹87.5 cr | FBP wallets, "Save" expense, gifting |
+| Pluxee (ex-Sodexo) | Benefits | Mid to enterprise | Benefit-card led | Euronext Paris (PLX), spun off 1 Feb 2024 | Meal/fuel/FBP cards; ~₹12,000/yr meal tax saving |
+| Pazcare | Benefits | SMB to mid | Wallet / insurance led | ~USD 12M raised; 1,500+ companies | FBP wallets plus employee insurance |
+| ICICI (banks) | Bank card | Mid to enterprise | Card fees | Bank | MCC limits, Visa/Mastercard data tools, no workflow |
+
+<p class="source-note">Sources: Zoho India pricing page (vendor, high); Crunchbase / Inc42 / BusinessWire / Screener.in funding and status (analyst and primary, high); Zaggle Screener.in FY25 (primary, high). Karbon funding (~USD 38.3M, incl ₹55 cr debt) is from a single aggregator listing, not in the thesis canonical set, so treat as low confidence. Card-led pricing is quote-gated; figures shown are the few published points and may be plan-specific or dated.</p>
+
+## Correct the stale facts
+
+Half the public commentary on this market is out of date. Four corrections, all <span class="pill pill--high">High</span> confidence:
+
+:::caution[Four facts the market still gets wrong]
+
+- **Happay is no longer CRED's.** CRED bought Happay in 2021 (~USD 180M), then sold the expense-management business, brand, and team to MakeMyTrip (announced 18 Nov 2024, closed early 2025). The payments arm stayed with CRED. Happay now sits inside MakeMyTrip's corporate-travel suite.
+- **Fyle is now Sage.** Acquired by Sage in July 2025 and rebranded Sage Expense Management; ~USD 15.4M raised before the deal. It is no longer an independent India startup.
+- **Sodexo is now Pluxee.** Sodexo's Benefits and Rewards Services spun off and listed on Euronext Paris (PLX) on 1 Feb 2024. Do not list Sodexo and Pluxee as two players; they are one business.
+- **Zaggle is listed and large.** IPO Sep 2023, listed at ₹164; FY25 revenue ~₹1,303 cr (+68% YoY), PAT ~₹87.5 cr. It is the camp's bellwether, not a startup.
+
+:::
+
+:::danger[Do not launder this soft number]
+Volopay's widely-cited "USD 77.3M ARR" (Latka/getlatka) is self-reported and implausible against ~USD 33.5M raised and a headcount near 140. <span class="pill pill--low">Low</span> Do not cite it as fact. Volopay's verifiable number is funding, not ARR.
+:::
+
+## The whitespace for an indie
+
+The incumbents cluster at two poles and leave the middle open. Card-led players over-serve funded startups with free software subsidised by interchange, economics a micro-SMB cannot generate for them. Pure-SaaS players either anchor at near-zero price (Zoho) or have been absorbed into travel and accounting suites. Banks have cards without workflow. Benefits players solve a different job (FBP tax wallets, not T&E reimbursement).
+
+The seam is a genuinely low-cost, software-only, India-first reimbursement tool for the sub-200-employee SMB and field-heavy verticals, with WhatsApp and offline mobile capture, automatic GST extraction and ITC tracking, native Tally and Zoho Books sync, UPI and bank-file payouts, and crucially no mandatory card program. The under-served vendor-reimbursement use case (paying contractors and vendors, with TDS and MSME-clock awareness) compounds the gap: card-led players bolt vendor payouts onto card stacks; pure-SaaS tools center on employee T&E. No mass-market, low-cost India tool unifies employee reimbursement, vendor reimbursement, UPI payout, and GST ITC tracking for small firms.
+
+The strategic read: do not out-card the card businesses or out-price Zoho. Win on India compliance depth and integration, and design for clean accounting/ERP integration so the obvious exit (a travel or accounting suite, the Happay and Fyle pattern) stays open. For the full case, see [the whitespace and wedge](/market/whitespace/); for how the global feature bar compares, see [global competitors](/market/competitors-global/); and for where to price against this field, see [pricing and packaging](/business/pricing/).
+
+## Sources
+
+- [Zoho Expense pricing (India)](https://www.zoho.com/in/expense/pricing/) (vendor): India INR tiers, free plan, features
+- [MakeMyTrip to Acquire Happay from CRED, BusinessWire, 18 Nov 2024](https://www.businesswire.com/news/home/20241118432629/en/MakeMyTrip-to-Acquire-Happay-Expense-Management-Platform-from-CRED) (primary): ownership change, payments arm retained
+- [Sage Expense Management company page (formerly Fyle)](https://www.fylehq.com/company) (vendor): Sage acquisition Jul 2025, funding raised
+- [Pluxee lists on Euronext Paris following spin-off from Sodexo](https://www.pluxeegroup.com/historic-milestone-for-pluxee-now-listed-on-euronext-paris-following-its-spin-off-from-sodexo/) (primary): rebrand and listing
+- [Zaggle on Screener.in](https://www.screener.in/company/ZAGGLE/) (primary): FY25 revenue and PAT, listing status
+- [EnKash unveils unified corporate-card ecosystem, PR Newswire](https://www.prnewswire.com/in/news-releases/enkash-unveils-indias-first-unified-corporate-card-ecosystem-for-businesses-302582732.html) (vendor): RBI licence stack
+- [Volopay Series A, Entrepreneur India](https://www.entrepreneur.com/en-in/finance/volopay-raises-29-million-in-series-a/421063) (analyst): verifiable funding vs unverified ARR
+- [RazorpayX Corporate Cards](https://razorpay.com/x/corporate-cards/) (vendor): card fees, FX, limits
+- [Mysa, Best Expense Management Software India 2026](https://www.mysa.io/blogs/expense-management-software) (vendor): India feature must-haves and gaps

@@ -1,0 +1,87 @@
+---
+title: "MVP Scope: Getting the Over-Ask Right"
+description: The explicit cut line between the lovable MVP, deferred features, and things never to build.
+---
+
+The mistake that kills indie SaaS in this category is not building too little; it is over-asking. Building corporate cards, SOC 2, multi-entity ISD, and travel booking all at once burns a two-person team before the first paying deal. The discipline is to ship a lovable, India-native reimbursement core in roughly three to six months, defer anything a paying customer has not yet funded, and never touch the capital-and-licence layer at all. Verdict on the scope below: <span class="pill pill--build">Build</span> the IN column, <span class="pill pill--caution">Caution</span> the DEFER column, <span class="pill pill--avoid">Avoid</span> the NEVER column.
+
+This page is the cut line. It pairs with [the build plan and sequencing](/business/roadmap/), the [final scored decision](/business/verdict/), and the [whitespace analysis](/market/whitespace/) that explains why this narrow shape is the only defensible one.
+
+## The three-column cut
+
+The columns answer three different questions. IN: what makes the product lovable and India-native on day one. DEFER: real, but only after a paying deal funds it. NEVER (as an indie): structurally closed to a software-only team without RBI licensing or a bank partner.
+
+### IN (the lovable MVP)
+
+These are the features that, together, a finance-led SMB will pay for and that incumbents and foreign tools under-serve. The wedge is India-native compliance and Tally depth, not OCR or cards, which are table-stakes.
+
+| Feature | Why it is in the MVP |
+| --- | --- |
+| WhatsApp + mobile + email capture | Removes app-install friction for field and grey-collar staff; WhatsApp has 500M+ India users and utility messages cost ~₹0.125 each (MessageCentral, vendor pricing, medium; WhatsApp pricing shifted materially in 2025, so re-verify the live rate before quoting). |
+| LLM-vision OCR + GST field extract | Buy/wrap a vision model (~USD 0.0005-0.003/doc, vendor pricing, medium); the value-add we build is GST field validation, not the model. |
+| Configurable rule engine | Six actions (allow / flag / warn / cap / block / route), line-item then claim rollup; policy enforcement is the daily job. See [the rule engine design](/product/rule-engine/). |
+| Maker-checker + DoA + SLA | Rupee-tiered Delegation-of-Authority with SLA escalation; the single most India-specific buying requirement and a credibility signal to Finance and auditors. |
+| Self-registration + PAN/bank whitelisting | Admin maker-checker on the master; PAN and reverse-penny-drop bank verification (~₹3/successful drop, Setu published, high). See [onboarding and KYC](/product/onboarding-kyc/). |
+| Line-item partial approval | Approve the legitimate lines, reject the rest; real claims are mixed, not all-or-nothing. |
+| GST ITC tagging | Eligible-vs-blocked ITC under Sec 17(5) turns soft ROI into a hard rupee number for the CFO. |
+| Tally + Zoho Books sync | The single biggest deal-maker/breaker; ~70-80% Indian SMB accounting (vendor-claimed, not independently audited). |
+| Payout via file hand-off (+ optional RazorpayX) | Bank file to the customer's own corporate account; RazorpayX as an optional partner (~₹1.75-5/txn, indicative). Funds never touch us. |
+| Immutable audit trail | Required for retention (8 financial years default) and the auditor credibility story. See [audit and retention](/compliance/audit-retention/). |
+| Per-active-submitter pricing + small free tier | Charge submitters, approvers/admins free, 3-5 user free tier with capped OCR and no payouts. |
+
+<p class="source-note">Sources: THESIS canonical figures (Tally share vendor-claimed; OCR unit cost vendor pricing, medium; penny-drop Setu published, high). Pricing per the THESIS Zoho-anchored ladder.</p>
+
+:::tip[The wedge sits inside the IN column]
+Tally-native two-way sync plus GST ITC tagging is the defensible core. It is painful (desktop, on-prem, XML-over-HTTP on port 9000) precisely because that difficulty deters competitors. Foreign tools (Fyle/Sage) integrate QuickBooks, Xero, and NetSuite but not Tally. Build it natively; do not wait.
+:::
+
+### DEFER (real, but only when a deal funds it)
+
+Each of these is legitimate. None is needed to close the lead ICP (finance-led, 50-500 employees, Tally-first). Building them early is the over-ask.
+
+| Deferred feature | Why it waits |
+| --- | --- |
+| SOC 2 (Type II) | ~₹6-14 L year one, ~12 weeks (analyst, medium); needed only for US-HQ enterprise. Get ISO 27001 first (~₹5 L). |
+| Multi-entity ISD / cross-charge | Input Service Distributor and inter-company complexity; only large or grouped buyers need it. |
+| Deep ERP (SAP/NetSuite/Dynamics) | Mid-market and up; the SMB wedge runs on Tally and Zoho Books. |
+| Travel booking | A separate product surface and the category's exit path, not a reimbursement requirement. |
+| Native-app polish | Mobile-web and WhatsApp cover capture; pixel-perfect native apps are a cost without a deal behind them. |
+| Advanced fraud ML | Layer deterministic checks first (GSTIN Luhn-mod-36, e-invoice QR/IRN, arithmetic, perceptual-hash duplicate, EXIF); bespoke ML later. |
+| Live Aadhaar auth | Private entities cannot freely run live Aadhaar auth; use PAN as the primary identity key, DigiLocker/offline XML if needed. |
+
+:::caution[Defer is not never]
+SOC 2, deep ERP, and ISD are revenue-gated, not forbidden. The rule is simple: build each one when a signed or near-signed deal pays for it, never speculatively. A two-person team cannot afford to carry these as standing maintenance before the customer exists.
+:::
+
+### NEVER (as an indie)
+
+| Off-limits | Why it is closed to an indie |
+| --- | --- |
+| Own corporate cards | Interchange and float economics require bank partnership; ~75-80% of Zaggle's revenue is card interchange, a pool software cannot match. |
+| Own PPI / wallet | Non-bank PPI needs ₹5 cr net worth rising to ₹15 cr by year three (RBI Master Directions, high). |
+| Hold or pool float | Triggers Payment Aggregator licensing (₹15 cr net worth at application, ₹25 cr by year three, mandatory escrow). |
+
+:::danger[Regulatory invariant: funds never touch our account]
+Stay a technology provider. Money must move only via (a) file hand-off to the customer's own corporate bank, (b) a regulated partner (RazorpayX/Cashfree) initiating from its own escrow/current account, or (c) connected banking on the customer's current account. Holding or pooling funds triggers PA or PPI licensing. Get a written legal opinion before go-live. See [the money-movement architecture](/compliance/money-movement/).
+:::
+
+## Why this is the right size
+
+The IN column is buildable by a small team because the hard parts are bought or partnered, not invented. OCR is a wrapped vision model; payouts are a partner API or a bank file; the genuine engineering investment is Tally-native sync and the GST/rule/maker-checker logic that competitors skip. That concentration is what makes three to six months realistic rather than aspirational.
+
+The NEVER column is not a maturity gate; it is a structural wall. The card and float layer is closed to a software-only team without RBI licensing or a bank balance sheet, and chasing it is the most predictable way an indie loses. The DEFER column is the discipline in between: say yes to the buyer's compliance and integration needs, say "later, when you fund it" to everything that is a cost without a deal.
+
+## The rough build
+
+Roughly **three to six months** for a small team to ship the IN column, consistent with the [build plan](/business/roadmap/). Sequencing inside that window: capture and OCR first (visible value), then the rule engine and maker-checker FSM (the buying requirement), then Tally and Zoho Books sync (the moat), then payouts via file hand-off with RazorpayX optional. ISO 27001 (~₹5 L) runs in parallel as a sales unlock, not as code. <span class="pill pill--med">Medium</span> confidence on the timeline: it is our own derivation from the scope, not a measured estimate, and OCR plus Tally long-tail edge cases are the most likely sources of slip.
+
+## Sources
+
+- [RBI FAQs, Prepaid Payment Instruments (PPIs)](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812) (govt). PPI net-worth thresholds; reason to partner, not build, money movement.
+- [Zaggle Q4FY24 Investor Presentation](https://ipo.zaggle.in/wp-content/uploads/2024/05/investor-presentation-zaggle-Q4FY24.pdf) (primary). ~75-80% of revenue from card interchange; why the card pool is closed to indies.
+- [Tally, Integration with TallyPrime](https://help.tallysolutions.com/integrate-with-tallyprime/) (vendor). XML/TDL/ODBC integration surface; no first-party cloud API.
+- [RazorpayX Payouts](https://razorpay.com/x/payouts/) (vendor). Partner payout option for the optional disbursal path.
+- [SOC 2 vs ISO 27001 for Indian Startups (TCSA)](https://www.tcsa.in/resources/soc-2-vs-iso-27001-indian-startups) (analyst). Certification sequencing and year-one costs that justify deferring SOC 2.
+- [SOC 2 Type 2 Compliance Cost in India (Codesecure)](https://codesecure.in/blogs/soc-2-type-2-compliance-cost-india) (vendor). ~₹6-14 L year-one SOC 2 cost and timeline.
+- [WhatsApp Business API India Guide (MessageCentral)](https://www.messagecentral.com/en-in/blog/whatsapp-business-api-india-guide) (vendor). 500M+ user base and DPDP context for WhatsApp-first capture.
+- [Fyle / Sage Expense Management Pricing](https://www.fylehq.com/pricing) (vendor). Integrations list (no Tally) confirming the India integration gap.

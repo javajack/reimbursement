@@ -1,0 +1,109 @@
+---
+title: Bank Payout File Formats
+description: Indicative bulk-payment file fields per major bank, the rails and limits, and a sample CSV.
+---
+
+Bank bulk-payment formats are not a stable spec you can hard-code once. They are bank-specific, channel-specific, versioned, and often published only inside the corporate net-banking portal. The fields below are indicative, assembled from secondary and summary sources; the ICICI v3.3 PDF could not be machine-parsed and the Kotak field doc was not independently fetched. Treat this page as a build orientation, not a contract. Confirm every format against the bank's primary file-format document or the customer's relationship manager before you write a parser.
+
+This matters because file hand-off is the disbursement architecture we ship first: the SaaS generates a bulk file in the customer's bank format, the customer uploads and authorizes it in their own corporate net banking, and money flows from the customer's own current account. Funds never touch an account the SaaS owns. See [money movement](/compliance/money-movement/) for why that boundary is the whole game, and [payouts](/product/payouts/) for the disbursement product.
+
+:::caution[Indicative, not authoritative]
+Field order, fixed-width positions, encryption requirements, header/footer rows, and per-file caps differ by bank and channel and change between versions. Verify against the bank's own spec per integration. Confidence on the per-bank detail below is <span class="pill pill--med">Medium</span> and lower for HDFC, SBI, and Kotak.
+:::
+
+## Common fields across bank bulk files
+
+Despite format divergence, the payload converges on a small set of fields. A clean internal payout record should carry all of these, then a per-bank serializer maps them to that bank's columns or fixed-width positions.
+
+| Field | Purpose | Notes |
+| --- | --- | --- |
+| Beneficiary name | Payee display name | Banks may match against beneficiary-master; name mismatch can reject |
+| Account number | Credit account | Validate length per bank before emit |
+| IFSC | Routing to branch | 11 char; drives NEFT/RTGS/IMPS routing |
+| Amount | Payout value (₹) | Drives rail selection by threshold |
+| Payment mode | NEFT / RTGS / IMPS / internal | Some banks auto-segregate by amount and IFSC |
+| Narration / remarks | Statement reference | Carry your claim or payout ID here for reconciliation |
+| Email / mobile | Beneficiary alert | Optional; used for credit advice |
+| Source / debit account | Which current account to debit | Maps reimbursement type to source account |
+
+The source/debit account field is load-bearing for the multi-account design: emit one file per source current account, or per debit account, so reimbursement type (travel vs vendor vs petty cash) routes to the right account and load spreads across banks.
+
+## Per-bank notes
+
+| Bank / channel | Format | Modes | Notable detail |
+| --- | --- | --- | --- |
+| ICICI CIB | Fixed-width / converter XLS (file format v3.3) | NEFT, RTGS, Bulk IMPS, cheque, DD, direct credit | Separate salary / vendor / dealer / external files; external file adds source and destination branch and account IDs, currency, account type, remarks; encrypted upload |
+| HDFC ENet / CBX (H2H) | Excel / text template | NEFT, RTGS, IMPS, A2A | Columns: Beneficiary Name, Account No., IFSC, Amount, Remarks; per-file cap ~1,000 txns / ₹10 crore (per a secondary upload manual; confirm against current HDFC ENet spec); H2H integration available |
+| Axis PayPro / CIB | CSV / XLS / TXT (generic or customer format) | RTGS, NEFT, IMPS, internal, DD, cheque | Single-file upload with auto-segregation by payment identifier; beneficiary-master validation; encrypted files; returns UTR-level status |
+| SBI Corporate (CINB) | Single-debit-multiple-credit file | Intra-bank, NEFT, RTGS | Symmetric-key or PKI file encryption; other-bank consolidated limit up to ~₹50 lakh/txn, ~₹2 crore/day (portal-sourced, verify) |
+| Kotak Corporate Net Banking / H2H | CSV / fixed-width / XML (verify) | NEFT, RTGS, IMPS | In scope for vendor and salary payouts; commonly-documented bulk fields (beneficiary name, account no., IFSC, amount, mode, narration) are unverified for Kotak; specific field-format doc not independently confirmed, verify directly |
+
+<p class="source-note">Source: bank cash-management pages and bulk-upload summaries (vendor / primary, medium confidence; HDFC, SBI, Kotak lower). ICICI v3.3 PDF not machine-parsed; Kotak fields unverified.</p>
+
+:::note[Encryption is part of the format]
+SBI requires symmetric-key or PKI file encryption; ICICI and Axis use encrypted upload. The bytes you emit are only half the integration. Plan for the bank's key exchange, header/footer conventions, and checksum rows alongside the field mapping.
+:::
+
+## Rails and limits
+
+Rail selection is driven by amount and urgency. NEFT is the cheapest and uncapped batch rail, RTGS is the high-value rail, IMPS and UPI are the instant rails with hard ceilings. Bank-imposed sub-limits can sit below these NPCI/RBI ceilings, so re-verify at build time.
+
+| Rail | Minimum | Maximum | Timing | Use |
+| --- | --- | --- | --- | --- |
+| NEFT | ₹1 (no floor) | No maximum | 24x7 since 16 Dec 2021, batch | Cheapest; default for non-urgent batch |
+| RTGS | ₹2 lakh | No maximum | 24x7 since 14 Dec 2020 | High-value vendor payouts |
+| IMPS | None | ₹5 lakh per txn | Instant, 24x7 | Instant small reimbursements |
+| UPI | None | ₹1 lakh standard; ₹5 lakh per txn for specific categories (insurance, capital markets, education, hospitals, govt e-marketplace, IPO); ₹10 lakh/day P2M | Instant | Instant payee-VPA disbursement |
+
+<p class="source-note">Source: ClearTax (NEFT/RTGS/IMPS limits); NPCI circular UPI-OC-185A and DD News (UPI limits). Govt/analyst, high confidence on ceilings; bank sub-limits may be lower.</p>
+
+Online NEFT and RTGS carry no RBI processing charge (banks may levy their own service fee). UPI standard per-transaction and per-day cap is ₹1 lakh, raised to ₹5 lakh per transaction only for the named merchant categories, with the P2M daily cap lifted to ₹10 lakh in 2025. For ordinary employee reimbursement, plan around the ₹1 lakh UPI ceiling and the ₹5 lakh IMPS ceiling, not the enhanced category limits.
+
+:::tip[Default rail by amount]
+Route IMPS or UPI for instant reimbursements under ₹5 lakh and ₹1 lakh respectively, NEFT for non-urgent batch (cheapest, no cap), RTGS for vendor payouts over ₹2 lakh. Expose per-rail cost so the customer controls spend.
+:::
+
+## Sample payout CSV
+
+A generic internal payout file before the per-bank serializer runs. Real bank templates rename columns, reorder, or switch to fixed-width; this is the canonical shape we hold and then transform.
+
+```csv
+source_account,beneficiary_name,account_number,ifsc,amount,mode,narration,email,mobile
+50200012345678,Ramesh Kumar,123456789012,HDFC0001234,4850.00,IMPS,KHRC-CLM-20481,ramesh@acme.in,9876543210
+50200012345678,Sunita Devi,987654321098,ICIC0004567,275000.00,RTGS,KHRC-VND-10932,sunita@acme.in,9123456780
+50200012345678,Field Travel Pvt Ltd,556677889900,SBIN0009988,1250.00,NEFT,KHRC-CLM-20488,ops@fieldtravel.in,9001234567
+```
+
+The `narration` field carries the originating claim or payout ID (here a `KHRC-` reference). That single convention is what makes return-file reconciliation tractable: the UTR comes back, the narration ties it to the record. See the [rule schema](/reference/rule-schema/) for how a payout record relates to the upstream claim object.
+
+## UTR-based reconciliation fields
+
+Reconciliation across every rail and provider is UTR-centric. Banks return a UTR in status reports; payout providers push status webhooks carrying the same. Ingest both, auto-match to the originating reimbursement, and surface retry or repair for failures. Make this a first-class feature; it is the operational edge over raw bank net banking.
+
+| Field | Source | Purpose |
+| --- | --- | --- |
+| UTR | Bank return file / provider webhook | Unique transaction reference; primary match key |
+| Payout reference ID | Your system / provider | Secondary match key; survives UTR-less states |
+| Status | Return file / webhook | <span class="pill pill--allow">Processed</span> / <span class="pill pill--flag">Pending</span> / <span class="pill pill--block">Failed</span> |
+| Narration / remarks | Echoed from your file | Carries claim/payout ID for matching |
+| Failure reason | Bank / provider | Drives retry vs repair routing |
+| Processed timestamp | Bank / provider | SLA and ageing on stuck payouts |
+
+Match on UTR first, fall back to the reference ID and narration when the UTR is absent (a failed or pending payout has no UTR yet). Axis bulk reports already return UTR, amount, and beneficiary details at the transaction level; partner APIs deliver the same through webhooks on every status change.
+
+:::danger[Funds never touch our account]
+File hand-off keeps the SaaS outside RBI Payment Aggregator scope because the customer's own bank moves the money. The moment reimbursement funds are pooled into an account the SaaS controls, the model can be re-characterized as a PA (net worth ₹15 crore at application, ₹25 crore by year 3, mandatory escrow) or a PPI. Get a written legal opinion before go-live. Details in [money movement](/compliance/money-movement/).
+:::
+
+## Sources
+
+- [ICICI Bank, Cash Management Services Payments](https://www.icicibank.com/business-banking/cash-management-services/payments) (vendor), CIB bulk upload for NEFT/RTGS/IMPS/cheque/DD; encrypted file upload.
+- [ICICI Bank, File Format for Bulk upload in CIB (v3.3 PDF)](https://www.icici.bank.in/managed-assets/docs/form-center/File_Format_Bulk_%20Transfers_3.3.pdf) (primary), field names and positions for salary/vendor/dealer/external files; PDF not machine-parseable.
+- [HDFC Bank, ENet Payment and Collection Solutions](https://www.hdfcbank.com/wholesale/financial-institutions-and-trusts/enet) (vendor), ENet/CBX bulk payments; NEFT/RTGS/IMPS/A2A; vendor and salary modules.
+- [HDFC Bank, Bulk Payment Upload Manual](https://www.scribd.com/document/317956116/Upload-Manual-Bulk-Payments-040216) (vendor), columns Beneficiary Name, Account No., IFSC, Amount, Remarks; ~1,000 txn / ₹10 crore per file.
+- [Axis Bank, Bulk Payment Uploads](https://www.axisbank.com/corporate/transaction-banking/cash-management-services/bulk-payment-uploads) (vendor), PayPro CSV/XLS/TXT upload; auto-segregation; UTR-level status reports.
+- [SBI, Corporate Banking File Upload](https://corp.sbi.bank.in/corporate/sbi/corp_fileupload.html) (primary), single-debit-multiple-credit files; PKI/symmetric encryption; ~₹50 lakh/txn, ~₹2 crore/day (portal-sourced, verify).
+- [ClearTax, Differences between NEFT, RTGS and IMPS](https://cleartax.in/s/differences-between-neft-rtgs-imps) (analyst), NEFT no min/max, RTGS min ₹2 lakh, IMPS max ₹5 lakh, 24x7 timings.
+- [NPCI Circular UPI-OC-185A (FY24-25)](https://www.npci.org.in/PDF/npci/upi/circular/2024/UPI-OC-No-185A-FY-24-25-Implementation-of-Rs-5-Lakh-limit-per-transaction-for-specific-categories-in-UPI.pdf) (govt), ₹5 lakh per-transaction UPI limit for specific categories.
+- [DD News, NPCI raises daily UPI P2M limit to ₹10 lakh](https://ddnews.gov.in/en/npci-raises-daily-upi-payment-limit-on-p2m-transactions-to-%E2%82%B910-lakh/) (govt), 2025 P2M daily limit increase.
+- [RazorpayX, Payout Status and Webhooks](https://razorpay.com/docs/x/payouts/status-details/) (vendor), UTR delivery and payout-update webhooks for reconciliation.

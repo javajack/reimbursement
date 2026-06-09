@@ -1,0 +1,261 @@
+---
+title: Rule-Object JSON Reference
+description: The full rule schema, evaluation algorithm, reference tables and a worked set of example rules.
+---
+
+Rules are data, not code. A rule is one JSON object with a condition tree and exactly one of six actions, persisted and versioned so India tax changes (which arrive every Budget) ship without a code deploy. This page is the canonical contract: the schema, the evaluation algorithm, the versioned reference tables, the India-native rule types, and a worked set of example rules. The design rationale and the six-action model live on the [rule engine](/product/rule-engine/) page; what counts as never-reimbursable lives on [non-reimbursables](/product/non-reimbursables/).
+
+All four reference engines we studied (SAP Concur, Fyle/Sage, Zoho Expense, Brex/Ramp) converge on the same shape: condition (field, operator, value, AND/OR-combinable) plus action plus severity plus scope. We adopt that shape and pin it down below. <span class="pill pill--info">Note</span> vendor capability claims (Ramp 99% in-policy accuracy <span class="pill pill--low">Low</span>, Fyle real-time duplicate detection) are vendor-marketing; the structural model is well corroborated.
+
+## The rule object
+
+```json
+{
+  "id": "rule_per_diem_tier1",
+  "name": "Per-diem cap, Tier-1 city, grade M2",
+  "description": "Caps daily food+lodging per-diem for Tier-1 metro travel.",
+  "scope": "line_item",
+  "enabled": true,
+  "priority": 100,
+  "condition": {
+    "op": "AND",
+    "children": [
+      { "field": "expense_type", "operator": "in", "value": ["per_diem", "food", "lodging"] },
+      { "field": "city_tier", "operator": "==", "value": "tier_1" },
+      { "field": "employee.grade", "operator": "==", "value": "M2" }
+    ]
+  },
+  "action": "cap",
+  "severity": "low",
+  "hardness": "soft",
+  "params": {
+    "cap_to": { "table": "per_diem", "key": ["city_tier", "grade", "expense_type"] },
+    "require": ["receipt"]
+  },
+  "message": "Per-diem exceeds the Tier-1 / M2 cap; amount auto-reduced to the policy limit.",
+  "tags": ["per-diem", "india", "travel"],
+  "effective_from": "2026-04-01",
+  "effective_to": null,
+  "version": 3
+}
+```
+
+Field semantics:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | Stable unique key, never reused. |
+| `name` / `description` | string | Human labels for the admin UI and the rule-trace. |
+| `scope` | enum | One of `line_item`, `claim`, `advance`, `vendor_invoice`. Drives evaluation order. |
+| `enabled` | bool | Disabled rules are skipped, not deleted (keep history). |
+| `priority` | int | Lower runs earlier within a scope. |
+| `condition` | tree | Recursive `AND`/`OR` node with `{field, operator, value}` leaves. |
+| `action` | enum | One of `allow`, `flag`, `warn`, `cap`, `block`, `route`. |
+| `severity` | enum | `info`, `low`, `medium`, `high`, `critical` (drives the exception color). |
+| `hardness` | enum | `hard` short-circuits and blocks submission; `soft` accumulates as an overridable exception. |
+| `params` | object | Action-specific (`cap_to`, `route_to_role`, `require`, etc.). |
+| `message` | string | Shown to the submitter or approver when the rule fires. |
+| `tags` | string[] | For filtering and reporting. |
+| `effective_from` / `effective_to` | date / null | Validity window; lets rates change by financial year. |
+| `version` | int | Bumped on every edit; logged in the audit trail. |
+
+Supported leaf operators: `==`, `!=`, `>`, `>=`, `<`, `<=`, `in`, `not_in`, `contains`, `matches` (regex), `between`. Keep them in a fenced block; never write a bare operator in prose.
+
+## The six actions
+
+Use exactly six action verbs. Hardness is an explicit field, not implied by the action: `block` is always hard; the other five are soft by default with an optional `hardness` override. This mirrors Concur's red (hard) versus yellow (soft) flag semantics exactly.
+
+| Action | Outcome | Hard / Soft | Maps to |
+| --- | --- | --- | --- |
+| `allow` | Explicit pass / auto-approve in-policy. | Soft | Brex auto-approve |
+| `flag` | Soft red flag for the approver; submission still allowed. <span class="pill pill--flag">Flag</span> | Soft | Fyle Flag / Concur yellow |
+| `warn` | Soft-gated: require a submitter reason before submit. | Soft | Fyle Warn + reason |
+| `cap` | Auto-reduce the reimbursable amount to a limit (the partial-coverage primitive). | Soft | Fyle / Zoho cap-to-limit |
+| `block` | Hard stop: mark incomplete / decline; cannot be submitted or approved. <span class="pill pill--block">Block</span> | Hard | Fyle Critical / Concur red / Ramp decline |
+| `route` | Send to a named approver, grade, or random manual audit. | Soft | Concur random audit / Brex require-approval |
+
+<p class="source-note">Source: Fyle/Sage, Zoho, Brex, Ramp help docs, 2026 (vendor, medium-high confidence).</p>
+
+:::caution[Build a rule-trace from day one]
+"Last matching rule wins" ordering is powerful but error-prone for non-technical admins. Without a UI that shows which rule fired and why, configurable engines routinely produce surprising reimbursements. A rule-trace/explain feature is not optional.
+:::
+
+## Evaluation algorithm
+
+Ordering bugs are the number-one source of wrong reimbursements, so the order is fixed and documented, not emergent.
+
+```text
+function evaluate(claim):
+    rules = all_enabled_rules_valid_on(claim.date)
+    sort rules by (scope_rank, priority)         # line_item < claim < advance < vendor_invoice
+
+    # 1. line-item pass, per line
+    for line in claim.lines:
+        line.reimbursable_amount = line.claimed
+        for r in rules where r.scope == "line_item" and matches(r.condition, line):
+            apply(r, line)                        # last matching action wins per field...
+            if r.action == "block" and r.hardness == "hard":
+                line.blocked = true               # ...but any hard block overrides softer
+        if line.non_reimbursable or line.blocked:
+            line.reimbursable_amount = 0
+        else:
+            line.reimbursable_amount = min(line.claimed, line.cap or line.claimed)
+
+    # 2. claim pass, over the aggregated claim
+    claim.lines_total = sum(line.reimbursable_amount for line in claim.lines)
+    for r in rules where r.scope == "claim" and matches(r.condition, claim):
+        apply(r, claim)
+
+    # 3. advance / vendor pass
+    for r in rules where r.scope in ("advance", "vendor_invoice"):
+        if matches(r.condition, claim): apply(r, claim)
+
+    # 4. rollup with advance netting
+    claim.reimbursable_total = claim.lines_total - claim.assigned_advance_balance
+
+    if any hard block fired: claim.status = "blocked"
+    return claim
+```
+
+Three invariants hold regardless of rule order:
+
+- A line's `reimbursable_amount` is `min(claimed, cap)`, and `0` if the line is `non_reimbursable` or hard-blocked.
+- Any `block` with `hardness: hard` overrides any softer action on the same line.
+- The claim total is the sum of reimbursable lines minus the assigned advance balance. Worked example: claimed 600, advance 500, reimbursed 100 (Concur's canonical cash-advance math).
+
+Partial coverage of a single mixed bill (some lines reimbursable, some personal) falls out of this for free: model the bill as a parent expense with N line items, cap or zero the offending lines, sum the rest. See [edge cases](/product/edge-cases/) for advances, split bills, and FX.
+
+## Versioned reference tables
+
+Rules read rates from editable tables, never hard-coded constants. Each row carries `effective_from` / `effective_to` so a Budget change is a data edit. These illustrative values are policy defaults you set per customer, not statutory rates.
+
+:::danger[Per-diem caps are policy, not law]
+India has no government-mandated per-diem rate (medium confidence; sourced from HR vendors Taggd and Rydoo, not a government circular). Tax exemption under Sec 10(14) / Rule 2BB applies only to the extent actually spent; the unspent balance is taxable salary. A per-diem cap is a spending control, never a tax computation.
+:::
+
+`city_tier` (HR per-diem axis; keep separate from the HRA metro list):
+
+| City tier | Example cities | Default daily per-diem (illustrative) |
+| --- | --- | --- |
+| `tier_1` | Mumbai, Delhi, Bengaluru, Chennai | Higher band |
+| `tier_2` | Pune, Jaipur, Lucknow, Indore | Mid band |
+| `tier_3` | District towns, rural sites | Lower band |
+
+`per_diem` matrix is keyed `[city_tier x grade x expense_type]`; the rule's `cap_to.table` points at it. `mileage` is keyed by vehicle class (two-wheeler, hatchback, sedan, SUV) at a rate per km. `mcc` holds allow / block category lists (4-digit ISO 18245). For out-of-pocket reimbursement there is no MCC, so an MCC rule must degrade to internal expense category or it will never fire.
+
+The HRA metro axis is a separate named set (do not conflate with per-diem tiers):
+
+| Set | Cities | Rate | Effective |
+| --- | --- | --- | --- |
+| `hra_metro_50` | Mumbai, Delhi, Kolkata, Chennai, Bengaluru, Pune, Hyderabad, Ahmedabad (8) | 50% of basic | FY2026-27 |
+| `hra_non_metro_40` | all others | 40% of basic | FY2026-27 |
+
+Statutory thresholds you version by financial year (from the [regulatory map](/compliance/regulatory-map/)): GST ITC reversal if a supplier is unpaid past `180 days` (Rule 37, ClearTax-corroborated, medium confidence; re-verify against live CBIC text before coding); gifts/vouchers exempt up to `₹5,000`/year; TDS 194C `1%/2%`, 194J `10%` professional / `2%` technical, 194H `2%` (w.e.f. 1 Oct 2024). Version-date every rate; mark TDS and ITC rates with their financial-year window.
+
+<p class="source-note">Source: ClearTax, TaxGuru, FinanceToolsPro, 2026; THESIS regulatory invariants (mixed: govt-derived + vendor, medium confidence).</p>
+
+## India-native rule types
+
+These need code, so they are first-class built-in rule types, not admin-authored conditions. Build them natively; none of the global tools handle them well.
+
+| Rule type | What it tests | Confidence |
+| --- | --- | --- |
+| `GSTIN_FORMAT` | 15-char structure: state(2) + PAN(10) + entity(1) + 'Z'(1) + Luhn-mod-36 checksum. Offline. | <span class="pill pill--high">High</span> |
+| `GSTIN_MATCHES_COMPANY` | Invoice GSTIN equals the org GSTIN (ITC precondition). | <span class="pill pill--high">High</span> |
+| `GSTIN_LIVE_STATUS` | Optional async GST-portal / GSTR-2B status check; rate-limited, cached. | <span class="pill pill--med">Medium</span> |
+| `ITC_ELIGIBLE` | Tax invoice present, company GSTIN on it, within the 180-day payment window, not Sec 17(5) blocked. | <span class="pill pill--med">Medium</span> |
+| `PER_DIEM_CAP` | Lookup on `city_tier x grade x expense_type`. | <span class="pill pill--high">High</span> |
+
+:::caution[Format check is not eligibility]
+The Luhn-mod-36 checksum only proves a GSTIN is well-formed. It does not prove the number is active or that ITC is claimable. Keep `GSTIN_LIVE_STATUS` as a distinct, optionally-async rule with its own confidence and cache. ITC under Sec 17(5) is separately blocked for food, rent-a-cab, and similar; see [non-reimbursables](/product/non-reimbursables/).
+:::
+
+Expose computed fields the engine can test directly rather than asking admins to author them: `is_duplicate` (amount + date + vendor match plus receipt-hash and cross-employee match), `days_since_spend`, `is_weekend`, `is_holiday`.
+
+## Worked example rules
+
+A representative set. Conditions abbreviated for readability; in storage each is a full condition tree.
+
+```json
+[
+  { "id": "r01_receipt_required", "scope": "line_item", "priority": 10,
+    "condition": "claimed > 1000 AND receipt == null",
+    "action": "block", "hardness": "hard", "severity": "high",
+    "message": "Receipt mandatory above ₹1,000." },
+
+  { "id": "r02_fnb_itc_block", "scope": "line_item", "priority": 20,
+    "condition": "expense_type == 'food_beverage' AND itc_claimed == true",
+    "action": "flag", "hardness": "soft", "severity": "high",
+    "params": { "clear_itc_tag": true },
+    "message": "ITC not claimable on F&B under Sec 17(5)(b); reimburse gross, drop the ITC tag." },
+
+  { "id": "r03_rentacab_itc", "scope": "line_item", "priority": 21,
+    "condition": "expense_type == 'rent_a_cab' AND itc_claimed == true AND obligatory_under_law == false",
+    "action": "flag", "hardness": "soft", "severity": "medium",
+    "message": "Rent-a-cab ITC blocked unless obligatory under law." },
+
+  { "id": "r04_gstin_format", "scope": "line_item", "priority": 30,
+    "condition": "gstin != null AND GSTIN_FORMAT(gstin) == false",
+    "action": "warn", "hardness": "soft", "severity": "medium",
+    "message": "GSTIN fails format/checksum; correct before ITC claim." },
+
+  { "id": "r05_gstin_match", "scope": "line_item", "priority": 31,
+    "condition": "itc_claimed == true AND GSTIN_MATCHES_COMPANY(gstin) == false",
+    "action": "flag", "hardness": "soft", "severity": "high",
+    "message": "Invoice GSTIN does not match company; ITC not claimable." },
+
+  { "id": "r06_per_diem_cap", "scope": "line_item", "priority": 100,
+    "condition": "expense_type == 'per_diem'",
+    "action": "cap", "params": { "cap_to": { "table": "per_diem" } },
+    "hardness": "soft", "severity": "low",
+    "message": "Per-diem auto-capped to the city-tier / grade limit." },
+
+  { "id": "r07_personal_line", "scope": "line_item", "priority": 110,
+    "condition": "category == 'personal' OR is_personal == true",
+    "action": "cap", "params": { "cap_to": 0 }, "hardness": "soft",
+    "severity": "info", "message": "Personal line set non-reimbursable." },
+
+  { "id": "r08_duplicate", "scope": "line_item", "priority": 120,
+    "condition": "is_duplicate == true",
+    "action": "flag", "hardness": "soft", "severity": "high",
+    "message": "Possible duplicate (amount + date + vendor + receipt-hash)." },
+
+  { "id": "r09_weekend_alcohol", "scope": "line_item", "priority": 130,
+    "condition": "category == 'alcohol' OR (is_weekend == true AND amount > 5000)",
+    "action": "route", "params": { "route_to_role": "manual_audit" },
+    "hardness": "soft", "severity": "medium",
+    "message": "Routed to manual audit." },
+
+  { "id": "r10_claim_monthly_cap", "scope": "claim", "priority": 200,
+    "condition": "sum(claim.lines, window='monthly') > 50000",
+    "action": "warn", "hardness": "soft", "severity": "medium",
+    "message": "Monthly claim total exceeds ₹50,000." },
+
+  { "id": "r11_advance_net", "scope": "advance", "priority": 300,
+    "condition": "claim.assigned_advance_balance > 0",
+    "action": "allow", "hardness": "soft", "severity": "info",
+    "message": "Advance netted: reimbursable = lines_total - advance_balance." },
+
+  { "id": "r12_tds_194j", "scope": "vendor_invoice", "priority": 400,
+    "condition": "vendor.section == '194J' AND invoice_amount > 30000",
+    "action": "route", "params": { "route_to_role": "ap_tds_review" },
+    "hardness": "soft", "severity": "medium",
+    "message": "TDS 194J (10% professional) applies; route for deduction." }
+]
+```
+
+Note the ITC distinction in `r02_fnb_itc_block`: Sec 17(5)(b) blocks the input tax credit, not the spend. Food and beverage stays reimbursable to the employee; only the ITC tag is cleared. A `block` action that zeroed `reimbursable_amount` would wrongly conflate a blocked-ITC tag with a non-reimbursable expense, so ITC eligibility and the line's reimbursable amount are tracked separately.
+
+Every rule firing is logged as an immutable audit-trail event (rule id + version, input snapshot, action, severity, approver override + reason). That is required for GST/ITC defensibility and matches the "full audit trail" bar Concur and Ramp set; see [audit and retention](/compliance/audit-retention/).
+
+## Sources
+
+- [Fyle Help, Configure Company Policies](https://help.fylehq.com/en/articles/1203330-configure-company-policies) (vendor), action taxonomy, cap-to-limit, aggregation windows.
+- [SAP Learning, Configuring Audit Rules (Concur)](https://learning.sap.com/learning-journeys/getting-started-with-concur-expense-standard-for-administrators/configuring-audit-rules) (vendor), if/then model, red vs yellow flag severity.
+- [Brex, Policy Engine](https://www.brex.com/support/policy-engine) (vendor), AND-combinable conditions, last-rule-wins ordering, receipt threshold.
+- [Zoho Expense, Rules](https://www.zoho.com/us/expense/help/managing-policies/rules/) (vendor), limit types, Warn vs Block, INR-native examples.
+- [ClearTax, Know your GSTIN](https://cleartax.in/s/know-your-gstin) (primary-style), 15-char GSTIN structure.
+- [The GST Calculator India, GSTIN Validator](https://thegstcalculator.in/tools/gst-number-validator) (vendor), Luhn-mod-36 checksum detail.
+- [ClearTax, GST Input Tax Credit](https://cleartax.in/s/gst-input-tax-credit) (primary-style), GSTR-2B requirement, 180-day reversal.
+- [TaxGuru, HRA exemption: 8 cities qualify for 50%](https://taxguru.in/income-tax/hra-exemption-8-cities-qualify-50-percent-exemption-practical-guide.html) (primary-style), 8 metro cities, FY2026-27.
+- [Taggd, Per Diem Allowance for Indian Businesses](https://taggd.in/hr-glossary/per-diem-allowance/) (vendor), no government-mandated per-diem; tax-exempt to actual spend.

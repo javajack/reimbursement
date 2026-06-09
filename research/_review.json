@@ -1,0 +1,1182 @@
+[
+  {
+    "slug": "business/freemium",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "the global B2B freemium benchmark (1-5% for broad-market tools, 5-15% for tightly targeted)",
+        "problem": "The body cites the benchmark as \"5-15% for tightly targeted,\" but the page's own Sources entry for First Page Sage (line 98) says \"3-5% good, 8-12% great.\" The two ranges contradict each other, so the cited band is not actually supported by the listed source.",
+        "fix": "Reconcile the body band with the cited source: state the band exactly as the sources report it (e.g. broad 1-5%, strong/targeted 8-12%) and ensure the Sources line and the prose agree."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Source: AWS Textract pricing; RazorpayX billing docs; Setu",
+        "problem": "The COGS table's LLM-vision OCR row (USD 0.0005-0.003/doc) is sourced from Gemini Flash-Lite / Claude Haiku per THESIS, but the source-note credits \"AWS Textract pricing,\" which is the dedicated parser, not the LLM-vision price. The provenance is mis-attributed for the headline OCR line.",
+        "fix": "Add the actual LLM-vision source (Gemini/Claude API pricing) to the source-note and reserve AWS Textract attribution for the dedicated-parser row only."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "or USD 8-10 per 1,000 pages on a dedicated parser like Textract AnalyzeExpense",
+        "problem": "THESIS expresses the dedicated-parser cost as \"per 1,000 docs,\" and the rest of the dossier uses \"docs.\" \"Pages\" silently changes the unit (multi-page receipts would change the per-doc economics), introducing an inconsistency with the table two paragraphs below that says \"USD 8-10 / 1,000 docs.\"",
+        "fix": "Change \"per 1,000 pages\" to \"per 1,000 docs\" to match THESIS and the COGS table on the same page."
+      }
+    ]
+  },
+  {
+    "slug": "business/gtm",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "India SMB ACVs sit around Rs 4-8 lakh for funded firms",
+        "problem": "This page uses \"Rs\" for rupee amounts throughout while the rest of the business batch (pricing, freemium, unit-economics) uses the ₹ glyph the AUTHORING-GUIDE prescribes (\"₹ amounts\"). Inconsistent currency notation across the dossier.",
+        "fix": "Replace \"Rs\" with \"₹\" consistently (Rs 4-8 lakh -> ₹4-8 lakh, Rs 1.5 lakh -> ₹1.5 lakh, Rs 40-80k -> ₹40-80k, etc.) to match the house style and sibling pages."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Tally reported 28,000+ partners (2022)",
+        "problem": "A precise vendor figure (28,000+ partners) is stated with a year but no provenance/confidence label in prose, where THESIS requires load-bearing numbers to carry source and, when soft, confidence. The Sources list has the Tally link but the inline claim reads as established fact.",
+        "fix": "Tag the figure inline as vendor-claimed, e.g. \"Tally reported 28,000+ partners (2022, vendor-claimed)\" consistent with how the 60M+ Zoho figure is hedged elsewhere."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "reported PLG median CAC of Rs 500-1,500 versus Rs 2,000-5,000 sales-led (from a blog aggregator, directional only)",
+        "problem": "Hard CAC figures are cited from \"a blog aggregator\" without naming it in the sentence; the caveat \"directional only\" is good but the source is unnamed inline. unit-economics.mdx names this as productgrowth.in, so the dossier is inconsistent about attributing the same numbers.",
+        "fix": "Name the aggregator inline (productgrowth.in) as unit-economics.mdx does, keeping the \"directional only\" caveat, so the same figures carry the same provenance across pages."
+      }
+    ]
+  },
+  {
+    "slug": "business/integrations",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Get Tally right and you have a durable wedge a globally-built rival cannot easily copy; ship without it and Finance walks.",
+        "problem": "The lead packs three pill verdicts and two semicolon clauses into a single opening paragraph; the inline <span class=\"pill pill--build\">Build</span> dropped mid-sentence reads as decoration rather than a stated verdict, slightly diluting the 'commit to a verdict, open with the takeaway' rule.",
+        "fix": "Keep the takeaway but lift the Build pill into its own short sentence at the end of the lead, e.g. end with 'The verdict: <span class=\"pill pill--build\">Build</span>, but integration-first.' rather than wedging the pill into a compound clause."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "the leading cloud challenger; clean REST API",
+        "problem": "Zoho Books is asserted as 'the leading cloud challenger' with no provenance or confidence. The thesis/raw treat cloud-accounting leadership as soft; this is stated as fact in a table marked High confidence.",
+        "fix": "Soften to 'a leading cloud challenger' and downgrade that row's confidence to Medium, or add a brief provenance note; the High pill is not warranted for a market-leadership claim."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "Meta can reclassify a utility template to the costlier marketing tier (effective 9 Apr 2025)",
+        "problem": "The aside cites the marketing rate (₹0.8631) and reclassification risk but omits that Meta moved to per-message pricing and (per the raw research) generic surveys default to marketing from July 2025, which is the operationally material reclassification trigger for approval flows.",
+        "fix": "Add one clause noting the July 2025 shift to per-message pricing and that survey-style prompts default to marketing, so approval prompts must be built strictly as utility templates."
+      }
+    ]
+  },
+  {
+    "slug": "business/pricing",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "RazorpayX 250 free payouts/mo then ~₹1.5-5 each",
+        "problem": "The payout low bound is stated as ₹1.5, but the THESIS canonical figure is ₹1.75-5/transaction (and the sibling pages freemium.mdx and unit-economics.mdx both correctly use ₹1.75-5). This page disagrees with the canonical number and with its own dossier.",
+        "fix": "Change \"~₹1.5-5 each\" to \"~₹1.75-5 each\" to match the THESIS canonical payout range and the other business pages."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "| Volopay | None | not published | sales-led, card-led | vendor page, high |",
+        "problem": "Provenance is labeled \"vendor page, high\" for a row whose only datum is \"not published.\" There is no published figure to assign high confidence to; the high label is meaningless here. THESIS also flags Volopay's self-reported numbers as unreliable.",
+        "fix": "Drop the confidence to a note like \"sales-gated, no public price\" or relabel provenance as \"vendor page (no public pricing)\"; do not assert \"high\" confidence on an unpublished cell."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "60M+ users; medium confidence on attribution",
+        "problem": "The 60M+ Zoho user figure is vendor-claimed and not in THESIS canonical figures. It is hedged \"medium confidence on attribution,\" but the number itself is unlabeled as vendor-claimed in this sentence, so a precise figure reads as fact.",
+        "fix": "Add \"(vendor-claimed)\" directly to the 60M+ figure, e.g. \"60M+ users (vendor-claimed); medium confidence on attribution.\""
+      }
+    ]
+  },
+  {
+    "slug": "business/risks",
+    "counts": {
+      "blocker": 1,
+      "major": 1,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "contradiction",
+        "offendingText": "Tally integration is the highest-leverage moat (80%+ Indian SMB accounting share, 2.2M businesses, 6sense, medium; the 70-80% figure is vendor-claimed, not independently audited)",
+        "problem": "This misattributes the 80% India accounting-share figure to 6sense. The adversarial fact-check (verify-v-tally.md) explicitly states the 6sense/enlyft numbers are GLOBAL ERP install-base estimates (~0.2-0.3%) and 'should NOT be used as India accounting share'; no independent analyst (Gartner/IDC) publishes such a figure. Citing 6sense as the source for '80%+ Indian SMB accounting share' fabricates provenance, and labelling 6sense '(analyst)' in Sources compounds it. The '2.2M businesses' figure also is not in the research (raw cites ~2M licenses / ~2.5M businesses, vendor-claimed).",
+        "fix": "Remove '6sense' as the source for the 80% India share. Attribute the 70-80% share to Tally's own vendor/PR claim (per thesis: vendor-claimed, not independently audited) and reserve 6sense only for the ERP install-base context if used at all. Drop or re-source '2.2M businesses'. In Sources, relabel the 6sense link as vendor/ERP-install-base, not analyst, and do not present it as the India-share source."
+      },
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "utility messages ~₹0.125, free in the 24-hour service window",
+        "problem": "Same error as the roadmap page: the canonical utility rate per the raw research and the integrations page is ~₹0.115, not ₹0.125, and the 'free 24-hour service window' is stale given Meta's July 2025 move to per-message pricing. Two pages in this batch disagree with the third (integrations) and with the source.",
+        "fix": "Change ₹0.125 to ₹0.115 and either drop 'free in the 24-hour service window' or note that Meta moved to per-message pricing in July 2025. Align all three business pages on ₹0.115."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "partner all money movement via RazorpayX or Cashfree at roughly ₹2-5 per payout",
+        "problem": "The thesis canonical payout figure is ~₹1.75-5/transaction. The page uses ₹2-5 here (line 35) but ₹1.75-5 is the canonical band; the roadmap and verdict pages use ₹1.75-5, so this is an internal inconsistency within the batch. The raw build-feasibility does say ₹2-5, so it is defensible, but the dossier should be consistent.",
+        "fix": "Use ₹1.75-5 to match the thesis canonical figure and the sibling roadmap/verdict pages, or footnote that ₹2-5 is the build-feasibility framing of the same ₹1.75-5 band."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "WhatsApp-first capture is a cheap, India-native wedge (500M+ users",
+        "problem": "The '500M+ users' WhatsApp India figure is stated as fact with no provenance or confidence; it does not appear in the cited integrations research finding and carries no source label, contrary to the 'every load-bearing number carries provenance' rule.",
+        "fix": "Add a source/confidence tag (e.g. 'Meta-reported, vendor, medium') or remove the user count; it is not load-bearing to the risk argument and is currently unsourced."
+      }
+    ]
+  },
+  {
+    "slug": "business/roadmap",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "the WhatsApp Business API at production scale (~₹0.125/utility message, free in the 24-hour window; BSP plans from ~₹1,499/mo; vendor, medium confidence)",
+        "problem": "Three problems. (1) The utility rate is wrong: the raw research and the integrations page both state ~₹0.115/utility message (effective 1 Jan 2026), not ₹0.125. (2) 'free in the 24-hour window' is stale: Meta moved to per-message pricing in July 2025 and removed the free conversation window, so this contradicts the cited model. (3) 'BSP plans from ~₹1,499/mo' has no support in the cited Whautomate research finding.",
+        "fix": "Change ₹0.125 to ₹0.115 to match the raw source and the integrations page. Drop 'free in the 24-hour window' or replace with 'service-window replies have moved to per-message pricing.' Remove the ~₹1,499/mo BSP figure unless a source is added; it is not in the cited finding."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "## What we explicitly will not do early",
+        "problem": "Minor: the deferral list repeats 'SOC 2' (already covered at length in Phase 4 and the SOC 2 trap aside) a third time, adding redundancy rather than new information.",
+        "fix": "Trim 'and SOC 2' from the not-do list since it is already the subject of Phase 4 and a dedicated aside; keep the list to items not handled elsewhere."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "GST ITC and GSTR-2B reconciliation (which turns soft ROI into a hard rupee number for the CFO)",
+        "problem": "Phase 3's AP figures carry provenance (Mordor, analyst, medium), but the GST ITC 'hard rupee number' claim in Phase 2 restates thesis framing without the carry-through caveat that the underlying ITC-leakage pain stats are vendor-sourced and dramatized.",
+        "fix": "No number is wrong here, but if ITC ROI is quantified anywhere downstream, label the leakage stats as vendor-sourced/medium per the thesis; as written it is acceptable but borderline. Consider a one-clause caveat."
+      }
+    ]
+  },
+  {
+    "slug": "business/unit-economics",
+    "counts": {
+      "blocker": 1,
+      "major": 1,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "wrong-number",
+        "offendingText": "roughly 5-20x cheaper than the ₹8-10 per 1,000 docs dedicated parsers",
+        "problem": "\"₹8-10 per 1,000 docs\" is wrong by ~100x. The THESIS figure is USD 8-10 per 1,000 docs, which converts to roughly ₹670-840 per 1,000 docs (≈₹0.70-0.85/doc). This sentence also internally contradicts the page's own table row at line 19 (\"~USD 0.008-0.01/doc (~₹0.70-0.85)\"). As written, ₹8-10 per 1,000 docs equals ₹0.008-0.01/doc, making the dedicated parser look ~30x cheaper than it is and cheaper than the LLM-vision option, which inverts the whole argument.",
+        "fix": "Replace \"₹8-10 per 1,000 docs\" with the correct figure, e.g. \"USD 8-10 (≈₹670-840) per 1,000 docs\" or \"~₹0.70-0.85/doc,\" matching the table on line 19 and THESIS."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "~USD 0.008-0.01/doc (~₹0.70-0.85) | Vendor pricing (Textract AnalyzeExpense, Google Doc AI, Azure) | <span class=\"pill pill--high\">High</span>",
+        "problem": "The dedicated-parser OCR row is marked High confidence while the LLM-vision row directly above it is Medium. THESIS labels the entire OCR unit-cost stack \"[vendor pricing, medium]\"; nothing in the spine supports promoting the dedicated-parser figure to High. Overstates confidence relative to the canonical caveat.",
+        "fix": "Downgrade the dedicated-parser confidence pill from High to Medium to match THESIS (\"vendor pricing, medium\") and the LLM-vision row."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "roughly 5-20x cheaper than",
+        "problem": "The \"5-20x cheaper\" ratio is only true at the extreme corners of the ranges (dedicated-high vs LLM-low). Using the table's own central figures (~₹0.30 LLM vs ~₹0.70-0.85 dedicated) the realistic multiple is closer to 2-3x. The claim cherry-picks range endpoints and reads as inflated.",
+        "fix": "State a defensible central multiple, e.g. \"roughly 2-3x cheaper on typical figures (up to ~20x at the range extremes),\" rather than leading with the 20x corner case."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "Bank penny-drop / reverse-penny-drop | Once, at account whitelisting | ~₹3 per successful + 18% GST | Setu/Cashfree published page | <span class=\"pill pill--high\">High</span>",
+        "problem": "THESIS supports \"₹3/successful (Setu published)\" at high confidence for Setu specifically, but the row attributes the same ~₹3 high-confidence anchor to \"Setu/Cashfree.\" The Cashfree figure is not a THESIS-anchored published price; bundling it under one High pill slightly overstates the Cashfree provenance.",
+        "fix": "Either cite Setu alone as the High-confidence ₹3 anchor, or keep Cashfree as a secondary indicative corroboration without folding it into the High-confidence Setu published price."
+      }
+    ]
+  },
+  {
+    "slug": "business/verdict",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "India SMB expense-software TAM is a derived ~USD 250-400M with SAM ~USD 80-150M (our derivation, low confidence)",
+        "problem": "The TAM band ~USD 250-400M contradicts the thesis canonical figures. The thesis bottoms-up India TAM is ~USD 150-300M (point ~USD 150-250M for the software market; range 120-350M), and the SAM ~USD 80-150M is correct. The verdict's 250-400M overshoots the thesis on both ends (top of any thesis band is 350M; 400M is above all of them) and its floor of 250M sits at the thesis point/ceiling, overstating the market the page elsewhere argues is 'oversold'.",
+        "fix": "Change the TAM to the canonical ~USD 150-300M (or ~USD 150-250M point), keeping SAM ~USD 80-150M. This also makes the 'large is not [fair]' argument internally consistent."
+      },
+      {
+        "severity": "minor",
+        "type": "bad-crosslink",
+        "offendingText": "for the one-page summary see the [executive summary](/overview/executive-summary/)",
+        "problem": "Not a wrong URL, but the verdict page and the executive summary are near-duplicate 'one-pager verdict' surfaces; the cross-link invites confusion about which is canonical. The slug map distinguishes them (executive-summary = the one-pager; verdict = the scored decision), so the anchor is acceptable but the relationship should be stated.",
+        "fix": "Keep the link but clarify the distinction, e.g. 'for the condensed one-pager (not the scorecard) see the executive summary', so the two verdict surfaces are not read as redundant."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Zaggle (listed, ~₹1,303 cr FY25 revenue), Happay (now MakeMyTrip), Volopay, Pluxee, plus Zoho anchoring price near zero",
+        "problem": "Pluxee is a benefits/meal-card player, not an expense-software competitor in the reimbursement lane this page scopes; listing it flatly in 'competitive intensity' without that distinction slightly overstates the direct competitive set. The thesis flags Pluxee only to avoid double-listing it with Sodexo, not as a head-to-head expense rival.",
+        "fix": "Either drop Pluxee from the competitive-intensity comment or qualify it as an adjacent benefits-card player, not a direct reimbursement-software competitor."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Tally-native two-way sync (XML-over-HTTP port 9000) plus GST ITC capture and WhatsApp-first field UX is genuinely hard to copy and genuinely under-served.",
+        "problem": "The defensibility row scores 4/5 on the strength of Tally share, but the supporting Sources label the 6sense link '(vendor)' here while risks.mdx labels the same 6sense link '(analyst)'. The two sibling pages disagree on the provenance class of the identical source, and neither matches the thesis stance that Tally share is vendor-claimed.",
+        "fix": "Standardise the 6sense Source label across both pages to 'vendor / ERP install-base' and keep the Tally-share claim explicitly vendor-claimed per the thesis, so defensibility is not propped on a misclassified analyst figure."
+      }
+    ]
+  },
+  {
+    "slug": "compliance/audit-retention",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "routed up to roughly five levels by amount",
+        "problem": "The 'roughly five levels' DoA depth is a specific structural claim stated as fact; it is not grounded in THESIS (which says only 'rupee-tiered DoA matrix') and carries no provenance. It reads as an invented precision.",
+        "fix": "Soften to 'routed up multiple authority levels by amount' or attribute the five-level figure to the maker-checker page's design, removing the unsupported specificity."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "Year preceding the current year",
+        "problem": "The Companies Act Sec 128 'Clock starts' cell says '8 financial years' with start 'Year preceding the current year,' which is muddled: Sec 128 requires keeping books for the 8 financial years immediately preceding the current year. The table phrasing conflates the period length with the clock anchor and could read as a 1-year anchor.",
+        "fix": "Clarify the cell to 'The 8 financial years immediately preceding the current year (longer if investigation ordered),' matching the regulatory-map page's clearer wording for the same statute."
+      }
+    ]
+  },
+  {
+    "slug": "compliance/data-protection",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Around 90% of US enterprise security questionnaires ask for it",
+        "problem": "The '90%' figure for SOC 2 questionnaire demand is a precise statistic stated as fact with no provenance or confidence; it is not in THESIS canonical figures and the page's source-note (Codesecure/TCSA) covers costs, not this 90% claim.",
+        "fix": "Either cite the source and a confidence for the 90% figure, or soften to 'the large majority of US enterprise questionnaires' with a vendor-sourced/medium-confidence label."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "around Rs 60k per year ongoing",
+        "problem": "The Rs 60k/year ISO 27001 maintenance figure is precise and stated as fact; THESIS only carries 'ISO 27001 ... ~₹5 L.' The ongoing-cost number has no provenance attached and the source-note labels all such costs only as 'indicative, medium.'",
+        "fix": "Keep but explicitly tie to the medium-confidence/indicative caveat already in the source-note, or drop the precise Rs 60k and say 'a modest annual surveillance-audit cost.'"
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Consent-manager registration (approx 12 months) | Around Nov 2026",
+        "problem": "The 'around Nov 2026' consent-manager milestone is presented in the timeline table as a fixed date but is not in THESIS (which only fixes 14 Nov 2025 notification and ~May 2027 full obligations). It is a derived/estimated date shown without a confidence marker in the table.",
+        "fix": "Mark the Nov 2026 row as approximate/derived in the table cell (e.g. '~Nov 2026, est.') consistent with how the May 2027 endpoint is hedged, so it is not read as a hard statutory date."
+      }
+    ]
+  },
+  {
+    "slug": "compliance/money-movement",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "min paid-up capital ₹5 cr, positive net worth ₹1 cr+ at all times",
+        "problem": "THESIS canonical PPI figure is 'non-bank PPI net worth ₹5 cr rising to ₹15 cr.' The page instead states 'paid-up capital ₹5 cr' and 'net worth ₹1 cr+,' omitting the ₹15 cr ceiling and substituting a ₹1 cr net-worth figure not present in THESIS. This disagrees with the canonical PPI net-worth band and introduces an un-sourced number.",
+        "fix": "Align with THESIS: state non-bank PPI net worth ₹5 cr at application rising to ₹15 cr (by the third financial year), matching the regulatory-map/THESIS framing. If the ₹1 cr / paid-up-capital nuance is retained, source it explicitly and reconcile it with the ₹15 cr ceiling."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "PA or PPI territory, which means ₹15 crore net worth and escrow",
+        "problem": "The lead conflates PA and PPI under a single '₹15 crore net worth' figure. PPI starts at ₹5 cr (THESIS), not ₹15 cr; ₹15 cr is the PA-at-application threshold (and the PPI ceiling). As written the lead implies PPI also requires ₹15 cr net worth up front, which is wrong.",
+        "fix": "Split the figures in the lead: PA net worth ₹15 cr at application (₹25 cr by year 3) with escrow; non-bank PPI ₹5 cr rising to ₹15 cr. Or generalize to 'multi-crore net worth and escrow' and let the table carry the precise split."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "cap PA-CB outward at ₹25 lakh per transaction",
+        "problem": "The ₹25 lakh PA-CB per-transaction cap is stated as a hard fact but is not in THESIS canonical figures and the page's source-note does not attach a confidence to it. It is a precise regulatory number presented without provenance.",
+        "fix": "Add an inline source/confidence for the ₹25 lakh PA-CB cap (cite the 2025 Directions clause) or mark it medium confidence pending re-verification, consistent with the guide's provenance rule."
+      }
+    ]
+  },
+  {
+    "slug": "compliance/regulatory-map",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Rs 1,800/mo (`<=`1.6L) or Rs 2,400/mo (`>`1.6L), + Rs 900/mo driver",
+        "problem": "These exact Rule 3 car-perquisite rupee values are stated as hard facts but are not among the THESIS canonical figures (THESIS lists only 'Rule 3 fixed perquisite values' generically). The source-note flags only the ~Rs 7,000 fuel cap as low confidence; the car/driver values are presented without provenance or confidence.",
+        "fix": "Either cite a specific govt source/confidence for the Rs 1,800/2,400/900 values inline, or add them to the source-note caveat the same way the fuel cap is flagged (e.g. 'car-perquisite rupee values per Rule 3, practitioner-corroborated, verify against current notification')."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "raised from Rs 30,000",
+        "problem": "The 194J threshold note claims it was 'raised from Rs 30,000' to Rs 50,000 for FY 2025-26. The pre-2025 194J threshold was actually Rs 30,000, which is correct, but THESIS does not carry this 'raised from' figure and the page states it as fact without provenance in the table; the source-note only points generically to a TDS chart. Confirm the baseline so a reader does not treat the delta as canonical.",
+        "fix": "Keep the Rs 50,000 figure but tie the 'raised from Rs 30,000' claim to the FY and notification in the source-note, or drop the parenthetical to avoid asserting an un-cited delta."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "the product pays for itself in recovered credit",
+        "problem": "Mild marketing-flavored phrasing in the tip aside ('pays for itself'). The guide bans marketing fluff; this leans promotional rather than numerate.",
+        "fix": "Replace with a concrete framing, e.g. 'recovered ITC is a measurable rupee line a CFO can underwrite,' avoiding the self-paying-product cliche."
+      }
+    ]
+  },
+  {
+    "slug": "market/competitors-global",
+    "counts": {
+      "blocker": 0,
+      "major": 2,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "Issuing INR corporate cards needs an RBI-licensed bank, PPI or NBFC",
+        "problem": "This invariant adds 'NBFC' as an INR-card issuer. THESIS and the page's own table cite only banks (RBI-approved) and non-bank PPIs (Companies Act + PSS Act 2007) as issuers. NBFCs are not a recognised card-issuing category under the PPI/PA framework in the spine; introducing 'NBFC' here muddies the regulatory invariant the page is trying to enforce.",
+        "fix": "Drop 'or NBFC' (or qualify it precisely), keeping the invariant to RBI-authorized banks and non-bank PPIs as in THESIS and the body text two lines above."
+      },
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "Industry roundups now treat 99%+ OCR extraction accuracy ... as essential",
+        "problem": "The '99%+ OCR accuracy' bar is asserted as the table-stakes standard. THESIS is explicit that clean-invoice accuracy is 94-99% (vendor-stated, optimistic) and drops to low-to-mid 80s on faded thermal/Devanagari. Citing '99%+' as the bar, even hedged as vendor roundup, risks setting an unachievable, misleading expectation that contradicts the OCR reality the dossier commits to.",
+        "fix": "Reframe as 'vendors advertise 99%+ on clean printed receipts, real-world India accuracy falls to the low-to-mid 80s on thermal/handwritten/Devanagari (THESIS)'. Cross-link /product/ocr/ for the honest range."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "Brex | US, card-led | Cards in 30+ currencies / 60+ countries, AI OCR, budgets in 100+ currencies",
+        "problem": "Brex hero-feature currency counts ('30+ currencies / 60+ countries', 'budgets in 100+ currencies') are precise vendor figures not in THESIS and not sourced on the page (the Brex sources cover the INR reimbursement cap, not these counts). Hard, specific numbers stated as fact without provenance.",
+        "fix": "Either source these currency/country counts inline or generalise to 'multi-currency cards across many countries'; reserve the precise counts for figures you can cite."
+      },
+      {
+        "severity": "minor",
+        "type": "bad-crosslink",
+        "offendingText": "See [/compliance/money-movement/](/compliance/money-movement/).",
+        "problem": "Cross-links on this page use the raw URL as the visible anchor text ('See /compliance/money-movement/', 'See /product/ocr/', 'See /market/whitespace/'). The AUTHORING-GUIDE wants prose cross-links with descriptive anchor text, not bare slugs shown to the reader. Functionally the URL is correct, but the anchor text is wrong style and reads as unfinished.",
+        "fix": "Replace bare-slug anchors with descriptive text, e.g. 'See [the compliant money-movement architecture](/compliance/money-movement/)' and 'See [bill digitization and fraud](/product/ocr/)'."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Expensify sells in INR (roughly ₹350-450/user/month)",
+        "problem": "The ₹350-450/user/month Expensify India price is presented as fact in prose; it traces only to a Capterra India listing (in Sources) and is the kind of aggregator figure THESIS warns may be stale/quote-specific. No confidence tag inline.",
+        "fix": "Tag it soft inline: '(roughly ₹350-450/user/month per Capterra India listing, may be stale)'."
+      }
+    ]
+  },
+  {
+    "slug": "market/competitors-india",
+    "counts": {
+      "blocker": 0,
+      "major": 2,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "~USD 14.99-17.99/user/mo (US-listed)",
+        "problem": "Fyle/Sage pricing here disagrees with the THESIS canonical figure (Fyle/Sage ~USD 11.99-14.99/user/mo) and with the sibling whitespace.mdx page, which states 'USD 11.99-14.99/user/month'. Same product, three numbers, two pages in this batch contradict each other.",
+        "fix": "Change to '~USD 11.99-14.99/user/mo' to match THESIS and whitespace.mdx, or if a higher tier is meant, label it explicitly as the top plan and keep the canonical entry price."
+      },
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "Karbon | Card-led | Startups / SMB | Quote-only | ~USD 38.3M (incl Rs 55 cr debt)",
+        "problem": "Karbon's '~USD 38.3M raised (incl Rs 55 cr debt)' is not a THESIS canonical figure (THESIS lists Volopay, EnKash, Kodo funding but not Karbon) and carries no per-cell provenance. A precise funding figure for a player the spine does not cover is stated as hard fact. It also happens to collide numerically with the India T&E spend figure (USD 38.3B) used elsewhere, inviting confusion.",
+        "fix": "Add a source for the Karbon funding figure inline or in the source-note, and flag confidence. If it is only from a single aggregator, mark it soft."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "the few pure-software players either anchor near-zero price (Zoho) or have left the building (Fyle to Sage, Happay to MakeMyTrip)",
+        "problem": "Calling Happay a 'pure-software player' that 'left the building' is slightly off against THESIS, which notes CRED kept Happay's payments arm and only the expense business moved to MakeMyTrip. The lead implies the whole of Happay exited as software; the nuance (payments arm retained) is correct later in the page but the lead overstates.",
+        "fix": "Soften the lead to 'Happay's expense business to MakeMyTrip' to match the precise correction made later on the same page."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "Free `<=`3; Std Rs 99 (Rs 79 yr)",
+        "problem": "Inline code span is broken across the comparison: backticks wrap only '<=' leaving the '3' outside, rendering as '<=`3' visually inconsistent. The guide requires wrapping the whole token to keep MDX from misreading '<'.",
+        "fix": "Wrap the full token: `<=3` (single code span covering both the operator and the number)."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "RazorpayX | Card-led / neobank | Startups to mid | Card up to Rs 1,499 reg + Rs 1,499 annual; 1.99% FX",
+        "problem": "Rupee amounts on this page are written 'Rs' throughout (Rs 99, Rs 1,499, Rs 1,303 cr) instead of the ₹ symbol the AUTHORING-GUIDE mandates ('India-first: ₹ amounts'). Every other page in the batch uses ₹; this page is inconsistent with the house style and its siblings.",
+        "fix": "Replace 'Rs ' with '₹' throughout the page (table cells, prose, and the corrections aside) for consistency with the guide and the other market pages."
+      }
+    ]
+  },
+  {
+    "slug": "market/pain-points",
+    "counts": {
+      "blocker": 0,
+      "major": 2,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "Many employee expenses (meals, outdoor catering, leave travel) are blocked ITC under Sec 17(5) unless mandated by law.",
+        "problem": "The 'unless mandated by law' qualifier is applied to the whole list including 'leave travel'. Per THESIS, the obligatory-under-law exception was extended to all of clause (b) from 1 Feb 2019, so meals/outdoor catering can become eligible when obligatory; but the LTC/LTA 'travel benefits to employees on vacation' block has its own logic, and crucially THESIS stresses that ORDINARY business travel is NOT blocked. The page risks reinforcing the 'business-travel ITC is blocked' error the spine explicitly warns against by lumping 'leave travel' with general employee travel.",
+        "fix": "Tighten to: 'food and beverages, outdoor catering, and leave/home-travel concession (LTC/LTA) are blocked ITC under Sec 17(5)(b), with an obligatory-under-law exception from 1 Feb 2019. Ordinary business travel (air/rail for work) is generally ITC-eligible.' Make the business-travel-is-eligible point explicit."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "a competent buyer can get it today from Zoho Expense, Fyle/Sage, Happay, or SAP Concur",
+        "problem": "Listing 'Happay' as a tool a buyer 'can get today' sits awkwardly against THESIS, which states CRED sold Happay's expense business to MakeMyTrip and it now lives inside MakeMyTrip's corporate-travel suite. As a standalone India SMB purchase it is no longer the same offering; the page treats it as a current independent incumbent without the stale-fact caveat the competitors page carries.",
+        "fix": "Replace 'Happay' with 'Happay (now in MakeMyTrip's travel suite)' or drop it from the 'can get today' list, matching the correction made on /market/competitors-india/."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "the hard ITC claim deadline of 30 November of the following financial year",
+        "problem": "The page states the ITC claim deadline as '30 November of the following financial year'. THESIS does not canonicalize this date and the statutory cut-off is 30 November following the end of the financial year (i.e. after FY end), which is what is meant, but 'following financial year' is ambiguous and could read as a year later than intended. The page itself elsewhere says 'Nov-30 deadline' tied to the next FY.",
+        "fix": "Clarify to '30 November following the end of the financial year (i.e. of the next FY)' and confirm against the live CBIC/Sec 16(4) wording, as THESIS warns CBIC pages were intermittently un-fetchable."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Roughly ₹7.34 lakh crore is reportedly tied up in unpaid MSME invoices ... TReDS discounting exceeded ₹1.9 lakh crore by FY2025.",
+        "problem": "Both the ₹7.34 lakh crore trapped-invoice figure and the ₹1.9 lakh crore TReDS figure are precise and sourced only to a single vendor press-wire (Webnewswire, in Sources). They are presented in prose with only a soft 'reportedly' and no confidence pill, despite being exactly the dramatized vendor stat THESIS says to label.",
+        "fix": "Add a Low/Medium confidence tag and 'single vendor source' caveat inline, consistent with how the page labels other vendor stats."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "The one verbatim employee thread we have is real but thin.",
+        "problem": "The page leans heavily on the under-sampled-employee-voice caveat but never surfaces even the one verbatim thread it references, so the 'employee voice' evidence the page promises is asserted rather than shown. Given the page's purpose (verified pains), at least one concrete employee quote would materially strengthen it.",
+        "fix": "Quote the one verbatim employee complaint (clearly labelled n=1, anecdotal) or state plainly that no usable verbatim was retained and the claim rests on aggregated review corpora."
+      }
+    ]
+  },
+  {
+    "slug": "market/size",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 4
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "| Global T&E software | ~USD 4.49B (2025) to ~11.7B (2031), ~17.3% CAGR | Analyst (Mordor) |",
+        "problem": "The global T&E '17.3% CAGR' and the '~11.7B (2031)' endpoint are not in THESIS. THESIS only canonicalizes global T&E base ~USD 4.49B (2025) and APAC T&E ~19% CAGR. A precise global CAGR is introduced here as analyst fact without being in the spine; the global T&E CAGR (~17.3%) sits oddly close to the APAC figure and risks conflating region with global.",
+        "fix": "Either drop the precise global '17.3% CAGR' / '11.7B (2031)' endpoint or footnote it as sourced directly from the Mordor T&E page and not part of the canonical spine. Keep only the THESIS-anchored base (~USD 4.49B, 2025) and the APAC ~19% growth note."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "~14.8 lakh are composition",
+        "problem": "The '~14.8 lakh composition' count and the '~21.7%' regular-salaried share are precise figures not present in THESIS canonical numbers and carry no inline provenance in the cell itself, presented as hard fact in a table whose deflator column is doing load-bearing argument work.",
+        "fix": "Add a brief provenance tag for the 14.8 lakh and 21.7% figures (e.g. 'GST stats' / 'PLFS') inline, or soften to '~15 lakh' / 'roughly a fifth' if the exact figure is not from a cited primary source in the raw file."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "the enterprise band holds the majority of T&E software spend (~59% in 2025)",
+        "problem": "The '~59% large-enterprise share' is stated in prose as a flat fact tied to '2025'. THESIS does not canonicalize this number; it appears only in the page's own Sources line as a Mordor T&E datapoint. Stating it inline without provenance launders an analyst slice into a bare fact.",
+        "fix": "Attach provenance inline: '(~59% in 2025, Mordor T&E, analyst)'. Confirm the figure is enterprise share of T&E spend specifically, not all expense-management software."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "SOM (indie, 3-year) | USD 0.5-2M ARR | ~2,000-8,000 paying users at ~₹120/user/mo blended",
+        "problem": "The blended ₹120/user/mo used to derive SOM is asserted without tying it to the THESIS pricing ladder (₹79-149 annual / ₹99-199 monthly). The number is plausible but the reader cannot reconcile ₹120 against the stated price points, weakening the 'argue with it' transparency the page promises.",
+        "fix": "Note that ₹120 is a blended realised ARPU sitting between the ₹79 annual Standard and ₹149 annual Premium points after free-tier dilution, cross-linking /business/pricing/."
+      }
+    ]
+  },
+  {
+    "slug": "market/whitespace",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 4
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "Zoho Expense is free up to 3 users and ₹79-99/user/month on the paid tier",
+        "problem": "The Zoho paid range '₹79-99' omits the Premium tier and disagrees with THESIS (Standard ₹99/₹79 annual; Premium ₹199/₹149 annual). The page's own positioning-map row also lists the wedge at '₹79-149', so within the same page Zoho's ceiling (₹99) is below the wedge's ceiling (₹149), which is internally inconsistent and understates the price floor the strategy must clear.",
+        "fix": "State Zoho as '₹79-149/user/mo on annual (₹99-199 monthly)' to match THESIS, and reconcile the prose with the positioning-map row."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "program fees grew 69.5% to ₹545.6 cr in FY25",
+        "problem": "The '69.5% to ₹545.6 cr program-fee' and 'SaaS subscriptions only about 3%' figures are precise and not in THESIS canonical set (THESIS gives Zaggle total revenue ₹1,303 cr and the 75-80% interchange share, not the program-fee line item). They are sourced to a Q4FY24 investor deck that predates FY25, so a FY25 figure cannot come from a Q4FY24 deck.",
+        "fix": "Fix the source mismatch: cite a FY25 result (annual report / Screener) for the ₹545.6 cr FY25 program-fee figure, not the Q4FY24 deck, or relabel the figures to the period the deck actually covers."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "USD 11.99-14.99/user/month, roughly 10x the India software point",
+        "problem": "This Fyle/Sage figure is correct against THESIS, but it contradicts the sibling page /market/competitors-india/ which lists '~USD 14.99-17.99/user/mo'. The batch ships two different Fyle prices; at least one is wrong and a reader cross-linking between the two pages will hit a contradiction.",
+        "fix": "Align both pages to the THESIS canonical '~USD 11.99-14.99/user/mo' (fix the competitors-india page, since this page matches the spine)."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "500M+ India WhatsApp users; utility messages ~₹0.125 each",
+        "problem": "The '500M+ users' and '₹0.125/utility message' figures are precise and sourced only to vendor blogs (MessageCentral/Whautomate). They appear both in the wedge table and prose as load-bearing economics for plank 3 with only a 'vendor, medium' tag in one place; WhatsApp utility-message pricing changes frequently, so a hard ₹0.125 risks going stale.",
+        "fix": "Keep the medium/vendor tag visible at every occurrence and add 'rate as of 2025, subject to Meta pricing changes' so the per-message cost is not read as fixed."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "Holding or pooling funds triggers RBI PA or PPI licensing (net worth ₹5 cr rising to ₹15 cr, or PA at ₹15-25 cr)",
+        "problem": "The PA threshold is compressed to '₹15-25 cr' without the THESIS timing nuance (PA net worth ₹15 cr at application, ₹25 cr by year 3). As written it reads as a static band rather than a staged requirement, slightly mis-stating the regulatory invariant in a danger box where precision matters most.",
+        "fix": "Match THESIS: 'PA net worth ₹15 cr at application, rising to ₹25 cr by year 3; non-bank PPI ₹5 cr rising to ₹15 cr.'"
+      }
+    ]
+  },
+  {
+    "slug": "overview/executive-summary",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "SaaS subscriptions are only about 3 percent",
+        "problem": "This precise figure is a vendor, single-period number (Zaggle 9MFY24 investor deck per the raw research) and is NOT in the THESIS canonical figures. It is stated inline as a hard fact in the verdict paragraph with no provenance or confidence, and the only source-note on the page is attached to a later table (line 63), not to this claim. The AUTHORING-GUIDE requires every load-bearing soft number to carry provenance and, when soft, a confidence, and warns against laundering vendor numbers into facts.",
+        "fix": "Qualify it: change to 'SaaS subscriptions are only about 3 percent of revenue (Zaggle 9MFY24 investor deck, vendor-stated)' or add a confidence pill. Tie it to the existing source-note or add an inline (vendor, 9MFY24) tag."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "expense-management software ~USD 8.33 to 8.48B (2025 to 26)",
+        "problem": "Provenance label is thinner than the source note convention. The THESIS attributes this to Mordor / Fortune Business Insights as [analyst, medium]; the inline confidence tag [analyst, medium] is present here, which is fine, but the two endpoint figures (8.33 from FBI, 8.48 from Mordor) are presented as a single range without distinguishing which firm produces which endpoint, where the Sources list does separate them. Acceptable but slightly imprecise.",
+        "fix": "Optionally note the range spans two analysts (FBI ~8.33B, Mordor ~8.48B) inline, since the Sources section already attributes them separately."
+      }
+    ]
+  },
+  {
+    "slug": "overview/the-problem",
+    "counts": {
+      "blocker": 1,
+      "major": 0,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "wrong-number",
+        "offendingText": "Concur is roughly USD 9 per report plus fees and sales-gated",
+        "problem": "This contradicts the THESIS canonical pricing. THESIS and the raw pricing research state SAP Concur is ~USD 9/user/mo PLUS ~USD 8-9 per expense report. The page conflates the per-user-per-month subscription into a per-report charge, which understates Concur's true cost and misstates its pricing model (it is a hybrid base-plus-overage, not a flat per-report fee).",
+        "fix": "Change to 'Concur is roughly USD 9 per user per month plus about USD 8 to 9 per expense report, quote-only and sales-gated' to match the THESIS canonical figure."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "~10 hours/month | Fortune Business Insights (analyst/vendor, soft)",
+        "problem": "The table labels Fortune Business Insights as 'analyst/vendor', but the caution aside two paragraphs below (line 45) lumps the '10 hours/month' figure in with figures that 'come from vendor and HRMS marketing blogs'. FBI is treated as an analyst source elsewhere in the dossier (THESIS market-size figures), so the page is internally inconsistent about whether this specific number is analyst or vendor-blog sourced.",
+        "fix": "Pick one label. If the 10 hrs/month number genuinely traces to FBI analyst data, drop it from the 'vendor and HRMS marketing blogs' list in the caution aside; otherwise relabel the table row as vendor-sourced."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "no TDS under Sec 192",
+        "problem": "The structural employee-vs-vendor tax fork is the page's most important technical claim, but the employee side is compressed into one clause ('cost-to-cost, receipt-backed, no TDS under Sec 192, and no GST when bought in the company name'). 'No TDS under Sec 192' is shorthand for 'not taxable as salary' and could confuse a reader, and the per-diem nuance (per-diem exempt only to the extent actually spent, unspent balance is taxable salary per Sec 10(14)/Rule 2BB) is a material employee-side reimbursement tax point that the page omits entirely despite being a THESIS invariant.",
+        "fix": "Briefly clarify that pure cost-to-cost reimbursement is not salary income (hence outside Sec 192), and add a one-line note that per-diem/allowances are exempt only to the extent actually spent, with the unspent balance taxable as salary, cross-linking to the regulatory map or edge cases."
+      }
+    ]
+  },
+  {
+    "slug": "product/edge-cases",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "1 to 2% (194C), 10% (194J), 10% (194R perquisite)",
+        "problem": "THESIS regulatory invariants explicitly state Sec 194J is '10% professional / 2% technical', and the raw research repeats the 2% technical rate. This canonical tax-fork table shows only '10% (194J)' and omits the 2% technical-services rate entirely. The row carries a 'high, corroborated against THESIS regulatory invariants' source-note, so the omission directly contradicts the thesis it claims to corroborate, and an implementer reading this table would under-cite the 194J rates.",
+        "fix": "Change the cell to '1%/2% (194C), 10% professional / 2% technical (194J), 2% commission (194H), 10% (194R)'. At minimum restore the 2% technical 194J rate. Consider adding 194H (2% w.e.f. 1 Oct 2024) which the thesis lists and the table omits."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "India petty-cash floats typically run Rs 5,000 to Rs 20,000.",
+        "problem": "A specific rupee range is presented as a fact inside a 'High' confidence row, but it is a soft, custom-practice figure with no provenance and is not in the THESIS canonical figures. Stating it as High confidence over-claims; petty-cash float sizes are an org-by-org convention, not a settled regulatory fact.",
+        "fix": "Either drop the specific range or label it as an indicative convention (medium/low), e.g. '(indicative; varies by org)'. Do not present it under the same High pill used for settled regulatory behaviour in that row."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Sec 10(14) / Rule 3 perquisite valuation",
+        "problem": "The employee 'Tax basis' cell conflates two distinct mechanisms: Sec 10(14) governs exempt allowances/reimbursements (per-diem, etc.), while Rule 3 governs perquisite valuation (car/fuel/accommodation). Labelling the combined cell 'perquisite valuation' mischaracterises the Sec 10(14) reimbursement path, which is an exemption, not a perquisite valuation.",
+        "fix": "Split or relabel: 'Sec 10(14) exemption for reimbursements; Rule 3 perquisite valuation where a perquisite arises.' Keep the two mechanisms distinct so the cell does not imply all employee reimbursement is perquisite-valued."
+      }
+    ]
+  },
+  {
+    "slug": "product/maker-checker",
+    "counts": {
+      "blocker": 0,
+      "major": 2,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "formatting",
+        "offendingText": "not a toggle in settings. <span class=\"pill pill--build\">Build</span> The four-eyes rule, a finite state machine",
+        "problem": "A Build pill is jammed mid-sentence between two independent sentences with no separating punctuation, so it reads as 'Build The four-eyes rule...'. The capital 'The' after the inline pill produces a run-on and a broken sentence boundary in rendered output.",
+        "fix": "Separate into two sentences and place the pill cleanly, e.g. '...not a toggle in settings. <span class=\"pill pill--build\">Build</span> the four-eyes rule, a finite state machine, a Delegation-of-Authority (DoA) matrix, ...' (lower-case 'the', and consider moving the pill to the end of the prior sentence)."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "Reject whole claim | CANCELLED | Checker",
+        "problem": "The FSM table routes a checker's 'Reject whole claim' to CANCELLED, but the State summary on the workflow page and the maker-checker roles table use REJECTED as the terminal for a rejected claim, and CANCELLED elsewhere means a maker discarding their own draft. Collapsing checker-rejection into CANCELLED conflates two semantically different terminals (maker abandon vs checker decline) and contradicts the workflow page's UNDER_REVIEW -> REJECTED transition.",
+        "fix": "Use a distinct REJECTED terminal for checker rejection (UNDER_REVIEW -> REJECTED, gate Checker) and reserve CANCELLED for maker discard, aligning with workflow.mdx's state table which lists REJECTED separately."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Reimbursement fraud leakage is estimated at 4 to 8 percent of spend (HRMS-vendor, medium confidence)",
+        "problem": "This 4-8% fraud-leakage figure does not appear in THESIS canonical figures. The thesis explicitly flags pain stats like ITC leakage and cycle times as vendor-dramatized; a fresh hard percentage is introduced here. It is at least labelled vendor/medium, but the specific number is not corroborated in the spine and risks laundering a marketing stat.",
+        "fix": "Either tie it to a thesis-supported source or soften to a directional statement, and add the standard caveat that such leakage figures are vendor-marketing and likely dramatized (consistent with the THESIS honest-caveats section)."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Manual approval turnaround in Indian setups is cited at 8 to 12 days against a sub-48-hour target.",
+        "problem": "Turnaround days (8-12) is a vendor (HROne) estimate; it is labelled medium/HRMS-vendor immediately after, which is acceptable, but the '8 to 12 days' is stated as a fact before the caveat and is not among THESIS canonical pain figures (thesis cites 30-45 day cycles, vendor-sourced).",
+        "fix": "Lead with the caveat or attribute inline: 'cited by an HRMS vendor (HROne, directional, medium confidence) at 8 to 12 days'. Acceptable as-is but tighten attribution placement."
+      }
+    ]
+  },
+  {
+    "slug": "product/mvp-scope",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "WhatsApp has 500M+ India users and utility messages cost ~₹0.125 each (vendor pricing, medium)",
+        "problem": "The '500M+ India users' and '~₹0.125 per utility message' figures are not in THESIS canonical figures (the thesis carries no WhatsApp user count or per-message price). They are labelled vendor/medium, which is the right convention, but neither number is corroborated in the spine, so they are net-new hard numbers introduced at the page level.",
+        "fix": "Acceptable with the vendor/medium label, but cite the specific source inline (MessageCentral, the page's own Sources entry) so the number is traceable, and confirm the ₹0.125 utility-message rate is current, since WhatsApp pricing changed materially in 2025."
+      }
+    ]
+  },
+  {
+    "slug": "product/non-reimbursables",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Minibar, in-room movies | Personal consumption on travel | Sec 37 personal; Sec 17(5)(g)",
+        "problem": "The catalogue cites 'Sec 17(5)(g)' for minibar/in-room movies. The THESIS Sec 17(5) invariant enumerates clauses (a) and (b) in detail but does not reference clause (g); the page elsewhere correctly anchors alcohol/F&B to 17(5)(b). Introducing 17(5)(g) (goods/services for personal consumption) without the same 'corroborate against live statute' caveat the page applies to (a)/(b) is an unverified clause citation in a danger-grade catalogue.",
+        "fix": "Either verify and footnote 17(5)(g) (personal-consumption block) against the CBIC text with the same caveat used elsewhere on the page, or map minibar/movies to the Sec 37 personal disallowance only and drop the unverified 17(5)(g) reference."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "the same amendment that introduced the 13-seat threshold",
+        "problem": "The page states the CGST Amendment Act 2018 (eff. 1 Feb 2019) 'introduced the 13-seat threshold'. THESIS describes the 17(5)(a) block as 'approved seating capacity not more than 13 (incl. driver)' but does not attribute the 13-seat threshold's introduction to that 2018 amendment. Coupling the obligatory-under-law extension and the 13-seat threshold as 'the same amendment' is a precise historical claim beyond what the spine supports.",
+        "fix": "Soften to the supported claim: the 1 Feb 2019 amendment extended the obligatory-under-law proviso to all of clause (b); state the 13-seat capacity rule as the current text of 17(5)(a) without asserting it was introduced by that same amendment, unless verified against the statute."
+      }
+    ]
+  },
+  {
+    "slug": "product/ocr",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "End-to-end third-party benchmarks land Claude/Gemini-class extraction at roughly USD 1.50-2.00 per 1,000 invoices.",
+        "problem": "This end-to-end benchmark figure is stated as fact in a tip aside with no inline provenance or confidence pill, even though the raw research marks it as a third-party benchmark estimate. The page elsewhere is careful to label its derivations; this one is naked inside a callout.",
+        "fix": "Add a provenance/confidence tag, e.g. append '(third-party benchmark, medium confidence)' to the sentence, matching the discipline used in the cost table's source-note."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Nanonets at roughly USD 1.20-1.80 per invoice, Veryfi at USD 0.08 per receipt with a hard USD 500/month floor, Mindee at roughly EUR 0.04 per page",
+        "problem": "Three precise vendor SaaS prices are stated as fact in prose with no provenance label or confidence, unlike the adjacent table which carries a full source-note. These are vendor-marketing figures and should be labelled as such per the authoring guide.",
+        "fix": "Add a short parenthetical or trailing source-note labelling these as vendor list prices (vendor-marketing, medium), e.g. '(vendor pricing pages, medium confidence)'."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "never <span class=\"pill pill--avoid\">Build a parser</span>",
+        "problem": "The lead sentence ends with a verdict pill 'Build a parser' under the avoid class, but 'Build a parser' is not a verdict label, it is the rejected action. Reading the pill in isolation ('Avoid: Build a parser') is fine, but pairing it with the pill--build 'Build cheap' in the same breath makes two pills do contradictory work in one sentence and slightly muddies the single-verdict rule.",
+        "fix": "Keep one verdict pill for the layer (Build cheap) and express the rejected option in plain prose: 'never by building a bespoke parser.' Reserve the avoid pill for an actual avoid verdict."
+      }
+    ]
+  },
+  {
+    "slug": "product/onboarding-kyc",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "Rs 12,000/yr + GST, 750 free PANs/day",
+        "problem": "The free-PAN allowance is correct per raw research (750/day), but the primitives table earlier on the page quotes 'Rs ~0.25-0.30/PAN at Protean volume' as a flat fact without noting the raw research caveat that the exact Protean per-PAN slab table was inferred from FAQ summaries because the live charges page did not render. The source-note says 'table inferred from FAQ' for the pricing block but the primitives table (line 16) states the per-PAN figure with no such caveat.",
+        "fix": "Carry the 'inferred from FAQ, confirm against live Protean charges page' caveat to the primitives-table per-PAN figure too, or drop the sub-rupee figure from the primitives table and keep it only in the caveated pricing block."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "GSTIN + Udyam (vendors only) | Tax registration, MSME status for the 45-day clock",
+        "problem": "Udyam/MSME verification is introduced as one of the three core primitives but is never developed: there is no detail on how Udyam status is verified (the Udyam portal has no open public API in the way GSTIN search does), unlike PAN and bank which each get a dedicated section. For a page whose whole job is the verification rail, the vendor-side MSME check is left thin.",
+        "fix": "Add 2-3 sentences on Udyam verification mechanics (KYB aggregator returning Udyam registration number/category, periodic re-check, the Sec 43B(h) 45-day-clock dependency) so the third primitive gets parity with PAN and bank."
+      }
+    ]
+  },
+  {
+    "slug": "product/payouts",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Ship file hand-off first <span class=\"pill pill--build\">Build</span>; offer the partner API as a premium tier.",
+        "problem": "The Build pill is dropped mid-sentence after 'first' with no label context, reading as a dangling token rather than a verdict ('Ship file hand-off first Build;'). It garbles the otherwise strong lead sentence.",
+        "fix": "Move the verdict to a clean position, e.g. 'Ship file hand-off first (verdict: <span class=\\\"pill pill--build\\\">Build</span>); offer the partner API as a premium tier.' or drop the inline pill and state the verdict in a short standalone line."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "RazorpayX caps any single payout at Rs 5 lakh, so reimbursements above that route to RTGS.",
+        "problem": "The Rs 5 lakh single-payout cap is stated as a hard current fact with no provenance or confidence, and it is a vendor product limit that changes. Given the page otherwise version-dates and labels partner economics as vendor-sourced/negotiable, this hard limit should carry the same caveat.",
+        "fix": "Add a brief provenance/confidence marker, e.g. 'RazorpayX caps any single payout at Rs 5 lakh (vendor product page, re-verify at build time)', consistent with the rails source-note."
+      }
+    ]
+  },
+  {
+    "slug": "product/rule-engine",
+    "counts": {
+      "blocker": 1,
+      "major": 0,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "formatting",
+        "offendingText": "\"condition\": {\"field\": \"gstin\", \"operator\": \"is_present\", \"value\": true},\n    \"action\": \"flag\", \"hardness\": \"soft\", \"severity\": \"low\",\n    \"message\": \"GSTIN failed Luhn-mod-36 format check\"",
+        "problem": "The gstin_format example rule is logically broken: the condition fires when a GSTIN is_present (true), but the action is 'flag' with message 'GSTIN failed Luhn-mod-36 format check'. As written, every claim that HAS a GSTIN is flagged as a format failure. The condition should test the checksum/format validity, not mere presence. This is the page's flagship India-native rule and the example contradicts the surrounding prose that GSTIN_FORMAT is a Luhn-mod-36 checksum rule.",
+        "fix": "Change the condition to test format validity, e.g. {\"field\": \"gstin\", \"operator\": \"fails_format\", \"value\": \"luhn_mod_36\"} (or operator 'is_valid_gstin' with value false), so the flag fires only when the checksum/format check fails, matching the message."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "\"action\": \"allow\", \"hardness\": \"soft\", \"severity\": \"info\", \"tags\": [\"itc_eligible\"]",
+        "problem": "The itc_company_match and vendor_tds_194j example objects use a top-level 'tags' / 'compute' field and a top-level 'rate' that are not in the rule-object schema table (line 18-30), which defines only id/name/description, scope, condition, action, params, severity, hardness, enabled, priority, effective_from/to plus a 'message'. 'tags', and the params keys 'compute'/'rate', and top-level 'message' are used in examples but undocumented in the schema table, creating an internal inconsistency a reader hits immediately.",
+        "fix": "Either add 'tags' and 'message' (and clarify 'compute'/'rate' live under params) to the rule-object field table, or move them under params in the examples so the examples conform to the documented schema."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "Each maps cleanly onto a verb already observed in a reference engine, so the taxonomy is not invented, it is consolidated.",
+        "problem": "The 'warn' verb is asserted as soft-gated 'employee must enter a reason before submit', but the evaluation-order Steps and the line-item-then-claim rollup never show how 'warn' (reason-required) interacts with submission blocking, unlike block/cap which are worked through. The reason-capture gating is the one verb with submission-time side effects and it is under-specified.",
+        "fix": "Add one line to the evaluation-order or hardness section explaining that 'warn' soft-gates submission by requiring a stored reason (which becomes an audit event), distinguishing it from 'flag' (no gate) and 'block' (hard stop)."
+      }
+    ]
+  },
+  {
+    "slug": "product/workflow",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "TDS under 194C (1-2%), 194J (10%), 194R (10%), 195 (non-resident)",
+        "problem": "194R (10% on benefits/perquisites to a business under Sec 194R) is not a vendor-invoice-reimbursement withholding and is not part of the THESIS TDS invariant. Listing it in a vendor-invoice TDS column alongside 194C/194J is misleading. The THESIS canonical TDS list is 194C (1%/2%), 194J (10% professional / 2% technical), 194H (2% from 1 Oct 2024), with possible RCM; it does not include 194R. The page also drops the 194J 2% technical-services rate that the thesis specifies.",
+        "fix": "Replace with the thesis-canonical set: '194C (1%/2%), 194J (10% professional, 2% technical), 194H (2% commission), 195 (non-resident)'. Drop 194R, or move it to a clearly-labelled separate note about benefits/perquisites if retained, with provenance."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Threshold-based multi-level routing goes up to roughly 5 levels deep",
+        "problem": "The '~5 levels deep' figure is a vendor-sourced (Volopay) claim used elsewhere on the maker-checker page with a confidence tag, but here it is asserted flat with no provenance or confidence, contrary to the guide's rule that load-bearing numbers carry provenance.",
+        "fix": "Add provenance/confidence inline, e.g. 'up to roughly 5 levels deep (Volopay vendor guidance, medium confidence)', consistent with how the maker-checker page labels the same number."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "Retain documents and trail for 72 months under CGST Sec 36",
+        "problem": "THESIS record-retention invariant says to default to the LONGEST applicable period, 8 financial years (Companies Act Sec 128), with GST 72 months as one of several. Stating only the 72-month GST figure on a page that describes the canonical lifecycle under-states the controlling retention period that mvp-scope.mdx correctly gives as '8 financial years default'.",
+        "fix": "Note the longest-applicable rule: 'Retain for the longest applicable period (default 8 financial years per Companies Act Sec 128; GST minimum 72 months under CGST Sec 36), with litigation-hold extension.'"
+      }
+    ]
+  },
+  {
+    "slug": "reference/bank-files",
+    "counts": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "other-bank consolidated limit up to ₹50 lakh/txn, ₹2 crore/day",
+        "problem": "This SBI Corporate (CINB) per-bank limit is presented as a hard fact in the table and repeated in the source-note and the SBI source line, but it is single-sourced to a vendor/portal page and the page itself flags SBI detail as lower confidence. It is not a THESIS canonical figure. Stating an exact rupee cap without a confidence marker on the row overstates certainty for a number the page elsewhere admits is unverified.",
+        "fix": "Mark the figure soft inline, e.g. 'other-bank consolidated limit up to ~₹50 lakh/txn, ~₹2 crore/day (portal-sourced, verify)'. Keep it consistent with the page's own caution that SBI detail is medium-or-lower confidence."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "Online NEFT and RTGS carry no RBI charge.",
+        "problem": "This page states RTGS carries no RBI charge, while the glossary page states RTGS has an 'indicative fee ~₹10 to 20 per transaction'. A reader moving between the two reference pages sees RTGS as both free and ₹10-20. The distinction (RBI charge vs bank service charge) is real but never spelled out, producing an apparent cross-page contradiction.",
+        "fix": "Add the distinction here ('no RBI processing charge; banks may levy their own service fee') and align the glossary RTGS fee row to say the same, so the two reference pages do not appear to disagree."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "| Kotak Corporate Net Banking / H2H | CSV / fixed-width / XML (verify) | NEFT, RTGS, IMPS | In scope for vendor and salary payouts; specific field-format doc not independently confirmed, verify directly |",
+        "problem": "The Kotak row carries essentially no concrete field detail, only a 'verify directly' note. Given the page's stated purpose (indicative fields per major bank), a row that supplies no fields is thin, though the page does honestly flag it as unconfirmed.",
+        "fix": "Either add the commonly-documented Kotak bulk fields (beneficiary name, account no., IFSC, amount, mode, narration) with an explicit 'unverified' tag, or drop the row to the per-bank caution note rather than presenting an empty table row as coverage."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "per-file cap ~1,000 txns / ₹10 crore",
+        "problem": "The HDFC per-file cap is sourced to a Scribd-hosted upload manual (vendor, uncertain vintage) and stated as a near-precise figure in the table. The page's caution covers it generally, but the specific cap reads as firmer than its single secondary source supports.",
+        "fix": "Tag it indicative inline ('~1,000 txns / ₹10 crore, per a secondary upload manual; confirm against current HDFC ENet spec') consistent with the page-level 'indicative, not authoritative' framing."
+      }
+    ]
+  },
+  {
+    "slug": "reference/glossary",
+    "counts": {
+      "blocker": 0,
+      "major": 2,
+      "minor": 3
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "Default for large vendor payouts; indicative fee ~₹10 to 20 per transaction.",
+        "problem": "The RTGS fee of ₹10-20/txn contradicts both the THESIS payout cost band (~₹1.75-5/transaction) and the bank-files page, which states 'Online NEFT and RTGS carry no RBI charge.' No source on the glossary or sources page supports a ₹10-20 RTGS figure; it appears invented. This is a number that disagrees with the thesis and with a sibling reference page.",
+        "fix": "Remove the ₹10-20 figure. Replace with the THESIS-consistent stance: 'Online RTGS carries no RBI charge; banks may add a small service fee. Default for large vendor payouts.' Do not state a precise rupee fee that no source supports."
+      },
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "the NEFT/RTGS beneficiary name look-up (free, mandatory from 1 Apr 2025).",
+        "problem": "The '1 Apr 2025' mandatory date is stated as a hard fact in the NPCI definition but is not a THESIS canonical figure and carries no provenance/confidence inline. The sources page lists only a Dec-2024 BusinessToday item and an undated Probe42 circular summary, neither pinned to 1 Apr 2025. A precise effective date stated bare is exactly the soft-to-hard laundering the guide forbids.",
+        "fix": "Either attach provenance ('free, effective ~Apr 2025 per RBI circular, verify') or drop the precise date. Confirm against the RBI/NPCI circular before stating a hard effective date."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "indicative fee ~₹3 to 5 per transaction (vendor pricing, medium).",
+        "problem": "The IMPS row gives ₹3-5/txn while the NEFT row gives ~₹1.75-3 and THESIS gives a single payout band of ~₹1.75-5/transaction. The per-rail splits are invented sub-bands not present in THESIS; IMPS at ₹3-5 is at the top of the band with no source for rail-specific pricing.",
+        "fix": "Collapse to the THESIS band: present payout cost as one indicative range (~₹1.75-5/txn, vendor pricing, medium) rather than fabricating distinct per-rail figures the sources do not support, or cite a source for the per-rail split."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "FEMA ... cross-border flows (per-transaction cap ₹25 lakh); out of MVP scope.",
+        "problem": "The PA-CB cross-border per-transaction cap of ₹25 lakh is stated as a hard fact but is not in THESIS and carries no provenance on the page; FEMA/PA-CB caps are version-sensitive RBI limits.",
+        "fix": "Add a provenance/version caveat ('~₹25 lakh per transaction under RBI PA-CB rules, verify by FY') or drop the figure, since the term is flagged out-of-scope anyway."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "success runs ~95 to 97% (vendor-stated).",
+        "problem": "The reverse-penny-drop success rate of 95-97% is labelled vendor-stated, which is good, but the figure is not in THESIS and is presented as a tight range; it should carry a confidence pill consistent with the page's own 'How to read provenance tags' convention.",
+        "fix": "Add 'low' or 'medium' confidence to match the page's stated convention, e.g. '~95 to 97% (vendor-stated, low)'. Same for the ~48h auto-refund window."
+      }
+    ]
+  },
+  {
+    "slug": "reference/rule-schema",
+    "counts": {
+      "blocker": 0,
+      "major": 2,
+      "minor": 2
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "Statutory thresholds you version by financial year (from the [regulatory map](/compliance/regulatory-map/)): GST ITC reversal if a supplier is unpaid past `180 days`",
+        "problem": "The 180-day ITC-reversal window is stated as a flat statutory fact with no provenance or confidence. THESIS marks all statute wording medium confidence and corroborated only via ClearTax/Taxmann/IndianKanoon (CBIC pages were un-fetchable), and the regulatory invariants section never hard-codes 180 days. Stating it bare risks laundering a soft, re-verify-before-coding number into a hard fact.",
+        "fix": "Attach provenance/confidence and a version caveat, e.g. 'GST ITC reversal if a supplier is unpaid past 180 days (Rule 37, ClearTax-corroborated, medium; re-verify against live CBIC text before coding)'. Tie it to the same caveat the Sources page carries."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "\"condition\": \"expense_type == 'food_beverage' AND itc_claimed == true\",\n    \"action\": \"block\", \"hardness\": \"hard\", \"severity\": \"high\",\n    \"message\": \"ITC blocked on F&B under GST Sec 17(5)(b).\"",
+        "problem": "This example hard-blocks the entire line (action=block makes reimbursable_amount=0 per the evaluation algorithm) when ITC is claimed on food & beverage. Sec 17(5)(b) blocks the ITC, not the expense: F&B is still reimbursable to the employee, only the input tax credit is unavailable. Hard-blocking the line conflates a blocked-ITC tag with a non-reimbursable spend and would wrongly zero a legitimate reimbursement.",
+        "fix": "Change the action so it blocks/clears only the ITC tag, not the reimbursement: e.g. action 'flag' or 'cap' on the itc_claimed flag, message 'ITC not claimable on F&B under Sec 17(5)(b); reimburse gross, drop the ITC tag.' Make clear block applies to ITC eligibility, not the line's reimbursable_amount."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Ramp 99% in-policy accuracy",
+        "problem": "Cited inside a Note pill and labelled vendor-marketing, which is correct, but the specific 99% figure is not in THESIS or shown with a confidence pill, so it reads as a precise fact carried into the page body.",
+        "fix": "Either drop the precise number or pair it with a Low confidence pill, e.g. 'Ramp 99% in-policy accuracy (vendor-marketing, low)'. The structural-model claim can stay."
+      },
+      {
+        "severity": "minor",
+        "type": "bad-crosslink",
+        "offendingText": "the [rule engine](/product/rule-engine/) page; what counts as never-reimbursable lives on [non-reimbursables](/product/non-reimbursables/)",
+        "problem": "Not an error in target, but the page opens by deferring rationale to two other pages in a single sentence before stating its own conclusion, softening the lead. AUTHORING-GUIDE requires opening with the takeaway, not a navigation handoff.",
+        "fix": "Move the two cross-links to the end of the opening paragraph or to a closing LinkCard set, and lead with the one-line conclusion ('Rules are data, not code...') unencumbered by cross-links."
+      }
+    ]
+  },
+  {
+    "slug": "reference/sources",
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 4
+    },
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "[FCM Travel - India 2024 business travel spend ~USD 38.2B]",
+        "problem": "The bibliography source line cites India 2024 business-travel spend as ~USD 38.2B, while THESIS canonical figure (and the glossary T&E row) is ~USD 38.3B (GBTA/Visa). A reference/methodology page that anchors the canonical figures should not seed a competing 38.2 vs 38.3 number in its own link labels.",
+        "fix": "Normalize the link label to the canonical ~USD 38.3B, or annotate that FCM cites 38.2B vs GBTA/Visa 38.3B so the discrepancy is explained rather than silently introduced."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "refuses to repeat the implausible Volopay \"USD 77.3M ARR\" self-report as fact.",
+        "problem": "THESIS records the figure as 'Volopay \"$77.3M ARR\"'. The page quotes it as 'USD 77.3M' which is fine, but it asserts the dossier 'refuses to repeat' it while the bibliography below lists getlatka Volopay profiles three times as the very self-reported source; the claim of refusal is slightly undercut without a note that the source is listed only to flag it.",
+        "fix": "Tie the sentence to the bibliography handling, e.g. note the getlatka lines are 'cited only to flag, not to trust' (as the final Sources block already does) so the refusal claim is consistent with the link list above."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "The lower blocks (prefixed VERIFY) are the adversarial fact-check sources.",
+        "problem": "The prose says adversarial blocks are 'prefixed VERIFY', but the actual H3 headings are prefixed 'Adversarial verification:' not 'VERIFY'. The label promised in prose does not match the rendered headings, so the navigational cue is wrong.",
+        "fix": "Change the prose to match the headings ('prefixed \"Adversarial verification:\"') or rename the headings to carry a VERIFY prefix. Make the cue and the headings identical."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "The dossier was built by a multi-agent research pass: 14 domain researchers ... plus 7 adversarial fact-checkers",
+        "problem": "The methodology section states counts (14 + 7) but never lists or maps which 7 claims the adversarial checkers covered against the bibliography's seven 'Adversarial verification' blocks, leaving the headline numbers unverifiable on the page itself. Minor, since the blocks exist, but the mapping is implicit.",
+        "fix": "Add one line mapping the 7 fact-checks to the 7 'Adversarial verification' bibliography blocks (market size, GST 17(5), RBI licensing, DPDP, KYC pricing, competitor status, Tally) so the 14+7 claim is self-evidencing."
+      }
+    ]
+  },
+  {
+    "slug": "users/buyers-icp",
+    "counts": {
+      "blocker": 0,
+      "major": 3,
+      "minor": 4
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "GST Input Tax Credit leakage runs up to 18% of expense value when invoices lack the company GSTIN",
+        "problem": "Same misframing as the personas page: '18% of expense value' presents the GST rate ceiling as a measured leakage rate. The thesis carries the soft ITC stats as '18% ITC recovery' / '60% ITC leakage' (vendor-sourced, dramatized) and does not endorse '18% of expense value lost'. It is labelled vendor-sourced/directional here, which helps, but the number itself misstates what 18% is.",
+        "fix": "Reframe: the leaked credit is the embedded GST on affected line items (often up to 18% of those items' taxable value), not 18% of total expense. Keep the vendor-sourced label and Low/Medium confidence, and align wording with the personas page so the two do not diverge."
+      },
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "~48% of Indian firms lacking T&E fraud detection",
+        "problem": "This precise figure (~48%) is not in THESIS canonical figures nor in its caveat list of sanctioned soft stats (40-60 hrs/month, 60% ITC leakage, 30-45 day cycles, 18% ITC recovery, 4-8% fraud). It is introduced twice (caution box and triggers table) as a hard percentage attributed only to a Fortune Business Insights blog, with no confidence pill. The thesis says no tier-1 analyst publishes India-only expense numbers, so an India-specific 48% should not be laundered as fact.",
+        "fix": "Either remove the ~48% figure or attach explicit provenance (Fortune Business Insights, vendor/analyst blog) plus a Low confidence pill, and state it is not corroborated by the thesis. Do not present it as an audited India-wide statistic."
+      },
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "spreadsheet/CSV-to-ERP adds 3 to 4 days",
+        "problem": "The '3 to 4 days' month-end close figure is a fresh precise number not present in THESIS canonical figures or its caveat list, and the triggers-table cell gives it no source label or confidence. Same class of un-provenanced soft stat the guide forbids laundering.",
+        "fix": "Drop the specific '3 to 4 days' or attach a vendor-sourced label and Low confidence; do not state as fact in a table cell without provenance."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "~10 hours/month lost per employee",
+        "problem": "The '~10 hours/month' productivity-loss stat is not among the thesis canonical or caveated figures (the thesis cites 40-60 hrs/month at the finance-team level, not 10 hrs/employee). It is at least bundled into the caution box and labelled vendor-sourced/dramatized, so provenance exists, but the number itself is not thesis-sanctioned and should be flagged as such.",
+        "fix": "Keep the vendor-sourced caveat but note this specific figure is not corroborated by the dossier's own research; consider attributing it to the specific vendor blog rather than implying a settled number."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Sell to Finance, not HR, in the 50 to 500 employee band.",
+        "problem": "Strong opening verdict, correctly committed and thesis-aligned; no issue. Confirming the lead states the conclusion per the guide.",
+        "fix": "No change required."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "See [/product/maker-checker/](/product/maker-checker/) for the state machine.",
+        "problem": "Two inline cross-links use the raw URL as anchor text ([/product/maker-checker/] and [/users/personas/] and [/business/pricing/], [/business/gtm/], [/market/whitespace/], [/overview/executive-summary/]). The guide says cross-link with descriptive anchor text; raw-URL anchors read as machine output, not prose, and are inconsistent with the personas page which uses descriptive anchors.",
+        "fix": "Replace raw-path anchor text with descriptive phrases, e.g. 'See [maker-checker and DoA](/product/maker-checker/)', '[the persona set](/users/personas/)', '[pricing](/business/pricing/)', etc. URLs are correct; only the anchor text needs humanizing."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "The MAKER-CHECKER (4-eyes) split",
+        "problem": "All-caps MAKER, CHECKER, MAKER-CHECKER mid-prose is a styling tic inconsistent with the personas page (which uses bold 'maker-checker'). Reads as shouting rather than emphasis.",
+        "fix": "Use bold or normal case: 'The maker-checker (4-eyes) split...', 'the Maker who validates...', 'the Checker and budget owner.' Match the personas page convention."
+      }
+    ]
+  },
+  {
+    "slug": "users/personas",
+    "counts": {
+      "blocker": 0,
+      "major": 2,
+      "minor": 4
+    },
+    "issues": [
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "ITC leakage of up to **18% of expense value** when invoices lack a valid GSTIN in the company name.",
+        "problem": "18% is the GST tax rate ceiling, not a measured leakage rate. The thesis lists the soft ITC pain stat as '18% ITC recovery' (a vendor blog figure) under honest caveats, and separately '60% ITC leakage'. Stating '18% of expense value' as the leakage magnitude conflates the GST rate with a loss rate and is not a figure the thesis supports. It is carried as Medium with a vendor caveat, but the number itself is a misframing.",
+        "fix": "Reframe to match the thesis: ITC leakage occurs when invoices lack a valid company-name GSTIN; the recoverable credit is the embedded GST (commonly up to 18% of the taxable value of those line items), not 18% of total expense. Cite as vendor-sourced and Low/Medium, and avoid implying 18% of all spend is lost."
+      },
+      {
+        "severity": "major",
+        "type": "thin-coverage",
+        "offendingText": "each handoff reportedly adding ~1.5-2 days",
+        "problem": "This per-handoff TAT figure (~1.5-2 days) does not appear in THESIS canonical figures or its caveat list and is introduced as a fresh precise number with only 'reportedly' as provenance, no source label and no confidence pill. The thesis only sanctions ~8-12 day total TAT and the vendor-stat caveat list (40-60 hrs/month, 30-45 day cycles).",
+        "fix": "Either drop the '~1.5-2 days per handoff' figure or attach explicit vendor-sourced provenance and a Low confidence pill, consistent with how the page labels its other soft stats."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "reimbursements bundled with fees",
+        "problem": "Auditor 'Top pains' row in the persona table abbreviates the pure-agent issue but this is fine; the real wrong-number risk is elsewhere. No change needed to this cell, but note for completeness the table is dense and defensible.",
+        "fix": "No change required; leave as is."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Win them and you win the demo.",
+        "problem": "Borderline marketing cadence ('win the demo'), acceptable for an operator memo but slightly punchy-fluffy. Not a blocker.",
+        "fix": "Optional: tighten to 'Win the Maker in the demo and the rest of the committee follows.' or leave; low priority."
+      },
+      {
+        "severity": "minor",
+        "type": "bad-crosslink",
+        "offendingText": "[the whitespace analysis](/market/whitespace/)",
+        "problem": "Anchor text and URL are correct per the slug map; verified no mismatch. Flagging only to confirm cross-links were checked: all four inline links (/users/buyers-icp/, /product/maker-checker/, /market/whitespace/, /compliance/audit-retention/, /compliance/data-protection/) resolve to valid slugs.",
+        "fix": "No change required."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Personas synthesized from HROne, MYND, FieldAssist and finance-ops content",
+        "problem": "Good provenance, no issue. Confirming the source-note convention is correctly applied.",
+        "fix": "No change required."
+      }
+    ]
+  }
+]

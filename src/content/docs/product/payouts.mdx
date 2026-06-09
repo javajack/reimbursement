@@ -1,0 +1,119 @@
+---
+title: Payouts and Bank Files
+description: Two compliant disbursement architectures, the rails, multi-source-account routing, and UTR reconciliation.
+---
+
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Money goes out two compliant ways, and never through us. Either we generate a bulk-payment file in the customer's bank format and they authorize it in their own net banking, or a regulated partner (RazorpayX, Cashfree) or connected-banking rail initiates the transfer from the customer's own current account. In both, funds debit an account the customer or a licensed partner controls, never one we own. That single design choice keeps us a technology provider and off the RBI Payment Aggregator (PA) hook. Ship file hand-off first (verdict: <span class="pill pill--build">Build</span>); offer the partner API as a premium tier.
+
+## The two architectures
+
+Both keep money off our balance sheet. They differ in who clicks "pay" and how much of the rail we automate.
+
+<Tabs>
+<TabItem label="File hand-off (ship first)">
+
+We render a bulk-payment file in the customer's exact bank format (ICICI CIB, HDFC ENet, Axis PayPro, SBI, Kotak). The finance user uploads and authorizes it inside their own corporate net banking. Money debits the customer's current account. We never touch funds, hold no escrow, need no licence.
+
+- Lowest regulatory and engineering risk for an indie team.
+- Works for any customer who already has corporate net banking.
+- Reconciliation is asynchronous: we ingest the bank's UTR return file.
+- Cost to us is effectively zero per payout (the bank charges the customer; online NEFT/RTGS are RBI-charge-waived).
+
+</TabItem>
+<TabItem label="Connected banking / partner API (premium)">
+
+We integrate a regulated payout provider (RazorpayX or Cashfree first; Open/Zwitch or Decentro for multi-current-account connected banking). The partner initiates NEFT/RTGS/IMPS/UPI from the customer's own current account or from the partner's own regulated escrow/current account. We are an API caller and orchestrator; the licensed partner is the entity that touches funds.
+
+- One-click straight-through disbursement, no manual upload.
+- UTR and success/failure arrive by webhook in near real time.
+- Per-transaction fees apply (see the rails table); the partner carries the PA/escrow burden.
+- Use as a paid upgrade, not the default.
+
+</TabItem>
+</Tabs>
+
+:::danger[Regulatory invariant: funds never touch our account]
+The decisive RBI trigger is the handling, receiving, or pooling of other parties' funds in an account we own or control. The Payment Aggregator definition covers customer-to-merchant collections and settlement, and a non-bank PA needs net worth of Rs 15 crore at application rising to Rs 25 crore by year three, plus mandatory escrow with a scheduled commercial bank. None of that is feasible for an indie team. Any pooled, swept, virtual, or pre-funded account in our name defeats the exemption and re-characterizes us as a PA or PPI issuer. Get a written legal opinion before go-live. Full legal treatment lives at [/compliance/money-movement/](/compliance/money-movement/). _(confidence: high)_
+:::
+
+## The rails
+
+Pick the rail by amount and urgency. NEFT is the cheapest batch default, IMPS/UPI are instant for small claims, RTGS is for large vendor payouts. Expose per-rail cost so customers control spend.
+
+| Rail | Min | Max per txn | Speed | Indicative partner cost |
+|------|-----|-------------|-------|--------------------------|
+| NEFT | Rs 1 (no min) | No maximum | Batch, 24x7 since 16 Dec 2021 | ~Rs 2-3 + GST |
+| RTGS | Rs 2 lakh | No maximum | Near-real-time, 24x7 since 14 Dec 2020 | ~Rs 10-20 + GST |
+| IMPS | None | Rs 5 lakh | Instant, 24x7 | ~Rs 3-5 + GST |
+| UPI | None | Rs 1 lakh standard; up to Rs 5 lakh for specific categories | Instant, 24x7 | ~Rs 2-5 + GST |
+
+<p class="source-note">Rail limits and timings: ClearTax and NPCI circular UPI-OC-185A (mixed: govt/analyst, high confidence). Online NEFT/RTGS are RBI-charge-waived for the customer; the cost column is what a regulated partner charges us. Costs are indicative ranges from RazorpayX/Cashfree product and review pages, not contractual rate cards (vendor-sourced, medium confidence). Re-verify at build time: individual banks impose stricter sub-limits than the NPCI/RBI ceilings.</p>
+
+Two limit nuances worth hard-coding. UPI's standard per-transaction ceiling is Rs 1 lakh; the Rs 5 lakh tier applies only to specific merchant categories (insurance, capital markets, education, hospitals, government e-marketplace, IPO) under NPCI circular UPI-OC-185A, with a P2M daily cap raised to Rs 10 lakh in 2025. Do not assume Rs 5 lakh UPI for ordinary reimbursements. RazorpayX caps any single payout at Rs 5 lakh (vendor product page, re-verify at build time), so reimbursements above that route to RTGS.
+
+On the partner economics: RazorpayX gives 250 free payouts per month, then charges per transaction plus GST. Cashfree claims 99.98% success with no setup or maintenance fee. Both are negotiable above roughly 10,000 transactions per month. Confirm rate cards with each provider before modeling [unit economics](/business/unit-economics/); the cited ranges are vendor pages, not quotes.
+
+## The source-account router
+
+Real customers debit different reimbursements from different current accounts: travel from one bank, vendor payments from another, petty cash from a third. Spreading load across banks also cuts single-bank downtime risk. Model this explicitly as a first-class router, not a single hardcoded debit account.
+
+<Steps>
+
+1. **Store multiple source accounts per customer.** Each row holds bank, account number, IFSC, the supported channel (CIB/ENet/PayPro file or a partner fund account), and a default flag.
+
+2. **Map reimbursement type to source account.** A rule binds a category (travel, vendor, advance, petty cash) to a debit account. Unmapped types fall back to the default.
+
+3. **Emit per source in file hand-off.** Generate one bank file per source current account, in that bank's format. The file's debit-account field selects the source; one upload per account in their net banking.
+
+4. **Select the fund account per payout in the API path.** With a regulated partner, set the partner source/fund account on each payout so the right account is debited straight-through.
+
+</Steps>
+
+The data shape (source accounts, the type-to-account map, and the resulting payout batch) lives in [/reference/bank-files/](/reference/bank-files/) alongside the per-bank field layouts.
+
+```json
+{
+  "source_account": {
+    "id": "src_travel_icici",
+    "bank": "ICICI",
+    "channel": "CIB",
+    "ifsc": "ICIC0000123",
+    "account_no": "000305001234",
+    "is_default": false
+  },
+  "routing_rule": {
+    "reimbursement_type": "travel",
+    "source_account_id": "src_travel_icici"
+  }
+}
+```
+
+:::caution[Bank file formats are bank-specific and versioned]
+Field order, fixed-width positions, encryption, headers/footers, and per-file caps differ by bank and channel, and some specs only live inside the corporate net-banking portal. ICICI publishes a CIB bulk format (v3.3); HDFC ENet uses Excel/text templates capped near 1,000 transactions and Rs 10 crore per file; Axis PayPro auto-segregates RTGS/NEFT/IMPS from one CSV/XLS/TXT file; SBI supports single-debit-multiple-credit with PKI or symmetric encryption. Treat captured field lists as indicative and confirm against the primary bank spec or the customer's relationship manager per integration. _(confidence: high on existence, medium on exact fields)_
+:::
+
+## UTR reconciliation
+
+Reconciliation is UTR-centric across every rail and provider. The Unique Transaction Reference is the join key between a payout and the originating reimbursement record. Make ingestion and auto-matching a first-class feature; it is the operational differentiator over raw net banking.
+
+| Path | UTR source | Failure signal |
+|------|------------|----------------|
+| File hand-off | Bank return/status file (Axis, SBI, ICICI reports carry UTR, amount, beneficiary) | Reject rows in the return file |
+| Partner API | Payout success webhook delivers UTR | Payout-update webhook fires on every status change |
+
+For the partner path, subscribe to payout-status webhooks, capture the UTR on success, and on failure auto-flag the claim for retry or repair rather than silently dropping it. For file hand-off, parse the bank's return file, match on the reference ID we stamped into the remarks field, and reconcile UTR-by-UTR. Surface failed payouts to the finance user with a one-click re-issue. This closes the loop from the approved claim in [/product/workflow/](/product/workflow/) back to a settled, audited payment.
+
+## Sources
+
+- [RBI (Regulation of Payment Aggregators) Directions, 2025 (full text PDF)](https://www.fidcindia.org.in/wp-content/uploads/2025/09/RBI-PAYMENT-AGGREGATORS-DIRECTIONS-15-09-25.pdf) (primary)
+- [Saraf & Partners, analysis of the 2025 PA Directions](https://sarafpartners.com/rbi-issues-the-reserve-bank-of-india-regulation-of-payment-aggregators-directions-2025/) (primary)
+- [AuthBridge, RBI PA Master Direction 2025 key details (net worth, deadlines)](https://authbridge.com/blog/rbi-payment-aggregator-master-direction-2025/) (analyst)
+- [ClearTax, differences between NEFT, RTGS and IMPS (limits, timings)](https://cleartax.in/s/differences-between-neft-rtgs-imps) (analyst)
+- [NPCI circular UPI-OC-185A, Rs 5 lakh limit for specific categories](https://www.npci.org.in/PDF/npci/upi/circular/2024/UPI-OC-No-185A-FY-24-25-Implementation-of-Rs-5-Lakh-limit-per-transaction-for-specific-categories-in-UPI.pdf) (govt)
+- [RazorpayX Payouts product page (rails, Rs 5 lakh cap, 250 free/month)](https://razorpay.com/x/payouts/) (vendor)
+- [RazorpayX Docs, payout status and webhooks](https://razorpay.com/docs/x/payouts/status-details/) (vendor)
+- [Cashfree Payouts product page (bulk rails, success rate, pricing)](https://www.cashfree.com/payouts/) (vendor)
+- [Axis Bank, bulk payment uploads (PayPro, UTR-level reports)](https://www.axisbank.com/corporate/transaction-banking/cash-management-services/bulk-payment-uploads) (primary)
+- [EnKash, connected banking (not a bank, multi-account orchestration)](https://www.enkash.com/connected-banking) (vendor)

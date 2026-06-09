@@ -1,0 +1,405 @@
+/* ============================================================
+   Kharcha Dossier — editorial "ledger paper" theme (light only)
+   See DESIGN.md. All color in OKLCH; no pure #000/#fff.
+   ============================================================ */
+
+@import '@fontsource-variable/newsreader/index.css';
+@import '@fontsource-variable/hanken-grotesk/index.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
+
+/* ---------- Brand tokens ---------- */
+:root {
+  --k-paper: oklch(0.989 0.006 90);
+  --k-paper-2: oklch(0.972 0.008 86);
+  --k-paper-3: oklch(0.948 0.009 84);
+  --k-line: oklch(0.888 0.010 82);
+  --k-line-strong: oklch(0.820 0.011 80);
+  --k-ink-faint: oklch(0.585 0.012 72);
+  --k-ink-soft: oklch(0.420 0.012 66);
+  --k-ink: oklch(0.245 0.012 60);
+
+  --k-accent-soft: oklch(0.945 0.030 165);
+  --k-accent: oklch(0.520 0.090 165);
+  --k-accent-deep: oklch(0.400 0.080 165);
+
+  --k-clay-soft: oklch(0.952 0.035 55);
+  --k-clay: oklch(0.585 0.130 48);
+  --k-clay-deep: oklch(0.470 0.120 48);
+
+  --k-danger-soft: oklch(0.955 0.030 30);
+  --k-danger: oklch(0.545 0.165 28);
+  --k-danger-deep: oklch(0.460 0.150 28);
+
+  --k-info-soft: oklch(0.950 0.022 265);
+  --k-info: oklch(0.500 0.090 265);
+  --k-info-deep: oklch(0.400 0.085 265);
+
+  --k-font-body: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --k-font-display: 'Newsreader Variable', ui-serif, Georgia, 'Times New Roman', serif;
+  --k-font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+}
+
+/* ---------- Force light: map Starlight scale for every theme state ---------- */
+:root,
+:root[data-theme='light'],
+:root[data-theme='dark'] {
+  color-scheme: light;
+
+  --sl-color-accent-low: var(--k-accent-soft);
+  --sl-color-accent: var(--k-accent);
+  --sl-color-accent-high: var(--k-accent-deep);
+
+  --sl-color-white: var(--k-ink);
+  --sl-color-gray-1: oklch(0.300 0.012 62);
+  --sl-color-gray-2: var(--k-ink-soft);
+  --sl-color-gray-3: var(--k-ink-faint);
+  --sl-color-gray-4: oklch(0.700 0.011 78);
+  --sl-color-gray-5: var(--k-line-strong);
+  --sl-color-gray-6: var(--k-line);
+  --sl-color-gray-7: var(--k-paper-2);
+  --sl-color-black: var(--k-paper);
+
+  --sl-color-text: var(--k-ink-soft);
+  --sl-color-text-accent: var(--k-accent-deep);
+  --sl-color-text-invert: var(--k-paper);
+
+  --sl-color-bg: var(--k-paper);
+  --sl-color-bg-nav: color-mix(in oklab, var(--k-paper), white 45%);
+  --sl-color-bg-sidebar: var(--k-paper-2);
+  --sl-color-bg-inline-code: var(--k-paper-3);
+  --sl-color-bg-accent: var(--k-accent);
+
+  --sl-color-hairline: var(--k-line);
+  --sl-color-hairline-light: var(--k-line);
+  --sl-color-hairline-shade: color-mix(in oklab, var(--k-line), transparent 35%);
+
+  --sl-color-text-accent-low: var(--k-accent-soft);
+
+  --sl-font: var(--k-font-body);
+  --sl-font-mono: var(--k-font-mono);
+  --sl-content-width: 52rem;
+}
+
+/* ---------- Base reading surface ---------- */
+html,
+body {
+  background: var(--k-paper);
+}
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.sl-markdown-content {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--k-ink-soft);
+}
+.sl-markdown-content p,
+.sl-markdown-content li {
+  color: var(--k-ink-soft);
+}
+.sl-markdown-content p,
+.sl-markdown-content ul,
+.sl-markdown-content ol {
+  max-width: 70ch;
+}
+.sl-markdown-content strong {
+  color: var(--k-ink);
+  font-weight: 600;
+}
+
+/* ---------- Display type (serif headings) ---------- */
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6),
+.content-panel h1,
+.hero h1,
+.hero .tagline,
+a.site-title,
+.site-title {
+  font-family: var(--k-font-display);
+  color: var(--k-ink);
+  font-weight: 540;
+  letter-spacing: -0.012em;
+  line-height: 1.18;
+}
+a.site-title {
+  font-size: 1.3rem;
+  font-weight: 580;
+}
+.content-panel h1,
+.sl-markdown-content h1 {
+  font-size: clamp(2.1rem, 1.6rem + 2.2vw, 2.7rem);
+  font-weight: 560;
+}
+.sl-markdown-content h2 {
+  font-size: 1.78rem;
+  margin-top: 3rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--k-line);
+}
+.sl-markdown-content h3 {
+  font-size: 1.34rem;
+  margin-top: 2rem;
+}
+.sl-markdown-content h4 {
+  font-size: 1.08rem;
+  margin-top: 1.6rem;
+  font-weight: 600;
+}
+
+/* ---------- Links ---------- */
+.sl-markdown-content a {
+  color: var(--k-accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in oklab, var(--k-accent), transparent 60%);
+  transition: text-decoration-color 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sl-markdown-content a:hover {
+  color: var(--k-accent);
+  text-decoration-color: var(--k-accent);
+}
+
+/* ---------- Inline code & figures ---------- */
+.sl-markdown-content :not(pre) > code {
+  font-family: var(--k-font-mono);
+  font-size: 0.86em;
+  background: var(--k-paper-3);
+  border: 1px solid var(--k-line);
+  border-radius: 0.35rem;
+  padding: 0.08em 0.36em;
+  color: var(--k-clay-deep);
+}
+.expressive-code,
+.sl-markdown-content pre,
+.sl-markdown-content pre code {
+  font-family: var(--k-font-mono);
+}
+
+/* ---------- Tables (data density) ---------- */
+.sl-markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.sl-markdown-content :is(th, td) {
+  border: 1px solid var(--k-line);
+  padding: 0.5rem 0.72rem;
+  text-align: left;
+  vertical-align: top;
+  font-variant-numeric: tabular-nums;
+}
+.sl-markdown-content thead th {
+  background: var(--k-paper-3);
+  color: var(--k-ink);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.sl-markdown-content tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--k-paper-2), transparent 30%);
+}
+.sl-markdown-content tbody tr:hover {
+  background: color-mix(in oklab, var(--k-accent-soft), transparent 45%);
+}
+
+/* ---------- Asides / callouts: full border + tint, NO side-stripe ---------- */
+.starlight-aside {
+  border: 1px solid var(--k-line);
+  border-inline-start-width: 1px;
+  border-radius: 0.65rem;
+  padding: 1rem 1.15rem;
+  background: var(--k-paper-2);
+}
+.starlight-aside__title {
+  font-family: var(--k-font-body);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  align-items: center;
+}
+.starlight-aside--note {
+  background: var(--k-info-soft);
+  border-color: color-mix(in oklab, var(--k-info), transparent 60%);
+}
+.starlight-aside--note .starlight-aside__title {
+  color: var(--k-info-deep);
+}
+.starlight-aside--tip {
+  background: var(--k-accent-soft);
+  border-color: color-mix(in oklab, var(--k-accent), transparent 60%);
+}
+.starlight-aside--tip .starlight-aside__title {
+  color: var(--k-accent-deep);
+}
+.starlight-aside--caution {
+  background: var(--k-clay-soft);
+  border-color: color-mix(in oklab, var(--k-clay), transparent 58%);
+}
+.starlight-aside--caution .starlight-aside__title {
+  color: var(--k-clay-deep);
+}
+.starlight-aside--danger {
+  background: var(--k-danger-soft);
+  border-color: color-mix(in oklab, var(--k-danger), transparent 58%);
+}
+.starlight-aside--danger .starlight-aside__title {
+  color: var(--k-danger-deep);
+}
+.starlight-aside a {
+  color: inherit;
+}
+
+/* ---------- Blockquote (editorial pull) ---------- */
+.sl-markdown-content blockquote {
+  border-inline-start: 2px solid var(--k-accent);
+  padding-inline-start: 1.1rem;
+  margin-inline-start: 0;
+  font-family: var(--k-font-display);
+  font-size: 1.2rem;
+  font-style: italic;
+  color: var(--k-ink);
+}
+
+/* ---------- Utility pills: verdicts, confidence, policy outcome ---------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--k-font-body);
+  font-weight: 600;
+  font-size: 0.72rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.34em 0.62em;
+  border-radius: 999px;
+  border: 1px solid;
+  white-space: nowrap;
+  vertical-align: 0.08em;
+}
+.pill--build,
+.pill--allow,
+.pill--high {
+  color: var(--k-accent-deep);
+  background: var(--k-accent-soft);
+  border-color: color-mix(in oklab, var(--k-accent), transparent 55%);
+}
+.pill--caution,
+.pill--flag,
+.pill--med {
+  color: var(--k-clay-deep);
+  background: var(--k-clay-soft);
+  border-color: color-mix(in oklab, var(--k-clay), transparent 52%);
+}
+.pill--avoid,
+.pill--block,
+.pill--low {
+  color: var(--k-danger-deep);
+  background: var(--k-danger-soft);
+  border-color: color-mix(in oklab, var(--k-danger), transparent 52%);
+}
+.pill--info {
+  color: var(--k-info-deep);
+  background: var(--k-info-soft);
+  border-color: color-mix(in oklab, var(--k-info), transparent 55%);
+}
+
+/* Small caption / source line under figures and tables */
+.source-note {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--k-ink-faint);
+  margin-top: 0.4rem;
+  font-style: italic;
+}
+
+/* ---------- Header / nav ---------- */
+.header {
+  background: color-mix(in oklab, var(--k-paper), white 45%);
+  border-bottom: 1px solid var(--k-line);
+  backdrop-filter: none;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar-content a[aria-current='page'] {
+  color: var(--k-accent-deep);
+  font-weight: 600;
+  background: var(--k-accent-soft);
+}
+.sidebar-content .large,
+nav.sidebar summary .large {
+  font-family: var(--k-font-display);
+  font-weight: 560;
+  color: var(--k-ink);
+  letter-spacing: -0.005em;
+}
+
+/* ---------- Hero (splash homepage) ---------- */
+.hero h1 {
+  letter-spacing: -0.02em;
+}
+.hero .tagline {
+  color: var(--k-ink-soft);
+  font-size: 1.2rem;
+  font-style: italic;
+}
+.hero .actions a.primary {
+  background: var(--k-accent-deep);
+  border-color: var(--k-accent-deep);
+  color: var(--k-paper);
+}
+.hero .actions a.primary:hover {
+  background: var(--k-accent);
+}
+
+/* ---------- Cards (used sparingly) ---------- */
+.card {
+  border: 1px solid var(--k-line);
+  background: var(--k-paper-2);
+  border-radius: 0.65rem;
+}
+.card .icon {
+  color: var(--k-accent);
+  background: var(--k-accent-soft);
+  border-color: color-mix(in oklab, var(--k-accent), transparent 65%);
+}
+.card .title {
+  font-family: var(--k-font-display);
+  color: var(--k-ink);
+  font-weight: 540;
+}
+
+/* ---------- Focus & selection ---------- */
+::selection {
+  background: var(--k-accent-soft);
+  color: var(--k-ink);
+}
+:focus-visible {
+  outline: 2px solid var(--k-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---------- Right-hand table of contents ---------- */
+starlight-toc a[aria-current='true'] {
+  color: var(--k-accent-deep);
+  font-weight: 600;
+}
+
+/* ---------- Pagination footer ---------- */
+.pagination-links a {
+  border: 1px solid var(--k-line);
+  background: var(--k-paper-2);
+  border-radius: 0.65rem;
+}
+.pagination-links a:hover {
+  border-color: var(--k-accent);
+}
+.pagination-links a span {
+  color: var(--k-ink);
+  font-family: var(--k-font-display);
+}

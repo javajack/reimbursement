@@ -1,0 +1,104 @@
+---
+title: The Problem and Who Feels It
+description: The real-world reimbursement use cases and the two-sided pain that justifies an India-first expense product.
+---
+
+Reimbursement is a two-sided wound. On one side an employee floats their own cash and waits weeks to be repaid; on the other, a small finance team burns days chasing receipts, decoding GST, and reconciling a pile of mismatched bills against the ledger. The job to be done is not "scan a receipt." It is to close the gap between the moment money leaves a person's pocket and the moment it returns, cleanly, with the tax and audit trail intact. That gap is where an app and web product earns its seat. <span class="pill pill--build">Build</span>
+
+The pain concentrates exactly where incumbents under-serve: sub-200-employee SMBs and field-heavy teams. See the full ICP reasoning in [the personas page](/users/personas/) and the verified-pain inventory in [pain points](/market/pain-points/).
+
+## The jobs to be done (concrete use cases)
+
+Before personas or pricing, anchor on what actually happens on the ground. Five recurring scenarios drive the product, and they are not variations of one shape: they differ by who pays, who approves, and how the tax engine must treat them.
+
+| Use case | Who | What they need at the point of spend |
+| --- | --- | --- |
+| Field travel, city to city | Sales/service field agent | Real-time logging while on the road: photo capture, distance/mileage log, offline queue, fast payout |
+| Team lunch | Team lead expensing for the group | One bill, split-or-attributed, GST line captured, often blocked ITC under Sec 17(5) food and beverages |
+| Client event spend | Salesperson at a customer event | Mixed bill (some reimbursable, some not), policy caps, who-paid (card vs personal) |
+| Event tickets on a personal card | Developer who paid out of pocket | Out-of-pocket claim that creates a payout, not a card reconciliation; receipt + business nexus |
+| Vendor reimbursement claim | A vendor raising a reimbursable cost | Separate-from-fee invoicing, TDS section mapping (194C/194J), pure-agent GST handling |
+
+<p class="source-note">Source: synthesized from research/raw edge-cases and personas files (our synthesis, medium confidence).</p>
+
+The last row is the structural fork. Employee reimbursement is cost-to-cost and receipt-backed: pure reimbursement of business spend is not salary income, so it sits outside Sec 192 TDS, and there is no GST when bought in the company name from a registered dealer. The exception to watch is per-diem and allowances: under Sec 10(14)/Rule 2BB these are exempt only to the extent actually spent, and any unspent balance is taxable as salary. Vendor reimbursement is a different tax object entirely: TDS under 194C (1%/2%) or 194J (10% professional, 2% technical), possible RCM, and GST that is only excluded if the reimbursable is invoiced separately from the fee. Bundle them and the whole amount can be taxed. The claim lifecycle that ties these together is detailed in [the workflow page](/product/workflow/), and the per-diem mechanics in [edge cases](/product/edge-cases/).
+
+:::note[Why line-item granularity is non-negotiable]
+A single restaurant, hotel, or travel bill routinely mixes reimbursable with non-reimbursable lines, and GST-eligible with blocked-ITC lines. The team lunch above is the canonical example. Header-level modeling cannot express it; the product must split each receipt into line items, each carrying its own reimbursable flag, tax code, and ITC eligibility.
+:::
+
+## Side one: the employee floats cash and waits
+
+The most emotionally resonant pain is time. Indian companies commonly take 30 to 45 days to repay employees, while best-in-class digital flows settle in 2 to 3 days. That is a process gap, not a missing tool. The employee has already paid the merchant; every extra day is an interest-free loan they did not choose to give.
+
+| Metric | Figure | Provenance |
+| --- | --- | --- |
+| Manual reimbursement cycle (India) | 30 to 45 days | OneFinOps (vendor blog, soft) |
+| Best-in-class vs legacy cycle | 2 to 3 days vs 15 to 20 days | Procurify/Fyle (vendor blog, soft) |
+| Approval TAT, manual setups | 8 to 12 days (target under 48h) | HROne (HRMS vendor, soft) |
+| Employee time lost to expense reporting | ~10 hours/month | Fortune Business Insights (analyst/vendor, soft) |
+| Travelers preferring dental drilling to filing a report | ~20% | SAP Concur survey (vendor-cited, soft) |
+
+<p class="source-note">Sources: OneFinOps, Procurify, HROne, Fortune Business Insights, SAP Concur via Mastercard. Treat all as vendor-sourced and directional, not audited.</p>
+
+:::caution[These numbers are vendor-dramatized]
+The 30-to-45-day cycle and the 40-to-60 finance hours come from vendor and HRMS marketing blogs with an incentive to overstate pain (the "~10 hours/month" traces to Fortune Business Insights, treated as analyst data elsewhere in this dossier). We carry them as directional signal at <span class="pill pill--med">Medium</span> confidence, never as audited fact. No tier-1 analyst publishes an India-only number here; primary customer interviews should validate before any of this anchors a pricing or ROI claim.
+:::
+
+The delay has a second-order cost the field hits hardest: attrition. Field reps pay daily recurring travel out of pocket first, and payout latency correlates with churn. For a road-warrior sales force, slow reimbursement is not an inconvenience; it is a reason to quit. That is why "speed to reimburse" (a 48-hour payout headline) is the single most marketable KPI for the field segment.
+
+## Side two: finance and AP drown in manual work
+
+The finance/AP person is the maker who validates every document, checks GST ITC eligibility, maps TDS sections, and prepares the payout. Their pain is volume and fragmentation. Workflows splinter across five disconnected systems (claim app, policy PDF, approval email, advance register, payroll sheet), with each handoff adding ~1.5 to 2 days. The pain scales sharply past roughly 50 employees, where manual tracking collapses.
+
+The India-specific load is GST. To preserve Input Tax Credit, finance must ensure every bill carries the company GSTIN, then classify eligible-versus-blocked ITC under Sec 17(5), and reconcile against GSTR-2B. The 2024 Invoice Management System made parts of that reconciliation manual again, and all ITC for a financial year must be claimed by 30 November of the following year. Miss it, and real rupees leak.
+
+| Metric | Figure | Provenance |
+| --- | --- | --- |
+| Finance manual hours/month on expenses (mid-size) | 40 to 60 hours | OneFinOps (vendor blog, soft) |
+| ITC leakage risk without GSTIN-gated approvals | up to 18% of expense value | MYND (finance-ops blog, soft) |
+| Operational spend drained by violations + duplicates | 15 to 25% | Cashbook (vendor blog, soft) |
+| Indian orgs hit by economic/financial fraud (24 months) | 59% vs 41% global | PwC India 2024 (analyst survey) |
+| Employees admitting to padding expenses | ~24% (another 15% considered it) | Cashbook (vendor blog, soft) |
+| Month-end overrun when ~10% of claims have unclear docs | 2 to 3 weeks past close | AIAccountant (vendor blog, soft) |
+
+<p class="source-note">Sources: OneFinOps, MYND, Cashbook, PwC India, AIAccountant. The PwC 59% is all economic fraud (procurement-led), not expense fraud specifically; do not over-attribute.</p>
+
+:::danger[Do not launder these into facts]
+The 18% ITC figure and the 15-to-25% leakage figure are vendor estimates, not statute or audited data. Use them to size opportunity, not to make compliance promises. The hard, defensible anchor is the rule itself: ITC must be claimed by 30 November of the following FY, and Sec 17(5) blocks food and beverages, rent-a-cab, club membership, and vacation-travel benefits. Build to the rule, cite the rule, and label every percentage as soft.
+:::
+
+## The black box: cash advances and field float
+
+The most under-served pain is not capture; it is the gap between an advance disbursed and the spend it eventually covers. A ₹10,000 site advance to pay carpenters, or a ₹15,000 weekly route-manager float, leaves no verifiable trail between issue and settlement. Tracking fragments across WhatsApp and spreadsheets, and pilferage thrives. This is worst in construction, logistics, retail, and field sales, exactly the verticals where incumbents ship buggy, slow-syncing mobile apps and web-only features.
+
+This is the wedge hiding in plain sight: an advance-issue-then-settle lifecycle that nets claims against the float, tracks outstanding exposure per employee, and supports return-of-excess or top-up. Pure receipt-capture-and-approve does not touch it. The detailed mechanics live in [edge cases](/product/edge-cases/).
+
+## Why a product exists, and where the pain concentrates
+
+Incumbents (Zoho Expense, Fyle/now Sage, Happay, SAP Concur) already solve OCR capture, approval routing, and accounting sync reasonably well. The durable, unfixed gaps are narrower and more India-flavored: price model for SMBs (Concur is roughly USD 9 per user per month plus about USD 8 to 9 per expense report, quote-only and sales-gated; per-user pricing with 5-user minimums excludes micro-teams), field/mobile UX, cash-advance settlement, OCR on handwritten and faded thermal Indian receipts, duplicate-detection that respects card-feed lag, and Tally plus GST-ITC localization.
+
+That is the demand thesis: real, repeated, India-flavored, and concentrated in the SMB and field-staff segments. The product justifies itself by attacking those segments where software (not card interchange or float) still decides the winner.
+
+| Audience | Core pain | What wins them |
+| --- | --- | --- |
+| Employee (esp. field) | 30 to 45 day wait, out-of-pocket float, attrition | 48-hour payout, offline mobile + WhatsApp capture |
+| Finance / AP (maker) | 40 to 60 hrs/month, GST ITC capture, reconciliation | Tally sync, GSTIN validation, ITC tagging, maker-checker |
+| SMB owner / CFO (buyer) | Leakage, fraud, month-end close | Hard-rupee ITC + speed, India-localized compliance |
+
+<p class="source-note">Source: our synthesis across the pain-points and personas research (medium confidence).</p>
+
+The two-question qualifier from [the personas page](/users/personas/) routes the pitch: who owns the expense policy today, and where does payout happen, payroll or AP. That answer decides whether HR-Ops or Finance/AP is the champion, and it shapes everything downstream.
+
+## Sources
+
+- [Employee Expense Management in India: A Guide, OneFinOps](https://onefinops.com/blog/employee-expense-management-guide-india) (vendor blog; 30 to 45 day cycles, 40 to 60 hrs/month)
+- [How to Prevent Employee Expense Fraud and Cash Pilferage in India, Cashbook](https://cashbook.in/blogs/employee-expense-fraud) (vendor blog; sub-₹5,000 violations, 15 to 25% leakage, field-staff risk)
+- [Advance Expense Management India, AIAccountant](https://www.aiaccountant.com/blog/advance-expense-management-india) (vendor blog; cash-advance "black box", month-end overrun)
+- [59% of Indian organisations faced economic fraud in 24 months, PwC India](https://www.pwc.in/press-releases/2024/59-of-indian-organisations-faced-financial-or-economic-fraud-in-the-past-24-months-where-procurement-fraud-emerged-as-the-top-threat-pwc-survey.html) (analyst survey)
+- [Expense Management Software India, HR-led view, HROne](https://hrone.cloud/blog/expense-management-software-india-hr) (vendor; TAT, fragmentation, field attrition)
+- [Setting Up Expense Approval Workflows in India, MYND](https://www.myndsolution.com/best-practices/setting-up-expense-approval-workflows-in-expense-and-travel-management-in-india/) (vendor; ITC leakage, maker-checker, DoA tiers)
+- [GST Input Tax Credit (ITC), ClearTax](https://cleartax.in/s/gst-input-tax-credit) (advisory; ITC mechanics, 30 Nov deadline, IMS)
+- [Cases where ITC is unavailable, ClearTax](https://cleartax.in/s/gst-cases-where-input-tax-credit-is-unavailable) (advisory; Sec 17(5) blocked ITC)
+- [Input Tax Credit Rules, CBIC (Govt of India)](https://cbic-gst.gov.in/input-tax-credit-rules.html) (govt; primary regulator source)
+- [End of the expense report as we know it, Mastercard](https://www.mastercard.com/news/perspectives/2024/it-s-the-end-of-the-expense-report-as-we-know-it/) (vendor-cited; Concur dental-drill survey)

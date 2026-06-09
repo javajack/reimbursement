@@ -1,0 +1,111 @@
+---
+title: The Claim Lifecycle
+description: "End to end: how a reimbursement moves from capture to paid, including the employee-versus-vendor fork."
+---
+
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+A reimbursement is not one flow. It is a single pipeline (capture, extract, evaluate, route, approve, pay, post, retain) that forks early on one question: is this an employee being made whole, or a vendor being paid? That fork drives two different tax engines and two different ledgers, and getting it wrong is how you create either a TDS default or a disallowed expense. The product's job is to capture the nature, business-nexus, and receipt evidence cleanly enough to defend the claim, then drive both payroll and bank-payout rails from the same classification.
+
+The design backbone is line-item granularity. One restaurant or hotel bill routinely mixes reimbursable with non-reimbursable, and GST-eligible with blocked-ITC items under Sec 17(5). Model the unit at the line, not the claim header, and partial approval, mixed-bill handling, and ITC accuracy all fall out of the same aggregation. <span class="pill pill--high">High</span> confidence; this is the highest-leverage schema decision in the product.
+
+## The two forks
+
+The mode of payout (payroll component versus direct bank or UPI transfer) does NOT change taxability. Only the nature and documentation of the expense does. So payout channel is a settlement choice; the tax classification is the same data read by both rails. <span class="pill pill--high">High</span> confidence (PwC Tax Summaries, IT Dept).
+
+What changes is the tax engine that runs at evaluation time.
+
+| Dimension | Employee reimbursement | Vendor-invoice reimbursement |
+| --- | --- | --- |
+| Tax object | Cost-to-cost, receipt-backed | Service invoice with reimbursables |
+| Income tax | No TDS under Sec 192 on genuine cost-to-cost | TDS under 194C (1%/2%), 194J (10% professional, 2% technical), 194H (2% commission), 195 (non-resident) |
+| Exemption logic | Sec 10(14) / Rule 3 perquisite valuation | Not applicable; segregation of reimbursables critical |
+| GST | No GST when bought from a registered dealer in company name | RCM / self-invoice if supplier unregistered (Rule 47A, 30-day window) |
+| Default payout rail | Payroll component or bank/UPI | AP bank transfer or partner API |
+| Ledger | Employee reimbursement / advance | Vendor payable, TDS payable |
+
+<p class="source-note">Source: Mysa (2026), IndiaFilings, BinarySemantics (primary synthesis of TDS sections and Rule 47A); medium-high confidence, secondary tax-advisory blogs, re-check against live statute.</p>
+
+The trap on the vendor side: if fees and expenses are mixed in one invoice without segregation, the entire amount can attract TDS, not just the service portion. The product should force separate line tagging so reimbursables carry original receipts and the TDS base is computed only on the service lines. See [/compliance/regulatory-map/](/compliance/regulatory-map/) for the full GST, income tax, and TDS overview.
+
+:::caution[Version-date every rate]
+The Income-tax Act 2025 transition tightens allowance exemptions toward actual expenditure, and e-invoicing thresholds keep falling. Build the tax engine config-driven and versioned with effective-from dates, never hard-coded. A payroll audit is advised for FY2025-26 onward.
+:::
+
+## The lifecycle
+
+<Steps>
+
+1. **Capture.** Field staff and employees submit via WhatsApp, mobile app (offline-first, syncs when connectivity returns), or email/PDF forward. India-field reality is low connectivity and Indic-script receipts, so the capture queue must be offline-first and the OCR must handle regional scripts. This is the under-served wedge incumbents miss. See [/product/ocr/](/product/ocr/).
+
+2. **OCR and GST field extraction.** LLM-vision extracts merchant, date, amount, tax, and the GSTIN. Field accuracy is 94-99% on clean printed invoices (vendor-stated, optimistic) and falls to low-to-mid 80s on faded thermal, crumpled, or Devanagari bills. Layer deterministic checks (GSTIN Luhn-mod-36 format, e-invoice IRN/QR, arithmetic, perceptual-hash duplicate, EXIF) before trusting any field. <span class="pill pill--med">Medium</span> confidence on accuracy.
+
+3. **Line-item rule evaluation.** Each line runs the rule engine first, then claim-scoped rules roll up over the aggregate. The engine uses six action verbs: <span class="pill pill--allow">allow</span>, <span class="pill pill--flag">flag</span>, warn, cap, <span class="pill pill--block">block</span>, route. Cap is the partial-coverage primitive: it auto-reduces a line's reimbursable amount to a limit. India-native rule types (GSTIN format, GSTIN-matches-company for ITC, per-diem cap by city-tier and grade, ITC-eligible) are first-class, not user-authored conditions. See [/product/rule-engine/](/product/rule-engine/).
+
+4. **Maker-checker routing by amount.** The maker submits; a checker verifies. Threshold-based multi-level routing goes up to roughly 5 levels deep (Volopay vendor guidance, medium confidence) by a rupee-tiered Delegation-of-Authority matrix. Per-step SLA timers auto-remind then auto-escalate; delegation routes claims to a deputy during leave, with the delegation itself logged. See [/product/maker-checker/](/product/maker-checker/).
+
+5. **Approve, partially approve, or send back.** An approver may approve some lines and query others. A QUERIED/SENT_BACK transition returns the rejected delta to the maker without killing the whole claim or losing history. The approved total is the sum of reimbursable lines, less any assigned advance balance.
+
+6. **Payout from the mapped source account.** Disbursement runs as a bank-file hand-off to the customer's own corporate bank, or via a regulated partner API (RazorpayX / Cashfree) initiating from its own escrow. Funds NEVER touch an account the SaaS owns. The source account is mapped per legal entity. See [/product/payouts/](/product/payouts/).
+
+7. **Accounting sync.** Approved and paid claims post to Tally (XML-over-HTTP port 9000) or Zoho Books, with the correct ledger, GSTIN, place-of-supply, and ITC tag. Tally-native two-way sync is the single biggest deal-maker for Indian SMBs.
+
+8. **Immutable audit.** Every state change writes an append-only event (actor, action, timestamp, before/after, rule id and version, override reason). A read-only Auditor role and one-click export close the loop. Retain documents and trail for the longest applicable period (default 8 financial years per Companies Act Sec 128; GST minimum 72 months under CGST Sec 36), with litigation-hold extension. See [/compliance/audit-retention/](/compliance/audit-retention/).
+
+</Steps>
+
+:::danger[Regulatory invariant: funds never touch your account]
+Stay a technology provider. Compliant money movement is file hand-off to the customer's bank, a regulated partner initiating from its escrow, or connected banking on the customer's current account. Holding or pooling funds triggers a Payment Aggregator licence (net worth ₹15 cr at application, ₹25 cr by year 3) or PPI (₹5 cr to ₹15 cr). Get a written legal opinion before go-live.
+:::
+
+## Payout fork: hand-off versus partner API
+
+<Tabs>
+
+<TabItem label="Bank file hand-off">
+
+The product generates a payout file (the customer's bank format) and the customer's authorized signatory uploads and releases it from their own corporate current account. Zero RBI surface for the SaaS; works for every bank; the customer keeps full control of money movement. The trade-off is a manual upload step and no real-time status without a return file. This is the MVP default. See [/reference/bank-files/](/reference/bank-files/).
+
+</TabItem>
+
+<TabItem label="Partner API (RazorpayX / Cashfree)">
+
+A regulated partner initiates the transfer from its escrow or the customer's connected current account via API, giving real-time status and UPI/IMPS/NEFT routing. Indicative cost is roughly ₹1.75-5 per transaction (RazorpayX gives 250 free per month). Still no PA/PPI licence for the SaaS because the SaaS never holds funds. Optional in MVP, gated behind the customer's own onboarding with the partner.
+
+</TabItem>
+
+</Tabs>
+
+## State summary
+
+| State | Owner | Next states |
+| --- | --- | --- |
+| DRAFT | Maker | SUBMITTED, CANCELLED |
+| SUBMITTED | Maker | UNDER_REVIEW |
+| UNDER_REVIEW | Checker (L1..Ln) | PARTIALLY_APPROVED, APPROVED, REJECTED, QUERIED |
+| QUERIED / SENT_BACK | back to Maker | UNDER_REVIEW |
+| PARTIALLY_APPROVED | Checker | APPROVED |
+| APPROVED | Finance/Payout | PENDING_PAYMENT |
+| PENDING_PAYMENT | Finance/Payout | PAID |
+| PAID | system | SETTLED/CLOSED |
+| SETTLED / CLOSED | system | RECOVERY/CLAWBACK (if reversal) |
+| RECOVERY / CLAWBACK | Finance | CLOSED |
+
+<p class="source-note">Source: synthesized canonical FSM from Volopay, Argano, Billdock (vendor descriptions, no single authoritative spec); reference design, medium confidence.</p>
+
+Two states matter more than they look. PARTIALLY_APPROVED makes mixed bills workable: the claim proceeds on approved lines while queried lines loop back. RECOVERY/CLAWBACK handles advance over-settlement and post-payment reversals via a negative-claim or payroll-deduction path. Cash advances ride the same spine with an extra leg: issue advance, spend, submit claim, net claim against advance, return excess or top up; advances, vendor prepayments, and salary advances stay on separate ledgers. The full set of operational edge cases (FX rate sourcing, per-diem versus actuals, mileage logbooks, split bills, expense-on-behalf) lives at [/product/edge-cases/](/product/edge-cases/).
+
+## Why this shape
+
+The lifecycle is deliberately boring at the rails and opinionated at the middle. Capture, OCR, and payout are table-stakes that you partner or buy. The defensible work is the line-item tax classification, the India-native rule engine, and the rupee-tiered maker-checker, because that is where India-specific compliance depth still decides the deal. <span class="pill pill--build">Build</span> the middle; rent the edges.
+
+## Sources
+
+- [Taxability of Reimbursement of Expenses to Employees in India: TDS, GST & ITC, Mysa](https://www.mysa.io/blogs/taxability-reimbursement-expenses-employees-india) (primary)
+- [Employee Reimbursement under GST, IndiaFilings](https://www.indiafilings.com/learn/employee-reimbursement-under-gst/) (primary)
+- [India, Individual, Income determination, PwC Tax Summaries](https://taxsummaries.pwc.com/india/individual/income-determination) (analyst)
+- [RCM under GST: applicability, e-invoicing, import of services, BinarySemantics](https://www.binarysemantics.com/blogs/reverse-charge-mechanism-rcm-under-gst-applicability-e-invoicing-import-of-services/) (vendor)
+- [Period of Retention of Accounts, Section 36 of GST, A R Dhorajiya & Co](https://ardhorajiya.com/period-of-retention-of-accounts-section-36-of-gst/) (primary)
+- [Maker Checker for Expense Approvals, Volopay](https://www.volopay.com/expense-management/maker-checker-workflow-for-expense-approvals/) (vendor)
+- [Configure Company Policies, Fyle / Sage Expense Management](https://help.fylehq.com/en/articles/1203330-configure-company-policies) (vendor)
+- [Know your GSTIN, ClearTax](https://cleartax.in/s/know-your-gstin) (vendor)

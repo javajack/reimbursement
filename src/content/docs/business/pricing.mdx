@@ -1,0 +1,88 @@
+---
+title: Pricing and Packaging
+description: A Zoho-anchored ladder with per-active-submitter billing, and what to gate behind paid.
+---
+
+Price against Zoho, not below it. Zoho Expense anchors the India floor with a real free tier and sub-₹200 paid plans, so undercutting it on raw price is a race to zero you will lose. The recommended model is a Zoho-shaped ladder: a tight free tier, then per-active-submitter billing around ₹79-149/user/mo on annual, with approvers and admins free, a 5-user minimum, and prices quoted ex-GST. Win on India reimbursement workflow value (UPI/vendor payouts, GST-ready reports, faster approvals, Tally sync), not on a cheaper sticker. <span class="pill pill--build">Build</span>
+
+## What the market charges
+
+The India price spread is wide. Zoho sits at the bottom with the only genuine free tier; funded and global players sit 5-10x above it, which is the structural gap a low-cost India-native tool can occupy.
+
+| Product | Free tier | Paid entry | Notes | Provenance |
+| --- | --- | --- | --- | --- |
+| Zoho Expense | 3 users, 20 autoscans, 5 GB | ₹99/user/mo (₹79 annual) Standard; ₹199 (₹149 annual) Premium | 5-user min, +GST, 14-day trial | vendor page, high |
+| Happay | None (no free trial) | from ~₹199/user/mo | quote-based, enterprise bundles likely higher | third-party listing, soft |
+| Fyle (Sage) | None | USD 11.99-14.99/active user/mo | 5/10-user min, active-user billing, US-leaning | vendor page, high |
+| SAP Concur | None | ~USD 9/user/mo + ~USD 8-9 per report | quote-only, hybrid base+overage | analyst estimate, medium |
+| SutiExpense | None | ~USD 6.50/active submitter/mo | approvers/admins free | analyst listing, medium |
+| ExpenseOnDemand | None | from ~GBP 4.34/user/mo | pay-per-feature activation | vendor page, medium |
+| Volopay | None | not published | sales-led, card-led | vendor page (no public pricing) |
+
+<p class="source-note">Sources: vendor pricing pages and third-party listings (Zoho high; Fyle high; Happay/Concur/Suti soft-to-medium). USD/GBP to INR conversions are approximate and move with FX.</p>
+
+Two patterns matter. First, the de facto category billing unit is the active submitter: Fyle, SutiExpense, and ExpenseOnDemand all charge only users who actually file an expense in the month, and make approvers and admins free. Second, Concur's per-report surcharge (~USD 8-9 on top of the seat) penalizes high-volume filers and is a poor fit for India SMB price sensitivity, so it is a lever to differentiate against, not to copy.
+
+## The recommended ladder
+
+Adopt the Zoho structure but earn a premium through India-specific value. Quote everything ex-GST as Zoho does: 18% GST applies under SAC 9983/998314, and GST-registered buyers reclaim it as Input Tax Credit, so the 18% is not a real cost to them.
+
+| Tier | Who | Price (annual) | What is included |
+| --- | --- | --- | --- |
+| Free | 3-5 users | ₹0 | Capture (WhatsApp/mobile/email), capped OCR autoscans (~20-50/mo), single-stage approval, read-only export. No payouts. |
+| Paid (per active submitter) | filers only | ~₹79-149/user/mo | Everything in Free, plus payouts, multi-stage maker-checker, accounting sync, GST/policy reports, audit trail. |
+
+Rules that hold the model together:
+
+- **Bill per active submitter, not per seat.** Only charge users who file an expense in the month; this matches the category standard and lowers the buyer's perceived ACV.
+- **Approvers and admins are free.** A 200-person company with 40 monthly filers pays for ~40, not 200. Mirror SutiExpense here.
+- **5-user minimum**, quoted ex-GST, to keep the floor matched to Zoho and avoid sub-scale deals that cost more to support than they earn.
+
+:::tip[Pricing stance]
+
+Price one tier above Zoho Premium only when you bundle vendor payouts, GST/TDS compliance, and Tally/Zoho Books sync. That bundle is exactly where Concur and Fyle's USD 12-15 pricing looks weak on value-for-money in India. See [unit economics](/business/unit-economics/) for whether the margin holds at this price.
+
+:::
+
+## What to gate behind paid
+
+The free tier exists to prove the capture-and-approve loop and to seed bottom-up adoption. The paid trigger is the moment a finance team needs the product to actually move money and survive an audit. Reserve the highest-value, highest-cost features for paid:
+
+| Feature | Tier | Why gated |
+| --- | --- | --- |
+| Payouts (bank file / RazorpayX) | Paid | Real per-transaction COGS; the core finance value; reserve to protect margin. |
+| Multi-stage maker-checker + rupee-tiered DoA | Paid | The most India-specific buying requirement; a credibility signal to Finance and auditors. |
+| Accounting sync (Tally, Zoho Books) | Paid | The single biggest deal-maker; this is the wedge, so it must be paid. |
+| GST ITC / policy / TDS reports | Paid | Turns soft ROI into a hard rupee number for the CFO. |
+| OCR autoscans above the free cap | Paid | Variable cost (LLM-vision OCR) scales with volume; cap it on free. |
+
+:::caution[Model the free tier before launch]
+
+OCR and payout costs are low per unit (LLM-vision OCR ~USD 0.0005-0.003/doc; RazorpayX 250 free payouts/mo then ~₹1.75-5 each), but a generous free tier can still accumulate real COGS at volume. Cap free OCR autoscans tightly and keep payouts paid-only. Model worst-case free-user behavior before you ship. See [unit economics](/business/unit-economics/) for the full cost stack.
+
+:::
+
+## Why not undercut Zoho
+
+Zoho is the canonical proof that generous freemium plus product-led growth works at scale for cost-sensitive Indian SMBs (bootstrapped, profitable, 60M+ users (vendor-claimed); medium confidence on attribution). You cannot out-Zoho Zoho on price, and you should not try. A few rupees off the seat does not move a finance buyer; it just compresses your own margin against a competitor with deeper pockets and 50+ integrated apps.
+
+The defensible play is value, not discount. Charge a comparable or slightly higher sticker and justify it with the India reimbursement workflow Zoho under-serves: Tally-native two-way sync, GST ITC capture, WhatsApp-first field capture, vendor-reimbursement compliance (TDS 194C/194J), and faster real payouts. That is the wedge described on the [whitespace](/market/whitespace/) and [competitors](/market/competitors-india/) pages, and it is what makes a premium defensible.
+
+The freemium mechanics (free-tier sizing, the paid-conversion trigger, the realistic 2-5% free-to-paid target) are worked out separately on the [freemium](/business/freemium/) page. Pricing sets the ladder; freemium decides how leaky the free rung should be.
+
+:::note[The one-line model]
+
+Free tier (3-5 users, capped OCR, no payouts). Then per active submitter at ~₹79-149/user/mo annual, approvers and admins free, 5-user minimum, quoted ex-GST. Do not undercut Zoho; win on India reimbursement workflow value. <span class="pill pill--med">Medium</span> confidence on the exact price point; <span class="pill pill--high">High</span> confidence on the structure.
+
+:::
+
+## Sources
+
+- [Zoho Expense Pricing (India)](https://www.zoho.com/in/expense/pricing/) (vendor): free tier limits, Standard/Premium monthly and annual, 5-user min, ~25% annual discount.
+- [Fyle / Sage Expense Management Pricing](https://www.fylehq.com/pricing) (vendor): USD 11.99-14.99 per active user/mo, active-user billing, user minimums.
+- [SutiExpense Pricing (Capterra)](https://www.capterra.com/p/118974/SutiExpense/pricing/) (analyst): ~USD 6.50 per active submitter/mo, approvers free.
+- [SAP Concur Pricing Guide (GetApp)](https://www.getapp.com/finance-accounting-software/a/concur-expense/pricing/) (analyst): ~USD 9/user/mo plus ~USD 8-9 per report, quote-only.
+- [Happay Pricing (Techjockey)](https://www.techjockey.com/detail/happay-expense-management) (vendor/listing): from ~₹199/user/mo, no free trial, quote-based.
+- [ExpenseOnDemand UK Pricing](https://www.expenseondemand.com/uk-pricing) (vendor): from ~GBP 4.34/user/mo, pay-per-feature, active-user billing.
+- [Indian GST for SaaS (Lemon Squeezy)](https://www.lemonsqueezy.com/blog/indian-sales-tax-gst-saas) (primary): 18% GST under SAC 9983, B2B Input Tax Credit, invoicing rules.
+- [RazorpayX Fees and Taxes (Docs)](https://razorpay.com/docs/x/manage-teams/billing/) (vendor): 250 free payouts/mo then ~₹1.75-5 each (payout cost input).

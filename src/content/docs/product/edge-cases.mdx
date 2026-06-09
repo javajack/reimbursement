@@ -1,0 +1,101 @@
+---
+title: Edge Cases and Workflow Nuances
+description: "The hard cases a robust product must model: advances, FX, per-diem, mixed bills, multi-entity and more."
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Most of these edge cases collapse into one design decision: model the expense at the line-item level, not the claim header. One restaurant bill can mix a reimbursable client dinner with a personal item, and a GST-eligible service charge with a blocked-ITC food line under Sec 17(5). If the schema cannot split that bill, you cannot do partial approval, compute ITC correctly, or defend a tax position. Get the line item right and most of this page becomes free.
+
+The second axis is the tax fork. Employee cost-to-cost reimbursement and vendor-invoice reimbursement are different tax objects, not two flavours of "expense." They share a UI and diverge at the tax engine: the vendor path computes TDS and RCM, the employee path computes Sec 10(14) exemption and perquisite. Build them as one record type and you will leak both ways.
+
+:::tip[The unlock]
+Line-item granularity is the single highest-leverage schema decision. Each line carries its own reimbursable flag, tax category, GST rate, ITC-eligibility, GSTIN/entity, place of supply, and who-paid. That one choice unlocks partial approval, mixed-bill handling, and accurate ITC. <span class="pill pill--high">High</span>
+:::
+
+## The edge-case map
+
+Each nuance below maps to a concrete schema or workflow requirement. Confidence pills mark where the behaviour is a settled regulatory fact versus a design convention drawn from vendor and best-practice sources.
+
+| Edge case | Product implication | Confidence |
+| --- | --- | --- |
+| Cash advance / imprest float | Issue advance, spend, submit claim, net claim against advance, return excess or top up. Track outstanding advances per employee; block new advances above an exposure limit. Keep expense advances, vendor prepayments, and salary advances on separate ledgers. India petty-cash floats typically run Rs 5,000 to Rs 20,000 (indicative convention; varies by org). | <span class="pill pill--high">High</span> |
+| Foreign-currency expense | Store original amount, INR amount, the rate used, and the rate source. No single rate is universally correct, so make rate source and rate date configurable per org. | <span class="pill pill--high">High</span> |
+| Per-diem vs actuals | Two claim modes. Per-diem needs rate tables by city and grade plus partial-day rules and no receipts; actuals need itemised capture. Hybrid trips (per-diem meals, actual hotel) must coexist on one trip. | <span class="pill pill--high">High</span> |
+| Mileage / self-driven vehicle | No statutory per-km rate in India. Configurable rate by vehicle type; distance entry (manual or map); mandatory logbook fields (date, route, purpose, distance) to defend the Sec 10(14) exemption. | <span class="pill pill--high">High</span> |
+| Split / shared bill | A who-paid plus allocation model: one payer claims, others' shares are attributed to them. | <span class="pill pill--med">Medium</span> |
+| Mixed bill (reimbursable + non, eligible + blocked ITC) | Split the receipt into line items, each with its own reimbursable flag, tax code, and Sec 17(5) ITC-eligibility. | <span class="pill pill--high">High</span> |
+| Recurring expense | Templated / auto-recurring claims for SaaS subscriptions, rent, and the like (recurrence rule on the record). | <span class="pill pill--med">Medium</span> |
+| Petty cash | Imprest model: float replenished to a fixed ceiling after vouchers reconcile. Remaining cash plus vouchers must equal the original float. | <span class="pill pill--high">High</span> |
+| Corporate-card vs out-of-pocket | A who-paid field gates payout: out-of-pocket creates a payout, a card charge only reconciles and codes (no payout). Match card feed to receipts to prevent double reimbursement. | <span class="pill pill--high">High</span> |
+| Expense-on-behalf | A delegate / booker field separating the payer from the beneficiary. | <span class="pill pill--med">Medium</span> |
+| Clawback / recovery | A negative-claim path: net against future reimbursement or route to payroll deduction; a dedicated recovery ledger. | <span class="pill pill--med">Medium</span> |
+| Duplicate / near-duplicate | Fingerprint each receipt (image hash plus OCR fields) and check org-wide before submission, tolerating slightly altered amounts or dates. | <span class="pill pill--high">High</span> |
+| Offline / low-connectivity field capture | Offline-first mobile capture queue that syncs when connectivity returns; Indic-script OCR. | <span class="pill pill--med">Medium</span> |
+| Bulk period-close | Batch approval, export, and accounting-system sync at month-end. | <span class="pill pill--med">Medium</span> |
+
+<p class="source-note">Source: research synthesis from product-vendor and best-practice sources (medium) plus CGST/Income-Tax statute (high), 2024 to 2026.</p>
+
+## The vendor-vs-employee tax fork
+
+This is the fork that decides whether you are computing perquisite or TDS. Mode of payout does not change taxability: a reimbursement wholly, necessarily and exclusively incurred in official duties is excluded from taxable salary whether paid via payroll or a direct bank or UPI transfer. Both rails must read the same tax classification, which is driven by category, receipt, and business-nexus, not by the disbursement channel.
+
+| Dimension | Employee reimbursement | Vendor / contractor reimbursement |
+| --- | --- | --- |
+| Tax basis | Sec 10(14) exemption for reimbursements; Rule 3 perquisite valuation where a perquisite arises | TDS under 194C / 194J / 195; possible RCM |
+| TDS | None under Sec 192 (cost-to-cost) | 1%/2% (194C), 10% professional / 2% technical (194J), 2% commission (194H, w.e.f. 1 Oct 2024), 10% (194R) |
+| Critical condition | Bills plus declared official-use percentage preserve the exemption | Reimbursables must be separately invoiced with receipts, or the whole amount can attract TDS |
+| GST | None when bought from a registered dealer in the company name | ITC under Sec 16; self-invoice under RCM when supplier is unregistered |
+
+<p class="source-note">Source: Mysa, IndiaFilings, PwC Tax Summaries; corroborated against THESIS regulatory invariants (high).</p>
+
+:::caution[RCM and self-invoicing]
+When an employee buys from an unregistered supplier, Rule 47A (effective 1 Nov 2024) requires a self-invoice within 30 days to keep ITC, with the ITC claimed in the same tax period as payment. Detect the unregistered-supplier case, flag the RCM liability, and track the 30-day window. Confirm the exact Rule 47A and e-invoicing thresholds against the live CBIC notification before hard-coding. <span class="pill pill--flag">Flag</span>
+:::
+
+## Multi-entity, multi-GSTIN and ISD
+
+Multi-entity is structural in India, not an enterprise add-on. GST registration is per state, and branches under one PAN are distinct persons. So every expense must carry entity, GSTIN, and place-of-supply tags from day one, plus cost-centre or branch allocation. Centrally procured services (HR, IT, accounting) need ISD distribution of ITC, which became mandatory from 1 Apr 2025 when the Finance Act 2024 changed "may" to "shall" in Sec 20 CGST. Cross-charge of shared services is a deemed supply. This complexity is real, but most of it is a tagging discipline on the line item rather than new machinery.
+
+The MVP can defer the deep ISD and cross-charge cross-entity distribution engine (the THESIS cut line puts multi-entity ISD complexity in the defer column), but the entity and GSTIN tags belong in the data model immediately so you are not re-platforming later. See [the regulatory map](/compliance/regulatory-map/) for how these obligations stack.
+
+## FX, advances and the partial-approval flow
+
+Foreign currency needs a policy engine, not a single rate. RBI and FBIL publish daily reference rates for USD, EUR, GBP and JPY against INR (the mean of bid and offer polled around noon; FBIL has computed these since July 2018). Best practice is RBI/FBIL reference for reporting, the AD-bank TT rate for settlement, and the gateway or card rate when applicable. Let admins pin the source and the rate date; always store original currency, INR, rate, and source so FX gain or loss is auditable.
+
+Cash advances need their own lifecycle because the employee holds company money before any receipt exists. That gap (the "black box" between advance and claim) is precisely the construction, logistics, and field-sales pain the THESIS calls a wedge.
+
+<Steps>
+
+1. Issue the advance against an exposure limit per employee.
+2. Employee spends and captures receipts (offline-first if in the field).
+3. Submit a claim that the engine nets against the outstanding advance.
+4. Return excess to the company, or top up if the spend exceeded the float.
+5. Settle and close; the advance ledger reflects zero outstanding.
+
+</Steps>
+
+Partial approval is not a nice-to-have layered on top of all this; it is the natural consequence of the line-item model. An approver should approve some lines, query or reject others, reduce the approved amount, and route only the rejected delta back to the maker without killing the whole claim. The [maker-checker state machine](/product/maker-checker/) treats QUERIED as a first-class state that preserves history, and the [rule engine](/product/rule-engine/) decides per line whether to allow, flag, cap, or block before a human ever sees it.
+
+:::danger[Retention is non-negotiable]
+Voucher and record retention is 72 months from the GSTR-9 annual-return due date under CGST Sec 36, extended to one year after final disposal of any litigation if later. The THESIS default is the longest applicable window: 8 financial years under Companies Act Sec 128. This dictates an append-only, immutable audit trail with litigation-hold extension and a document vault that cannot delete inside the window.
+:::
+
+## Duplicate detection and field reality
+
+Fingerprint every receipt on both the image hash and the OCR fields (GSTIN, date, amount, merchant) and check org-wide, across employees and across claim periods, before submission. This catches the resubmission of an altered bill that a per-claim check would miss. Pair it with the deterministic checks the [OCR page](/product/ocr/) layers in (GSTIN checksum, e-invoice IRN, arithmetic, EXIF) before any auto-approval, because AI-generated receipt fraud is now a measurable share of fraudulent documents.
+
+For field staff, capture must work offline and sync later, and the OCR must tolerate Indic scripts and crumpled thermal paper. Prefer in-India processing to stay aligned with DPDP. These are the under-served realities that justify the WhatsApp-first, mobile-first wedge rather than another card-led horizontal clone.
+
+## Sources
+
+- [Taxability of Reimbursement of Expenses to Employees in India](https://www.mysa.io/blogs/taxability-reimbursement-expenses-employees-india) (vendor): TDS sections, Rule 33 pure agent, Sec 17(5) blocked ITC, audit trail.
+- [Employee Reimbursement under GST, IndiaFilings](https://www.indiafilings.com/learn/employee-reimbursement-under-gst/) (vendor): no GST when bought from a registered dealer for the employer.
+- [Period of Retention of Accounts, Section 36 of GST](https://ardhorajiya.com/period-of-retention-of-accounts-section-36-of-gst/) (vendor): 72-month retention with litigation extension.
+- [Section 36, CBIC GST Act explorer](https://taxinformation.cbic.gov.in/content-page/explore-act/1000306/1000001) (govt): primary CBIC text of Section 36.
+- [Employees, Benefits allowable, Income Tax Department](https://www.incometaxindia.gov.in/w/employees-benefits-allowable) (govt): Sec 10(14) reimbursements and perquisites.
+- [RCM under GST, BinarySemantics](https://www.binarysemantics.com/blogs/reverse-charge-mechanism-rcm-under-gst-applicability-e-invoicing-import-of-services/) (vendor): Rule 47A 30-day self-invoicing, effective 1 Nov 2024.
+- [ISD vs Cross Charge post Finance Act 2024, Taxmann](https://www.taxmann.com/post/blog/analysis-input-service-distributor-isd-vs-cross-charge) (vendor): mandatory ISD from 1 Apr 2025.
+- [RBI Reference Rate Archive](https://www.rbi.org.in/scripts/referenceratearchive.aspx) (primary): authoritative daily INR reference FX rates; FBIL since July 2018.
+- [Advance Expense Management India, aiaccountant](https://www.aiaccountant.com/blog/advance-expense-management-india) (vendor): advance vs prepayment vs salary-advance ledgers and settlement.
+- [Vehicle Reimbursement in India, Motolog](https://motolog.app/vehicle-reimbursement-in-india) (vendor): no statutory per-km rate; logbook for Sec 10(14).

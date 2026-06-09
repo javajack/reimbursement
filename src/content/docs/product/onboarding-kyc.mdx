@@ -1,0 +1,126 @@
+---
+title: Onboarding, KYC and Bank Whitelisting
+description: First-time registration and verifying employee/vendor identity and bank accounts before any payout.
+---
+
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+No money leaves the system until an identity and a bank account are verified and whitelisted. That is the whole job of onboarding. Get it wrong and you fund the wrong account or break DPDP; get it right with three cheap, well-understood primitives and the rest of the product can trust its payout rail. The build verdict here is unambiguous: <span class="pill pill--build">Build</span> this with PAN as the primary identity key, UPI reverse-penny-drop as the default bank check, and maker-checker on the master itself.
+
+## The three primitives
+
+Every employee and vendor reduces to three verifications. Two apply to everyone; the third is vendor-only.
+
+| Primitive | What it proves | Method | Indicative cost |
+|---|---|---|---|
+| PAN verification | Tax identity, name-on-record | API to an authorized agency (Protean/UTIITSL) resold via aggregator | Rs 1-3/call (aggregator); sub-rupee/PAN at Protean volume (inferred from FAQ, confirm against live Protean charges page) |
+| Bank account verification | The account exists and the name matches | UPI reverse-penny-drop (default); classic penny-drop (fallback) | Rs 3/successful (Setu/Cashfree, +GST) |
+| GSTIN + Udyam (vendors only) | Tax registration, MSME status for the 45-day clock | KYB call returning GSTIN/PAN/Udyam together | Rs 1-3/call (aggregator) |
+
+<p class="source-note">Source: Setu and Cashfree published bank verification pages, 2026 (vendor, high for Setu's Rs 3); PAN/GSTIN per-call figures indicative low-volume list prices (vendor-marketing, medium); Protean charges page (govt, medium, table inferred from FAQ).</p>
+
+PAN is the spine because it is universal, cheap, and ties directly to TDS and the tax record. Make it the primary key for both employees and vendors. Bank verification is the gate on payout. GSTIN plus Udyam only matter for vendors, where Udyam status drives MSME payment-terms logic (the Sec 43B(h) 45-day clock, covered in [the regulatory map](/compliance/regulatory-map/)).
+
+Unlike GSTIN, where the GSTN search endpoint is near-free and openly callable, the Udyam portal exposes no equivalent open public API. In practice you verify it through the same KYB aggregator that returns GSTIN/PAN, which surfaces the Udyam registration number and the enterprise category (micro, small, or medium). That category, not the bare registration, is what arms the Sec 43B(h) 45-day clock: only micro and small suppliers qualify. Re-check it periodically, since a supplier can outgrow micro/small status or update its Udyam record after onboarding, and a stale category misprices the payment-terms logic.
+
+## Bank verification: prefer reverse-penny-drop
+
+Classic penny-drop deposits Re 1 (or one paisa) into the keyed account number and IFSC, then reads back the bank-returned name. It works, but the user must key an account number correctly and you move money into an account you have not yet trusted.
+
+UPI reverse-penny-drop (RPD) flips it: the user pays Re 1 from their own UPI handle, the inbound credit confirms the account, and the Re 1 is auto-refunded (Setu documents refund within ~48 hours). No account number or IFSC is keyed, success runs roughly 95-97% (HyperVerge, vendor-stated), and the UX suits WhatsApp/mobile self-registration, which is our core channel.
+
+<Tabs>
+<TabItem label="Reverse-penny-drop (default)">
+
+- User pays Re 1 from their own UPI app; nothing keyed.
+- Inbound credit confirms the account and returns the holder name.
+- Re 1 auto-refunded, typically within ~48h (Setu docs).
+- Success ~95-97% (HyperVerge, vendor-stated, medium).
+- Best for self-registration and field/mobile users.
+
+</TabItem>
+<TabItem label="Classic penny-drop (fallback)">
+
+- User keys account number + IFSC.
+- System deposits Re 1 and reads back the bank-returned name.
+- Rs 3/successful at Setu/Cashfree (+GST).
+- Coverage 600+ banks incl 126+ co-operatives, >97% (Cashfree, vendor).
+- Use for users without UPI; some co-operative banks still fail.
+
+</TabItem>
+</Tabs>
+
+Treat the returned name-match score as a maker-checker gate, not an auto-approve. A clean exact match can pass; a fuzzy or partial match routes to HR/admin review. See [maker-checker](/product/maker-checker/) for how that review fits the wider approval machine.
+
+:::tip[Free name check at payout, not just onboarding]
+RBI mandated a free beneficiary name look-up for NEFT/RTGS from 1 April 2025 (no customer charge). Use it at the disbursement step in [payouts](/product/payouts/) as a second, zero-cost name check layered on the one-time penny-drop done at onboarding. Onboarding verifies the account exists; this catches a stale or edited account at the moment of payment.
+:::
+
+## The Aadhaar trap
+
+Do not design around live Aadhaar authentication. Private entities cannot freely run Aadhaar auth or e-KYC. The 31 January 2025 MeitY amendment permits it only through a UIDAI-approved, ministry-sponsored process that is slow and not available to a generic SaaS. Assuming you can call Aadhaar e-KYC cheaply is a compliance trap.
+
+:::danger[Regulatory invariant: no live Aadhaar auth]
+Private-sector live Aadhaar authentication requires AUA/KUA licensing and, post-2025, UIDAI registration plus ministry approval. Do not build on it. Use PAN as the primary identity key, and DigiLocker or Aadhaar offline XML (consented) only if a document of address is genuinely required. If any Aadhaar number is ever stored, it must sit in an Aadhaar Data Vault. Note that DPDP itself does not govern Aadhaar; the Aadhaar Act and UIDAI do.
+:::
+
+The practical consequence: PAN plus bank name-match gives you payout-grade assurance without touching Aadhaar at all. Reserve DigiLocker/offline XML for the rare case that needs proof of address, and capture it with explicit consent.
+
+## Employee-master design
+
+The employee master is the source of truth for who can be paid. It has two ingestion paths and one non-negotiable control.
+
+<Steps>
+
+1. **Ingest.** HRMS/payroll sync where the customer runs one (read-only authoritative feed), else self-registration via WhatsApp/web. Most sub-200-employee SMBs will mix both.
+
+2. **Verify.** On capture, run PAN verification and bank RPD. Store the name-match outcome, not just a pass/fail.
+
+3. **Maker-checker on the master.** A new or changed record is proposed by a maker (HR-Ops or the employee) and approved by a checker (admin/HR). The master record itself is a 4-eyes object, not a free-text form.
+
+4. **Whitelist.** Only an approved, verified bank account is eligible to receive a payout.
+
+5. **Re-trigger on change.** Any bank-account edit drops the account out of whitelisted state and re-runs verification plus re-approval before the next payout. One-time verification is insufficient.
+
+</Steps>
+
+This matters because the most common real-world fraud is not a forged receipt; it is a quietly edited payout account. Re-verifying on every bank-detail change closes that hole. For vendors, add periodic GSTIN re-checks: a GSTIN can be suspended or cancelled after onboarding, and you do not want to keep paying a deregistered supplier.
+
+## Pricing and the legality caveats
+
+The market is well served by aggregators (Cashfree, Setu, Sandbox, Surepass, Deepvue, Signzy, HyperVerge, IDfy, Karza/Perfios). Start on a transparent self-serve one to skip enterprise sales cycles. Budget roughly Rs 3-8 for a fully verified account (PAN + bank + name-match) at low volume, then renegotiate at scale.
+
+| Item | Price | Provenance | Confidence |
+|---|---|---|---|
+| Bank verification (penny-drop or RPD) | Rs 3/successful, +18% GST | Setu/Cashfree published | <span class="pill pill--high">High</span> |
+| PAN verification (via aggregator) | Rs 1-3/call, +GST | indicative list price | <span class="pill pill--med">Medium</span> |
+| GSTIN verification (via aggregator) | Rs 1-3/call, +GST | indicative; GSTN search is near-free | <span class="pill pill--med">Medium</span> |
+| Protean Online PAN Verification (OPV) | Rs 12,000/yr + GST, 750 free PANs/day | Protean charges page | <span class="pill pill--med">Medium</span> |
+| Aggregator setup/activation | Rs ~5,000-15,000 one-time (where charged) | indicative | <span class="pill pill--low">Low</span> |
+
+<p class="source-note">Source: Setu/Cashfree (vendor, high for the Rs 3 anchor); Protean (govt, table inferred from FAQ, medium); PAN/GSTIN per-call and setup fees are indicative low-volume figures (vendor-marketing, medium-low). Confirm by direct quote before modeling unit economics.</p>
+
+Two legality caveats the headline prices hide. First, PAN verification is not a free-for-all: the Income Tax Department authorizes only Protean (ex-NSDL) and UTIITSL as PAN agencies, and Protean OPV registration is restricted to eligible entity categories (banks, NBFCs, large deductors, and similar). Aggregators resell that access, but the end-user often must qualify. Second, all per-call prices are pre-tax: add 18% GST, and assume setup fees and annual commitments push the effective cost above the per-hit figure. The full cost stack feeds [unit economics](/business/unit-economics/).
+
+## DPDP-aligned PII handling
+
+This flow collects PAN, bank details, and possibly an Aadhaar number: squarely personal data under the DPDP Act 2023. The SaaS is a Data Processor for customer data and a Data Fiduciary for its own staff. Build for the stricter reading now; the Rules are phasing to roughly May 2027 and the penalty ceiling is Rs 250 crore for a security-safeguard failure.
+
+:::caution[Bake DPDP in at capture, not later]
+Capture explicit, purpose-bound consent at the point of collection. Enforce purpose limitation (verification only), retention and erasure controls, and an Aadhaar Data Vault if any Aadhaar number is stored. Plan for an India-based DPO if the platform is later classed a Significant Data Fiduciary. Full treatment in [data protection](/compliance/data-protection/).
+:::
+
+## Sources
+
+- [Setu, Bank Account Verification API (Rs 3/successful)](https://setu.co/data/kyc/bank-account-verification/) (vendor)
+- [Setu, Reverse Penny Drop quickstart (Re 1, 48h refund)](https://docs.setu.co/data/bav/reverse-penny-drop/quickstart) (vendor)
+- [Cashfree, Bank Account Verification (Rs 3 + GST, 600+ banks, 97%)](https://www.cashfree.com/bank-account-verification/) (vendor)
+- [Protean (NSDL), Online PAN Verification charges (Rs 12,000/yr)](https://www.protean-tinpan.com/services/online-pan-verification/pan-verification-charges.html) (govt)
+- [Income Tax Dept, Verify Bulk PAN/TAN (agency-only)](https://www.incometax.gov.in/iec/foportal/help/how-to-verify-bulk-pan-tan) (govt)
+- [Lexology, Aadhaar Authentication for Private Entities: 2025 Amendment](https://www.lexology.com/library/detail.aspx?g=d22ac806-db2b-48d8-85a7-582c39237fac) (primary)
+- [UIDAI, Aadhaar Paperless Offline e-KYC](https://www.uidai.gov.in/en/ecosystem/authentication-devices-documents/about-aadhaar-paperless-offline-e-kyc.html) (govt)
+- [BusinessToday, RBI free beneficiary name look-up for NEFT/RTGS](https://www.businesstoday.in/technology/news/story/you-will-soon-be-able-to-verify-beneficiary-details-during-rtgs-neft-payments-for-free-459083-2024-12-31) (analyst)
+- [HyperVerge, Reverse Penny Drop 101 (97% success)](https://hyperverge.co/blog/reverse-penny-drop-101/) (vendor)
+- [EY, Decoding the DPDP Act 2023 / Rules 2025](https://www.ey.com/en_in/insights/cybersecurity/decoding-the-digital-personal-data-protection-act-2023) (analyst)
+- [MeitY, Digital Personal Data Protection Act, 2023 (PDF)](https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf) (primary)
+- [Perfios, OneClick Onboarding (KYB: GSTIN/PAN/Udyam)](https://perfios.ai/in/products/oneclick-onboarding/) (vendor)

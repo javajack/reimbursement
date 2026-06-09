@@ -1,0 +1,92 @@
+---
+title: Unit Economics and Cost Stack
+description: The per-user and per-transaction COGS, CAC/LTV benchmarks, and whether float-free SaaS margins work.
+---
+
+The cost stack works, but only because we choose not to be a card business. A float-free, software-only reimbursement product carries near-zero variable cost on its free tier and single-digit-rupee variable cost per paying transaction, so gross margins stay healthy at a Zoho-anchored ARPU of ₹99-149/user/mo. The catch: with no card interchange and no float income, every rupee of revenue is software revenue, so margin discipline is not optional. <span class="pill pill--build">Build</span> the economics; <span class="pill pill--caution">Caution</span> they are structurally thinner than the card-led incumbents, and only survive if per-transaction COGS is gated to paid plans and amortised across a user's monthly seat.
+
+## What we are not earning
+
+Roughly 75-80% of Zaggle's revenue is card interchange, not software (THESIS, high). We have deliberately walked away from that pool: no PPI, no float, no interchange. See [/compliance/money-movement/](/compliance/money-movement/) for why that boundary is a deliberate product invariant, not a limitation we can engineer around. The consequence for this page is simple. The card players can run software at or below cost and earn on float; we cannot. Our entire P&L is the SaaS line, so the COGS below is the whole game.
+
+## Per-transaction COGS
+
+Every cost here is variable and event-driven. The design principle is to make the free tier nearly free to serve and to gate the costed events (payouts, autoscans beyond a cap, verification) to paid usage so they ride on a paying seat.
+
+| Cost item | When incurred | Indicative unit cost | Provenance | Confidence |
+| --- | --- | --- | --- | --- |
+| OCR extraction (LLM-vision) | Per receipt scanned | ~USD 0.0005-0.003/doc (under ₹0.30) | Vendor pricing (Gemini 2.5 Flash-Lite/Flash, Claude Haiku 4.5) | <span class="pill pill--med">Medium</span> |
+| OCR extraction (dedicated parser) | Per receipt, if used | ~USD 0.008-0.01/doc (~₹0.70-0.85) | Vendor pricing (Textract AnalyzeExpense, Google Doc AI, Azure) | <span class="pill pill--med">Medium</span> |
+| PAN verification | Once, at onboarding | ~₹1-3 + 18% GST | Aggregator indicative; Protean OPV ~₹12,000/yr for eligible entities | <span class="pill pill--med">Medium</span> |
+| GSTIN verification (vendor) | Once, at vendor onboarding | ~₹1-3 + 18% GST (Luhn checksum is free) | Aggregator indicative | <span class="pill pill--med">Medium</span> |
+| Bank penny-drop / reverse-penny-drop | Once, at account whitelisting | ~₹3 per successful + 18% GST | Setu published page (Cashfree as indicative corroboration) | <span class="pill pill--high">High</span> |
+| Payout (employee or vendor) | Per disbursement | ~₹1.75-5 + GST; RazorpayX 250 free/mo | Vendor indicative (RazorpayX, Cashfree) | <span class="pill pill--med">Medium</span> |
+
+<p class="source-note">Sources: Gemini/Claude API pricing, AWS Textract / Google Doc AI / Azure (vendor); Setu, Cashfree, Protean, RazorpayX (vendor, mostly indicative ranges). KYC and payout aggregator per-call prices are largely sales-gated; only Setu/Cashfree bank verification (~₹3) and the Protean PAN slabs are firm public anchors. GST is reclaimable ITC for the buyer but a real cash cost to us on our own vendor spend.</p>
+
+The single most important line is OCR. LLM-vision (Gemini 2.5 Flash-Lite, Claude Haiku 4.5) extracts a structured GST invoice for well under a third of a US cent, roughly 2-3x cheaper on typical figures (up to ~20x at the range extremes) than the USD 8-10 (≈₹670-840) per 1,000 docs dedicated parsers, and handles faded thermal paper and Devanagari better. That is the design choice that makes a generous free tier survivable. Detail and the fraud-validation layer that wraps it live at [/product/ocr/](/product/ocr/).
+
+:::tip[Gate the costed events to paid]
+Verification (PAN, penny-drop) is a one-time onboarding cost, so it amortises to near-zero over a customer lifetime. Payouts are the recurring per-transaction cost. Reserve automated payouts for paid plans only and keep them inside RazorpayX's 250-free-per-month allowance for small customers, and the variable COGS on a paying account stays in single-digit rupees per active submitter per month. See [/product/payouts/](/product/payouts/).
+:::
+
+:::caution[The free tier is where COGS leaks]
+A popular free tier with uncapped autoscans can accumulate real OCR cost on users who never convert. Cap free autoscans (e.g. 20-50/mo, the Zoho free tier is 20), keep payouts behind the paywall, and model worst-case free-user behaviour before launch. The danger is not the unit cost; it is volume on non-paying accounts.
+:::
+
+## Gross-margin sketch at ₹99-149 ARPU
+
+Take a paid active submitter on the lower annual price of ₹99/user/mo (ex-GST), filing a realistic 8-15 claims a month, each triggering one OCR scan and (where paid payouts are on) one disbursement. The arithmetic is deliberately conservative: it assumes every claim is paid out individually, which over-counts payout cost because real customers batch.
+
+| Line (per paid submitter, per month) | Amount | Note |
+| --- | --- | --- |
+| Revenue (annual plan, ex-GST) | ₹99 | Quoted ex-GST; buyer reclaims the 18% as ITC |
+| OCR: ~15 scans x ~₹0.30 | ~₹4.50 | LLM-vision; well under ₹0.30/doc in practice |
+| Payouts: ~12 x ~₹3 (above free allowance) | ~₹36 | Worst case, un-batched, beyond 250-free/mo |
+| Verification (one-time, amortised) | ~₹0.50 | ~₹6-8 once, spread over a multi-year lifetime |
+| Hosting / infra (allocated) | ~₹3-8 | Shared compute, storage, bandwidth (our estimate) |
+| Approximate variable COGS | ~₹44-49 | Dominated entirely by the un-batched payout line |
+| Approximate gross margin | ~₹50-55, roughly 50-55% | Before any fixed cost or support |
+
+<p class="source-note">Source: our own derivation, low-medium confidence, built on the unit costs above. Claim and payout volumes are illustrative assumptions, not measured data. Batching, payouts gated off, or higher ARPU all push margin materially up; this is the pessimistic case.</p>
+
+The number that swings everything is the payout line, and it is the most over-stated cell in the table. In reality payouts batch (one NEFT file for many claims), the first 250 a month are free, and many small customers never exceed that. Drop to a batched, mostly-free-allowance reality and variable COGS falls toward ~₹10-15, putting gross margin north of 80%, ordinary for SaaS. On the ₹149 Premium-equivalent tier the picture only improves. The honest read: software gross margin is healthy; it is the operating cost (support, sales, the painful Tally integration) that decides net economics, not COGS.
+
+:::note[Why margin looks "thin" anyway]
+A standalone SaaS at 50-85% gross margin is normal. It feels thin only next to a card-led peer whose interchange-plus-float revenue dwarfs its software line. We are comparing a pure-software P&L against a fintech-and-software P&L. On a like-for-like software basis our margins are fine; on a total-revenue basis we will always look smaller than Zaggle. That is the trade we made by staying a technology provider.
+:::
+
+## CAC, ACV, LTV, payback
+
+These benchmarks are the soft part of this page, and we flag them as such. They come from a single India SaaS consultancy (upGrowth), calibrated to firms in the ₹10-30 Cr ARR band, not a pre-revenue indie, and are not audited primary data. Treat the shape as directional, not the digits as fact.
+
+| Metric | Benchmark | Provenance | Confidence |
+| --- | --- | --- | --- |
+| Blended CAC (₹10-30 Cr ARR band) | ₹1.2L-2.5L per customer | Single consultancy (upGrowth) | <span class="pill pill--low">Low</span> |
+| Typical SMB ACV | ₹4L-8L (~USD 4.8-9.6k) | Single consultancy (upGrowth) | <span class="pill pill--low">Low</span> |
+| LTV:CAC | 2.5x-3x | Single consultancy (upGrowth) | <span class="pill pill--low">Low</span> |
+| Payback | 14-20 months | Single consultancy (upGrowth) | <span class="pill pill--low">Low</span> |
+| Channel CAC: content/SEO | ₹40K-80K | Single consultancy (upGrowth) | <span class="pill pill--low">Low</span> |
+| Channel CAC: partnerships/channel | ₹50K-1.5L | Single consultancy (upGrowth) | <span class="pill pill--low">Low</span> |
+| Channel CAC: outbound/SDR | ₹2L-4L | Single consultancy (upGrowth) | <span class="pill pill--low">Low</span> |
+| PLG/self-serve CAC (micro-deals) | ₹500-1,500 vs ₹2,000-5,000 sales-led | Blog aggregator (productgrowth.in) | <span class="pill pill--low">Low</span> |
+
+<p class="source-note">Source: upGrowth and productgrowth.in (single-consultancy / blog-aggregator, low confidence). These are not audited primary benchmarks; a pre-revenue indie at a lower ACV will see different economics. Use the channel ranking, not the absolute rupee figures, to drive decisions.</p>
+
+The decision these numbers force is GTM, not pricing. At an India SMB ACV measured in low single-lakh rupees, an outbound SDR at ₹2L-4L CAC never pays back. Content/SEO and the CA-accountant plus Tally-reseller channel are the only affordable acquisition paths, which is exactly the motion we recommend at [/business/pricing/](/business/pricing/) and across [/business/freemium/](/business/freemium/). CAC discipline and COGS discipline are the same discipline here: the model only closes if both the cost to serve and the cost to acquire stay low.
+
+## The verdict
+
+<span class="pill pill--build">Build</span>, with the cost rules baked in. Float-free SaaS economics on this product are workable at ₹99-149 ARPU and genuinely healthy once payouts batch and ride a paying seat, but they are unforgiving. There is no interchange to subsidise a sloppy free tier and no float to cushion a long sales cycle. Three rules hold the line: gate payouts and KYC behind the paywall, cap free-tier OCR, and acquire through content and channel rather than outbound. Keep those, and the per-user math is comfortably positive. Break any one, and a low-ARPU product with no float income has nothing to absorb the leak.
+
+## Sources
+
+- [Zoho Expense Pricing (India)](https://www.zoho.com/in/expense/pricing/) (vendor): free-tier autoscan cap, ₹99/199 monthly and ₹79/149 annual seat prices.
+- [Gemini Developer API Pricing](https://ai.google.dev/gemini-api/docs/pricing) (vendor): LLM-vision token pricing behind the sub-cent-per-doc OCR estimate.
+- [AWS Textract Pricing](https://aws.amazon.com/textract/pricing/) (vendor): dedicated AnalyzeExpense parser at ~USD 8-10 per 1,000 docs, the cost we beat.
+- [Setu Bank Account Verification](https://setu.co/data/kyc/bank-account-verification/) (vendor): ~₹3-per-successful penny-drop, a firm public price anchor.
+- [Cashfree Bank Account Verification](https://www.cashfree.com/bank-account-verification/) (vendor): ~₹3 + GST per verification, second anchor on KYC unit cost.
+- [Protean Online PAN Verification charges](https://www.protean-tinpan.com/services/online-pan-verification/pan-verification-charges.html) (govt): PAN OPV registration and per-PAN slab pricing.
+- [RazorpayX Fees and Taxes](https://razorpay.com/docs/x/manage-teams/billing/) (vendor): 250 free payouts/month then per-transaction fee, the core payout cost input.
+- [CAC Benchmarks for Indian B2B SaaS by ARR Band (upGrowth)](https://upgrowth.in/cac-benchmarks-indian-b2b-saas-arr-band-2026/) (analyst): the soft, single-consultancy CAC/ACV/LTV/payback and channel-CAC figures.
+- [India SaaS Trends 2026 (productgrowth.in)](https://productgrowth.in/insights/saas/india-saas-trends/) (analyst): PLG-vs-sales-led CAC at micro-deal sizes, directional only.

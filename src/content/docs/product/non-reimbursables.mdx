@@ -1,0 +1,93 @@
+---
+title: What Is Not Covered
+description: The GST blocked-ITC catalogue, income-tax disallowances, and the default non-reimbursable policy set as configurable rules.
+---
+
+"Not covered" is not one question, it is three, and they decide independently. A single line item can be reimbursable to the employee, blocked for GST input tax credit, AND a taxable perquisite, all at once. The rule engine must model each overlay separately or it will either over-block legitimate claims or quietly launder a soft policy choice into a false legal absolute. This page turns the statute into rules.
+
+## Three overlays, evaluated per line item
+
+Treat every expense line through three independent booleans, not one verdict.
+
+| Overlay | Statute | Question it answers | Wrong default |
+|---|---|---|---|
+| GST ITC eligibility | CGST Sec 17(5) | Can the company recover the GST charged on this bill? | Assuming all business spend yields ITC |
+| Income-tax deductibility | IT Sec 37(1) | Can the company deduct this as a business expense? | Treating penalties/personal spend as deductible |
+| Employee taxability | Sec 10(14), 10(5), Rule 3 | Is the reimbursement/allowance tax-free in the employee's hands? | Assuming the full per-diem is tax-free |
+
+<p class="source-note">Source: CGST Sec 17(5); Income-tax Act Sec 37(1), Sec 10(14)/Rule 2BB, Sec 10(5), Rule 3 (primary statute, corroborated via ClearTax/Taxmann, high confidence).</p>
+
+The overlays do not co-vary. Hotel food and beverages are reimbursable and Sec 37 deductible, yet the GST on them is blocked ITC. A traffic challan is non-reimbursable by policy and non-deductible under Sec 37. The architecture follows directly: encode ITC eligibility, deductibility, and employee taxability as three flags on the line item, then roll up to the claim. The mechanics of that rollup live in our [rule engine](/product/rule-engine/) and the field-level schema in the [rule-object reference](/reference/rule-schema/).
+
+## The GST blocked-ITC catalogue (Sec 17(5))
+
+This is the hard, statute-grounded layer. ITC is blocked, with narrow exceptions, on the categories below. We verified the clause text against the official CBIC repository: the items sit in two different clauses, (a) and (b), and conflating them is a common and consequential error.
+
+| Clause | Blocked input | ITC available only if |
+|---|---|---|
+| 17(5)(a) | Motor vehicles for transport of persons, approved seating capacity not more than 13 (including driver) | Further supply (resale), passenger transport, or driving instruction |
+| 17(5)(ab) | Insurance, servicing, repair, maintenance of those blocked vehicles | Same exceptions as (a) |
+| 17(5)(b)(i) | Food and beverages, outdoor catering, beauty treatment, health services, cosmetic/plastic surgery | Used to make an outward taxable supply of the same category, or as an element of a taxable composite/mixed supply |
+| 17(5)(b)(i) | Leasing, renting, hiring of motor vehicles (rent-a-cab), life insurance, health insurance | Same-category outward supply, OR obligatory under law |
+| 17(5)(b)(ii) | Membership of a club, health or fitness centre | Obligatory under law |
+| 17(5)(b)(iii) | Travel benefits to employees on vacation (LTC / home travel concession) | Obligatory under law |
+
+<p class="source-note">Source: CBIC Tax Information Portal, Sec 17(5) verbatim text; ClearTax; IndianKanoon (primary + corroborating, high confidence).</p>
+
+Two exceptions, two scopes. The same-category outward-supply proviso attaches to the (b)(i) group only: a restaurant buying food, a tour operator hiring cabs onward. The obligatory-under-law proviso was extended to the whole of clause (b) by the CGST Amendment Act 2018, effective 1 February 2019. The 13-seat capacity rule is the current text of 17(5)(a); we do not assert here which amendment introduced it. Model both as conditional flags on the company profile, defaulting to false, so ITC is blocked unless an admin explicitly justifies the exception.
+
+:::danger[The "travel benefits" trap]
+"Travel benefits extended to employees on vacation" in clause (b)(iii) means leave travel concession and home travel concession only. It does NOT mean ordinary business travel. ITC on air and rail tickets booked for work is generally available and is NOT blocked by Sec 17(5). An engine that blocks ITC on all employee travel will silently throw away legitimate, recoverable credit on the single largest T&E category. Block LTC/vacation; pass business travel.
+:::
+
+:::caution[Do not blanket-apply RCM]
+Rent-a-cab, goods transport agency, and legal services can trigger GST reverse charge, but applicability is notification- and supplier-specific (rent-a-cab RCM depends on the supplier's rate election; aggregator cab rides fall under Sec 9(5), GST paid by the platform). Flag these for review rather than auto-charging RCM. The recovered ITC still has to survive the 17(5) block above. Medium confidence; re-check against current notifications.
+:::
+
+## Income-tax disallowance (Sec 37)
+
+Sec 37(1) deducts only expenditure laid out wholly and exclusively for business, that is not capital, not personal, and not already covered by Secs 30 to 36. The disallowances that matter for an expense product:
+
+- Fines and penalties for legal violations, including traffic challans. <span class="pill pill--block">Block</span>
+- Personal expenses dressed as business. <span class="pill pill--block">Block</span>
+- CSR spend mandated under Companies Act Sec 135 (Explanation 2 deems it not wholly-and-exclusively for business). <span class="pill pill--block">Block</span>
+- Freebies (gifts, travel, hospitality) to medical practitioners, disallowed as prohibited by law per CBDT Circular 5/2012 and widened by Finance Act 2022 Explanation 3. <span class="pill pill--block">Block</span>
+
+Deductibility is a separate flag from ITC. A penalty is non-deductible AND ITC-irrelevant; hotel food is fully deductible yet ITC-blocked. Keep them decoupled.
+
+## Default non-reimbursable set (configurable, not legal absolutes)
+
+Most of what companies call "non-reimbursable" is a policy choice, not a statutory ban. We ship the set below as defaults, each independently togglable per company. They are defaults because they frequently overlap the GST and Sec 37 disallowances, not because the law forbids reimbursement.
+
+| Default-blocked category | Why it is a sensible default | Overlapping statute |
+|---|---|---|
+| Alcohol | Personal consumption, rarely defensible as business | Sec 37 personal; Sec 17(5)(b) F&B |
+| Traffic fines / challans | Penalty for breaking the law | Sec 37 penalty disallowance |
+| Donations | Not wholly-and-exclusively for business | Sec 37; CSR/non-business |
+| Spa, grooming, beauty | Personal benefit | Sec 17(5)(b) beauty/health; Sec 37 personal |
+| Minibar, in-room movies | Personal consumption on travel | Sec 37 personal |
+| No-show / late-checkout penalties | Avoidable personal cost | Sec 37 |
+| Gifts above Rs 5,000/year | Excess is a taxable perquisite | Rule 3(7)(iv) excess taxable |
+
+<p class="source-note">Source: ClearTax Sec 37; CGST Sec 17(5); Rule 3(7)(iv) (corroborating, medium confidence; these are policy defaults, not statutory bans).</p>
+
+:::tip[Design stance]
+Present every entry above as a toggle with the statutory rationale attached, never as a hard-coded ban. Over-blocking is the failure mode that erodes trust with Finance: a company with a same-line-of-business exception, or one that reimburses controlled alcohol for client entertainment, must be able to allow it without forking the product. The defaults are opinionated; the engine is not dogmatic.
+:::
+
+A worked example of the employee-taxability overlay, unspent per-diem surfacing as a taxable balance to feed payroll, fuel handled against actual bills, and the Rs 5,000 gift ceiling, lives in [edge cases](/product/edge-cases/). The full statutory landscape, including TDS on vendor reimbursements and record retention, sits in the [regulatory map](/compliance/regulatory-map/).
+
+## Caveats we carry forward
+
+The authoritative CBIC and incometaxindia.gov.in pages were intermittently un-fetchable (TLS error / HTTP 403) at research time, so clause wording was corroborated via ClearTax, Taxmann, and IndianKanoon and should be re-verified against the live statute before hard-coding. Several rates and thresholds shifted across 2024 to 2026; version-date every value by financial year with an effective-from/effective-to range, and do not treat the policy defaults as legal absolutes.
+
+## Sources
+
+- [Section 17(5) of the CGST Act, 2017, CBIC Tax Information Portal](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/acts/2017_CGST_act/active/chapter5/section17_v1.00.html) (primary)
+- [Section 17(5) in The Central Goods and Services Tax Act, 2017, IndianKanoon](https://indiankanoon.org/doc/134183062/) (primary)
+- [Section 17(5) of CGST Act, Blocked Credit Under GST, ClearTax](https://cleartax.in/s/section-175-of-cgst-act) (analyst)
+- [Section 37 of Income Tax Act, allowed and disallowed deductions, ClearTax](https://cleartax.in/s/section-37-of-income-tax) (analyst)
+- [Critical Analysis of Section 37 of the Income Tax Act, Taxmann](https://www.taxmann.com/post/blog/critical-analysis-of-section-37-of-the-income-tax-act) (analyst)
+- [CBDT Circular disallowing freebies to medical practitioners is valid, TaxGuru](https://taxguru.in/income-tax/cbdt-circular-disallowing-expenditure-freebies-medical-practitioners-valid.html) (analyst)
+- [Perquisites, Gift, Voucher or Token, Rule 3(7)(iv)](https://www.taxmanagementindia.com/visitor/detail_manual.asp?ID=887) (govt)
+- [All about Reverse Charge Mechanism (RCM) under GST, ClearTax](https://cleartax.in/s/reverse-charge-gst) (analyst)

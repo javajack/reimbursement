@@ -1,0 +1,114 @@
+---
+title: Risks and Failure Modes
+description: "The ways this fails, ranked, with mitigations: float economics, the Zoho floor, the Tally moat, the SOC 2 wall."
+---
+
+This build is a <span class="pill pill--build">Build</span> conditioned on staying inside a narrow lane. The failure modes are predictable, not exotic. The biggest threats are not a competitor out-shipping us; they are structural: card economics we cannot match, a price floor we cannot undercut, a moat we do not fully control, and a two-person team that runs out of hours before it runs out of money. This page ranks those risks and states the mitigation for each.
+
+Ordering principle: a risk is dangerous in proportion to how cheaply it kills the company. Interchange economics and the Zoho floor are existential and structural; the SOC 2 wall and Tally erosion are containable if anticipated; the binding constraint underneath all of them is team capacity.
+
+## The risk register
+
+Likelihood and impact are our own derivation from the research, not measured probabilities. Treat them as a triage ordering, low confidence on the exact ranking, high confidence on the direction.
+
+| # | Risk | Likelihood | Impact | Mitigation |
+|---|------|------------|--------|------------|
+| 1 | Competing on cards / float and losing to interchange economics | High if attempted | Fatal | Do not build cards. Monetise software seats; partner payouts. See [money movement](/compliance/money-movement/). |
+| 2 | Zoho near-zero floor compresses ARPU below viability | High | Severe | Do not undercut Zoho; win on India workflow (GST ITC, Tally, payouts). Price at parity, differentiate on value. |
+| 3 | Drift into a low-margin services business | High | Severe | Cap implementation/services; productise onboarding; refuse bespoke work at the SMB price point. |
+| 4 | Tally moat erodes (first-party feature or connector change) | Medium | Severe | Stack Tally + WhatsApp + one vertical so no single dependency is the whole moat. Add Zoho Books sync. |
+| 5 | SOC 2 wall on the first enterprise deal | Medium-High | High | ISO 27001 first (~₹5 L); DPDP-as-feature; defer SOC 2 until a US-HQ deal funds it. |
+| 6 | OCR / Tally edge-case support burden across many small accounts | High | High | Deterministic pre-checks before auto-approve; tight free-tier caps; deflect support with self-serve. |
+| 7 | WhatsApp / Meta policy and pricing volatility | Medium | Medium | Keep mobile + email capture as fallbacks; never make WhatsApp the only intake path. |
+| 8 | DPDP buyer-questionnaire friction stalls deals | Medium-High | Medium | Pre-baked DPDP/security pack; ISO 27001 evidence; treat compliance as a sales asset. See [data protection](/compliance/data-protection/). |
+| 9 | Consolidation window narrows (Happay to MakeMyTrip) | Medium | Medium | Stay narrow and ship fast; do not broaden into the horizontal fight prematurely. |
+| 10 | Two-person team overwhelmed by support + compliance | High | Fatal | The binding constraint. Automate ruthlessly; one vertical; channel-led GTM. See below. |
+
+<p class="source-note">Source: our derivation from research-build-feasibility.md "Main failure modes" finding and research-pricing-gtm.md (our synthesis, low-medium confidence on ranking).</p>
+
+## The structural three: cards, the floor, and services
+
+### 1. Cards and float: structurally unwinnable
+
+Roughly 75-80% of Zaggle's net revenue is card interchange ("program fees"), with SaaS subscriptions only around 3% (Zaggle Q4FY24 investor presentation, primary, high). Program fees grew 69.5% to ₹545.6 cr in FY25. That pool is gated behind RBI licensing: a non-bank PPI issuer needs ₹5 cr net worth at application rising to ₹15 cr by the end of the third financial year, or a bank partner.
+
+A two-person team cannot match interchange unit economics on the card layer, full stop. The mitigation is not to compete there: monetise software seats and partner all money movement via RazorpayX or Cashfree at roughly ₹1.75-5 per payout. This is also a hard product invariant, not just a strategy choice.
+
+:::danger[Regulatory invariant]
+
+Funds must never touch an account the SaaS owns or controls. Use file hand-off to the customer's own bank, or a regulated partner (RazorpayX / Cashfree) initiating from its escrow. Holding or pooling funds triggers PA (net worth ₹15 cr at application) or PPI licensing. Get a written legal opinion before go-live.
+
+:::
+
+### 2. The Zoho floor: ARPU compression
+
+Zoho Expense anchors the India floor: free up to 3 users, Standard ₹99/user/mo (₹79 annual), Premium ₹199 (₹149 annual), 5-user minimum, ex-GST (Zoho pricing page, vendor, high). Foreign players price 5-10x higher (Fyle/Sage at USD 11.99-14.99 per active user/mo), which leaves a real umbrella, but the floor underneath is unforgiving.
+
+Attempting to win on raw price is the trap: it compresses ARPU below the cost of serving and supporting an account. The mitigation is to price at parity with Zoho and differentiate on India reimbursement workflow that Zoho under-serves: GST ITC capture, Tally two-way sync, UPI/vendor payouts, faster approvals. See the [pricing ladder](/business/pricing/) for the per-active-submitter model.
+
+### 3. Drifting into services
+
+At a ₹79-149/user/mo price point with high-touch onboarding (Tally connection, policy configuration, GST mapping), a two-person team can quietly become a consulting shop. Margin evaporates and the SaaS thesis dies. The mitigation is discipline: productise onboarding, cap implementation, and refuse bespoke work that does not generalise. Software margins or nothing.
+
+## The containable three: Tally, SOC 2, support
+
+### 4. The Tally moat erodes
+
+Tally integration is the highest-leverage moat (~70-80% Indian SMB accounting share, vendor-claimed by Tally and not independently audited; no tier-1 analyst publishes an India accounting-share number, so treat as medium confidence). It is defensible precisely because it is painful: legacy XML-over-HTTP on port 9000, TDL, no cloud API, on-prem and always-on. But the moat is not ours to keep. Tally controls the connector surface and could change TDL/XML behaviour or ship its own first-party expense feature.
+
+The mitigation is to not bet the company on one dependency. Stack Tally + WhatsApp-first capture + one vertical so the moat is a combination, not a single integration. Add Zoho Books and payroll sync so accounting depth is broader than Tally alone.
+
+### 5. The SOC 2 wall
+
+The first serious enterprise deal will trigger a security questionnaire. SOC 2 Type 1 runs ~₹6-14 L in year one over roughly 12 weeks; ISO 27001 is ~₹5 L year one (~₹60 K/year ongoing) over 12-16 weeks (Codesecure, TCSA, vendor, high). About 90% of US enterprise questionnaires ask for SOC 2; Indian and EU buyers more often accept ISO 27001.
+
+:::tip[Sequence the certifications]
+
+Get ISO 27001 first (cheaper, India/EU-preferred) and market DPDP compliance as a product feature. Defer SOC 2 until a US-HQ enterprise deal funds it. Do not let an unfunded ₹6-14 L certification block your first mid-market deal.
+
+:::
+
+### 6. OCR and Tally edge-case support burden
+
+OCR is table-stakes, not a moat, and the long tail is brutal. Field accuracy on clean printed invoices is 94-99% (vendor-stated, optimistic), falling to the low-to-mid 80s on faded thermal, crumpled, or Devanagari receipts. AI-generated receipt fraud rose from ~0% to ~14% of fraudulent documents in about 12 months (AppZen, Sept 2025). Each failed scan and each Tally connection refusal is a support ticket.
+
+For two people serving many small accounts, this is an unbounded burden. The mitigation is deterministic pre-checks (GSTIN Luhn-mod-36, e-invoice QR/IRN, arithmetic, perceptual-hash duplicate, EXIF) before any auto-approval, tight free-tier OCR caps, and self-serve deflection so support does not scale linearly with accounts.
+
+## The volatility two: WhatsApp and DPDP
+
+### 7. WhatsApp / Meta policy and pricing
+
+WhatsApp-first capture is a cheap, India-native wedge (500M+ India users, Meta-reported, vendor, medium; utility messages ~₹0.115, with Meta having moved to per-message pricing in July 2025). But it sits on Meta's platform: template approvals, policy shifts, and pricing changes are outside our control, and flows still carry DPDP consent/notice obligations. The mitigation is to keep mobile and email capture as first-class fallbacks so WhatsApp is never the single point of intake failure.
+
+### 8. DPDP buyer-questionnaire friction
+
+The near-term DPDP risk is not the ₹250 cr penalty ceiling (Sec 8(5), security-safeguard failure) or ₹200 cr breach-notification ceiling; those are maximums and enforcement is nascent (Board operational from Nov 2025, full obligations phased to ~May 2027). The practical risk is buyer-questionnaire friction stalling deals. The mitigation is a pre-baked DPDP and security pack plus ISO 27001 evidence, turning compliance from a blocker into a sales asset.
+
+### 9. The narrowing consolidation window
+
+Happay (6,500+ customers) was acquired by MakeMyTrip in Nov 2024; Fyle went to Sage in Jul 2025. The horizontal category is consolidating and the incumbents are funded (Volopay ~USD 33.5M raised; the "$77.3M ARR" figure is self-reported and implausible, do not cite as fact). The window for a horizontal "better expense app" is closing. The mitigation is the whole thesis: stay narrow, ship fast, do not broaden into the funded fight.
+
+## The binding risk: a two-person team
+
+Every mitigation above routes back to one constraint. OCR edge cases, Tally connection failures, compliance questionnaires, and support for many small accounts can exceed a tiny team's capacity and push it into unsustainable services work. This is the failure mode most likely to actually happen, because it does not require any single bet to be wrong; it just requires the accumulated load to exceed two people.
+
+:::caution[The constraint that decides everything]
+
+The binding risk is not capital and not competition. It is hours. A two-person team is overwhelmed by support plus compliance long before it is out-marketed. Every product and GTM choice should be read as a capacity decision: automate ruthlessly, pick one vertical, lead with channel partners (CA firms, Tally resellers), and cap services.
+
+:::
+
+If the team cannot hold that line, the verdict flips from <span class="pill pill--build">Build</span> to <span class="pill pill--avoid">Avoid</span>. The full scored decision and the conditions that keep it green live on the [verdict page](/business/verdict/).
+
+## Sources
+
+- [Zaggle Q4FY24 Investor Presentation](https://ipo.zaggle.in/wp-content/uploads/2024/05/investor-presentation-zaggle-Q4FY24.pdf) (primary): interchange/program-fee revenue mix.
+- [RBI FAQs, Prepaid Payment Instruments](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812) (govt): PPI net-worth and licensing thresholds.
+- [Zoho Expense Pricing, India](https://www.zoho.com/in/expense/pricing/) (vendor): the India price floor.
+- [Fyle / Sage Expense Management Pricing](https://www.fylehq.com/pricing) (vendor): USD pricing and the price umbrella.
+- [SOC 2 Type 2 Compliance Cost in India](https://codesecure.in/blogs/soc-2-type-2-compliance-cost-india) (vendor): SOC 2 cost and timeline.
+- [SOC 2 vs ISO 27001 for Indian Startups](https://www.tcsa.in/resources/soc-2-vs-iso-27001-indian-startups) (vendor): certification sequencing and buyer expectations.
+- [Tally ERP Market Share](https://6sense.com/tech/enterprise-resource-planning-erp/tally-erp-market-share) (vendor, ERP install-base estimate, not India accounting share): context only, not the source for the 70-80% India figure.
+- [DPDP Act 2023 Penalty Schedule](https://www.dpdpa.com/theschedule.html) (govt): penalty ceilings.
+- [Happay company profile (Latka)](https://getlatka.com/companies/happay) (analyst): consolidation and the MakeMyTrip acquisition.
+- [WhatsApp Business API India Guide](https://www.messagecentral.com/en-in/blog/whatsapp-business-api-india-guide) (vendor): channel reach and DPDP context.

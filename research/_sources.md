@@ -1,0 +1,519 @@
+# AGGREGATED SOURCES (by topic)
+
+
+## Indian employee & vendor expense-reimbursement / spend-management software incumbents (catalog + whitespace for an indie team)  [india-incumbents]
+- [Zoho Expense Pricing (India)](https://www.zoho.com/in/expense/pricing/)  — Primary: India INR pricing tiers, free plan, features
+- [Inc42 – CRED Acquires Happay at $180M](https://inc42.com/buzz/cred-acquires-corporate-expense-management-startup-happay-at-180-mn-valuation/)  — 2021 acquisition valuation
+- [Inc42 – MakeMyTrip To Acquire CRED's Happay](https://inc42.com/buzz/makemytrip-to-acquire-creds-expense-management-platform-happay/)  — 2024 resale + Happay revenue
+- [Business Standard – MakeMyTrip to acquire Happay from CRED](https://www.business-standard.com/companies/news/makemytrip-to-acquire-happay-s-expense-management-platform-from-cred-124111800839_1.html)  — Deal details, client count
+- [G2 – Fyle (now Sage Expense Management) reviews/pricing](https://www.g2.com/products/fyle/reviews)  — Sage acquisition + pricing
+- [Crunchbase – Fyle](https://www.crunchbase.com/organization/fyle)  — Funding total and investors
+- [Fyle official site](https://www.fylehq.com/)  — Card-agnostic/real-time positioning
+- [Volopay India](https://www.volopay.com/in/)  — Positioning; pricing not public
+- [Crunchbase – Volopay](https://www.crunchbase.com/organization/volopay)  — Funding total
+- [EnKash – Unified Corporate Card Ecosystem (PRNewswire)](https://www.prnewswire.com/in/news-releases/enkash-unveils-indias-first-unified-corporate-card-ecosystem-for-businesses-302582732.html)  — Cards issued, positioning
+- [Business Standard – EnKash secures PPI license](https://www.business-standard.com/content/press-releases-ani/enkash-secures-prestigious-ppi-license-strengthening-its-leadership-in-corporate-cards-and-spend-management-125040900400_1.html)  — RBI license stack (2025)
+- [TheKredible – EnKash profile](https://thekredible.com/company/Enkash/overview)  — Funding ~$23M
+- [Y Combinator – Kodo](https://www.ycombinator.com/companies/kodo)  — Positioning, integrations, segment
+- [Inc42 – Kodo $8.7M seed](https://inc42.com/buzz/y-combinator-backed-corporate-card-provider-kodo-bags-9-mn-in-seed/)  — Funding
+- [Y Combinator – Karbon Card](https://www.ycombinator.com/companies/karbon-card)  — Positioning, 2,000+ SMBs
+- [Entrepreneur India – Karbon Rs 55 cr debt](https://www.entrepreneur.com/en-in/news-and-trends/karbon-card-raises-inr-55-crore-debt-finance/427726)  — Funding, WhatsApp expense, credit terms
+- [RazorpayX Corporate Cards](https://razorpay.com/x/corporate-cards/)  — Card limits, fees, FX
+- [Techjockey – RazorpayX Payroll](https://www.techjockey.com/detail/razorpayx)  — Payroll pricing
+- [Chittorgarh – Zaggle IPO](https://www.chittorgarh.com/ipo/zaggle-prepaid-ocean-services-ipo/1505/)  — IPO size, price band, subscription
+- [MoneyMuscle – Zaggle Q4 FY25 results](https://www.moneymuscle.in/p/zaggle-prepaid-q4-fy25-results-analysis)  — FY25 revenue/PAT, guidance
+- [Zaggle official site](https://www.zaggle.in/)  — Save product, cards/users, bank partners
+- [Pluxee India](https://www.pluxee.in/)  — Rebrand, scale, benefits suite
+- [Pluxee Meal Benefits](https://www.pluxee.in/products/meal-benefits/)  — Tax savings figure, PPI status
+- [Tracxn – Pazcare](https://tracxn.com/d/companies/pazcare/__EPjXmrzTMfdXl-p5bZp58MfNvug4VDD27epYEzrefA4)  — Funding, clients, founders
+- [Pine Labs – Manage Corporate Expenses](https://www.pinelabs.com/use-cases/manage-corporate-expenses)  — Card-issuing infra for expense
+- [PNI – ProXpense + Pine Labs co-branded cards](https://www.pninews.com/proxpense-and-pine-labs-launch-co-branded-corporate-prepaid-cards/)  — 2024 partnership, ProXpense entrant
+- [TechCrunch – Open $100M Series C](https://techcrunch.com/2021/10/12/google-and-temasek-back-indian-neobank-open-in-100-million-fundraise/)  — Open funding/valuation
+- [ICICI Bank – Corporate Card](https://www.icici.bank.in/business-banking/cards/corporate-card)  — Bank corporate card + data-tool expense mgmt
+- [SutiExpense Pricing](https://www.sutisoft.com/sutiexpense/business-expense-software-pricing.html)  — Per-submitter billing model
+- [Techjockey – SutiExpense](https://www.techjockey.com/detail/sutiexpense)  — India price point
+- [ExpenseOnDemand](https://www.expenseondemand.com/)  — Modular usage-based SME positioning
+- [Jupiter Edge+ (TradeBrains)](https://tradebrains.in/jupiter-partners-with-csb-to-launch-edge-rupay-credit-card-heres-why-you-need-it-now/)  — Consumer card – out of scope
+- [Mysa – Best Expense Management Software India 2026](https://www.mysa.io/blogs/expense-management-software)  — India feature must-haves, gaps
+- [Cashbook – Small Business Expense Management 2025](https://cashbook.in/blogs/small-business-expense-management-2025)  — SME pain stats (low confidence)
+- [BinarySemantics – GST compliance for SMEs 2025](https://www.binarysemantics.com/blogs/start-ups-and-smes-gst-compliance-in-india-growing-pains-tech-levers-the-future-ahead/)  — GST/Tally hybrid workflow context
+- [ResearchAndMarkets – Expense Management Software Market](https://www.researchandmarkets.com/reports/4968819/expense-management-software-market-global)  — Global/APAC market size & CAGR
+- [Mordor Intelligence – Expense Management Software Market](https://www.mordorintelligence.com/industry-reports/expense-management-software-market)  — APAC fastest-growing region
+
+## Global expense/spend-management leaders: feature bar and India operability (inputs for an India-first B2B SaaS reimbursement feasibility study)  [global-adjacent]
+- [Ramp — Corporate Cards](https://ramp.com/corporate-cards)  — Hero card features, cashback, no annual fee
+- [Ramp — Expense Management](https://ramp.com/expense-management)  — OCR, SMS/Slack/Teams capture
+- [Ramp — Global](https://ramp.com/global)  — 190+ countries claim; India unconfirmed (page truncated)
+- [Ramp — Pricing](https://ramp.com/pricing)  — Free/Plus/Enterprise tiers
+- [Brex — Spring Release 2025](https://www.brex.com/spring-2025)  — India & Israel local-currency reimbursements (early access)
+- [Brex — Global reimbursements (support)](https://www.brex.com/support/global-reimbursements)  — INR payout caps; USD-default funding
+- [Brex — Locally-funded reimbursements (support)](https://www.brex.com/support/locally-funded-reimbursements)  — Fund INR from local Indian bank account
+- [Brex — Global product](https://www.brex.com/product/global)  — 30+ currencies / 60+ countries cards; 100+ currency budgets
+- [FinTech Futures — Navan acquires Tripeur](https://www.fintechfutures.com/m-a/navan-acquires-indian-travel-expense-management-firm-tripeur)  — April 2023 Bangalore TMC acquisition
+- [TheCompanyCheck — Navan Labs India Pvt Ltd](https://www.thecompanycheck.com/company/navan-labs-india-private-limited/U72200KA2015PTC084890)  — India entity registration, Bengaluru
+- [Capterra India — Navan](https://www.capterra.in/software/169591/tripactions)  — Reviewer: USD-default currency issue
+- [Pleo — FAQ (supported countries)](https://www.pleo.io/en/faq)  — EU/UK-only list; India absent
+- [Spendesk — Summer 2025 updates](https://www.spendesk.com/platform/platform-releases/summer-updates-2025/)  — AP/payment features, EEA/UK scope
+- [Spendesk Help — international invoice payments](https://helpcenter.spendesk.com/en/articles/11798230-pay-international-invoices-directly-from-spendesk)  — 30+ currencies via Wise; EEA/UK customers
+- [Payhawk — Pricing & Plans](https://payhawk.com/en-us/pricing-and-plans)  — Cards for UK & US entities only
+- [Payhawk — Product](https://payhawk.com/product)  — ERP integrations, multi-entity, real-time card sync
+- [PR Newswire — Zaggle x Mesh Payments partnership](https://www.prnewswire.com/news-releases/zaggle-x-mesh-payments--announce-strategic-partnership-to-power-global-spend-management-302454861.html)  — May 2025 India market entry via partnership
+- [Mesh Payments — homepage](https://meshpayments.com/)  — T&E + cards + travel feature set
+- [FinTech Futures — Paylocity to acquire Airbase $325M](https://www.fintechfutures.com/paytech/paylocity-to-acquire-spend-management-platform-airbase-for-325m)  — Acquisition price and timing
+- [Paylocity IR — Airbase acquisition agreement](https://investors.paylocity.com/news-releases/news-release-details/paylocity-announces-definitive-agreement-acquire-airbase-inc)  — Primary acquisition announcement
+- [Emburse — Enterprise Expense Management](https://www.emburse.com/products/enterprise/expense-management)  — 34 languages, VAT/per-diem, rules engine
+- [Business Travel Executive — Emburse renames Chrome River/Certify](https://www.businesstravelexecutive.com/news/emburse-changing-names-of-chrome-river-and-certify-products/)  — Brand mapping Enterprise/Professional
+- [TrustRadius — Rydoo vs Webexpenses](https://www.trustradius.com/compare-products/rydoo-vs-webexpenses)  — Webexpenses 70+ countries; feature comparison
+- [Rydoo — homepage](https://www.rydoo.com/)  — Expense automation, travel, ERP sync
+- [Capterra India — SAP Concur Expense](https://www.capterra.in/software/380/concur-expense)  — Listed/sold in India
+- [Cashbook — India SMB expense management 2025](https://cashbook.in/blogs/small-business-expense-management-2025)  — GST compliance tooling context for India SMBs
+- [Expensify — Pricing](https://www.expensify.com/pricing)  — Plan structure (SmartScan, ACH)
+- [Capterra India — Expensify](https://www.capterra.in/software/97594/expensify)  — INR pricing ₹350/₹450
+- [Asanify — Best expense management software 2025](https://asanify.com/blog/human-resources/best-expense-management-software-2025/)  — Reviewer quote on Expensify GST custom workflows
+- [Happay — Best expense management software India](https://happay.com/blog/top-10-best-expense-management-software-india/)  — State-wise GST, Tally/ERP integration, clients
+- [Mysa — Best expense management software India 2026](https://www.mysa.io/blogs/expense-management-software)  — Volopay GST/TDS/e-invoicing gaps; Tally/Zoho native
+- [Zoho Books — GST e-invoicing (India)](https://www.zoho.com/in/books/e-invoicing/)  — India e-invoicing, GSTN authentication
+- [TaxGuru — RBI Commercial Banks Credit/Debit Card Directions 2025](https://taxguru.in/rbi/reserve-bank-india-commercial-banks-credit-cards-debit-cards-issuance-conduct-directions-2025.html)  — 2025 card issuance rules
+- [SimplyBiz — RBI PPI compliance requirements](https://simplybiz.in/rbi-reporting-requirements-and-compliances-for-prepaid-payment-instruments-ppis-in-india/)  — Non-bank PPI must be India-incorporated, RBI-authorized; FEMA FX
+- [EnKash — RBI PPI guidelines 2025](https://www.enkash.com/resources/blog/rbi-ppi-guidelines-2025-rules-limits)  — PPI limits/compliance; India-native card+spend player
+- [Rippling — Top credit card expense management software 2025](https://www.rippling.com/blog/credit-card-expense-management-software)  — Table-stakes feature framing
+- [Bill.com — Best expense management software](https://www.bill.com/blog/best-expense-management-software)  — OCR accuracy benchmark, sync expectations
+
+## Market sizing for employee & vendor expense/spend-management SaaS in India (SMB-focused, indie-buildable), 2023-2026  [market-size]
+- [Mordor Intelligence - Travel & Expense Management Market (global + APAC/SME/cloud CAGRs)](https://www.mordorintelligence.com/industry-reports/travel-and-expense-management-market)  — Global T&E SW USD 4.49B (2025) -> 11.7B (2031), 17.32% CAGR; APAC 19.05% CAGR; SME 23.46% CAGR; large-enterprise 59.42% share.
+- [Mordor Intelligence - Expense Management Software Market (global)](https://www.mordorintelligence.com/industry-reports/expense-management-software-market)  — Global EM SW ~USD 7.7B (2025) / 8.48B (2026) -> 13.82B (2031); APAC fastest; e-invoicing tailwind in India.
+- [GBTA + Visa - India corporate travel study (T&E spend)](https://gbta.org/gbta-and-visa-study-outlines-path-to-stronger-corporate-travel-programmes-in-indias-rapidly-growing-market/)  — India 2024 business travel spend ~USD 38.3B; world's 8th largest; 5.7% of APAC.
+- [FCM Travel - India 2024 business travel spend ~USD 38.2B](https://www.fcmtravel.com/en-in/resources/news-hub/indias-2024-business-travel-spend-estimated-382-billion)  — +15.5% projected 2025 growth vs 6.6% global.
+- [PIB - Udyam registrations cross 7.83 crore](https://www.pib.gov.in/PressReleasePage.aspx?PRID=2246892&reg=3&lang=1)  — Cumulative MSME registrations by FY; primary government source.
+- [Statista - India registered MSMEs by type (micro share)](https://www.statista.com/statistics/1384894/india-number-of-registered-msmes-by-type/)  — ~39M micro = ~97% of registered MSMEs.
+- [CAClubIndia - GST @ 8 Years statistical report (active taxpayers)](https://www.caclubindia.com/news/gst-marks-8-years-of-transformative-journey-25607.asp)  — 1,53,56,323 active GST taxpayers (30 Jun 2025); 1.34 cr normal + 14.8 lakh composition.
+- [PIB - Record GST collection FY2024-25](https://www.pib.gov.in/PressNoteDetails.aspx?id=154789&NoteId=154789&ModuleId=3)  — Rs 22.08 lakh crore gross GST (+9.4% YoY).
+- [CAClubIndia - MCA registers 1.12 lakh companies FY2024-25 / active company count](https://www.caclubindia.com/news/mca-registers-over-1-12-lakh-companies-in-fy-2024-25-24261.asp)  — ~18-20 lakh active companies; 1.89M active in May 2025.
+- [MCA - Total companies registered (official statistics)](https://www.mca.gov.in/content/mca/global/en/data-and-reports/company-statistics/indian-foreign-companies-llps/total-companies-registered.html)  — Primary registry for active-company denominator.
+- [PIB - Transition of India's economy towards formalization (EPFO base)](https://www.pib.gov.in/PressNoteDetails.aspx?NoteId=153420&ModuleId=3&reg=3&lang=2)  — ~6.91 crore EPFO members (Sept 2017-Jul 2024).
+- [PIB - EPFO record net additions May 2025](https://www.pib.gov.in/PressReleasePage.aspx?PRID=2146353&reg=3&lang=2)  — 20.06 lakh net members added (highest ever).
+- [MoSPI - PLFS Annual Report 2023-24](https://mospi.gov.in/sites/default/files/publication_reports/AnnualReport_PLFS2023-24L2.pdf)  — 21.7% regular wage/salary; 53.4% lack social security.
+- [Business Standard - RBI: credit card spend FY24 Rs 18.26 lakh crore](https://www.business-standard.com/finance/news/credit-card-spends-rise-27-to-rs-18-26-trillion-in-fy24-rbi-data-124042400949_1.html)  — +27% YoY; 101M cards (Mar 2024).
+- [GlobeNewswire - India prepaid card & digital wallet report 2024-2028](https://www.globenewswire.com/news-release/2024/05/21/2885360/28124/en/India-Prepaid-Card-and-Digital-Wallet-Business-Report-2024-2028-Market-to-Grow-with-a-CAGR-of-29-7-New-Prepaid-Card-Launches-will-Further-Drive-the-Competitive-Landscape.html)  — USD 35.69B (2023) -> 134.59B (2028), 29.7% CAGR.
+- [Business Today - RBI halts card-based B2B payments via intermediaries](https://www.businesstoday.in/latest/economy/story/rbi-says-card-based-b2b-payments-stopped-for-violating-payment-and-settlement-systems-act-417735-2024-02-15)  — Regulatory risk for card-linked spend platforms (Feb 2024).
+- [Zoho Expense - India pricing](https://www.zoho.com/in/expense/pricing/)  — Free (3 users); Standard Rs79-99/user/mo; Premium Rs149-199/user/mo; min 5 users. SMB price anchor.
+- [Volopay blog - best expense management software (Fyle pricing)](https://www.volopay.com/in/blog/best-expense-management-software/)  — Fyle ~$6.99-11.99/user/mo; competitor landscape (vendor-authored, treat with caution).
+- [Inc42 - CRED acquires Happay at USD 180M](https://inc42.com/buzz/cred-acquires-corporate-expense-management-startup-happay-at-180-mn-valuation/)  — Exit benchmark + Happay India traction (6,000+ customers, ~$1B spend).
+- [Getlatka - Volopay revenue/funding profile](https://getlatka.com/companies/volopay)  — ~$77.3M ARR (self-reported 2024); $33.5M raised. Treat as vendor/marketing.
+- [Nasscom - Indian SaaS: The Next Big Thing](https://nasscom.in/knowledge-center/publications/indian-saas-next-big-thing)  — India B2B SaaS ~USD 13.1B by 2025 (~30% CAGR).
+- [Business Standard - Indian SaaS to USD 35B ARR by 2027 (Bain/SaaSBoomi)](https://www.business-standard.com/article/companies/indian-saas-firms-to-reach-35-bn-in-5-years-command-8-of-global-market-123012401223_1.html)  — ~USD 35B (2027), 8% of global; ~1,600 funded SaaS firms; ~14 above $100M ARR.
+
+## Verified real-world pain points in employee & vendor expense reimbursement in India (employees + finance/AP teams) — demand evidence for a B2B SaaS feasibility study  [pain-points]
+- [Employee Expense Management in India: A Guide — OneFinOps](https://onefinops.com/blog/employee-expense-management-guide-india)  — 30-45 day cycles; 40-60 hrs/month finance load (vendor blog)
+- [How to Prevent Employee Expense Fraud and Cash Pilferage in India (2026) — Cashbook](https://cashbook.in/blogs/employee-expense-fraud)  — Fraud patterns, <₹5,000 violations, 15-25% leakage, field-staff risk (vendor blog)
+- [Advance Expense Management India — AIAccountant](https://www.aiaccountant.com/blog/advance-expense-management-india)  — Cash advance 'black box', month-end overrun (vendor blog)
+- [59% of Indian organisations faced economic fraud in 24 months — PwC India](https://www.pwc.in/press-releases/2024/59-of-indian-organisations-faced-financial-or-economic-fraud-in-the-past-24-months-where-procurement-fraud-emerged-as-the-top-threat-pwc-survey.html)  — Primary analyst survey
+- [Zoho Expense Reviews — G2](https://www.g2.com/products/zoho-expense/reviews)  — OCR limits, multi-click approvals, rigid setup
+- [Zoho Expense Reviews — Capterra (4.6/5, ~1,133 reviews)](https://www.capterra.com/p/142384/Zoho-Expense/reviews/)  — Rating + cons
+- [Zoho Expense Pricing — Capterra](https://www.capterra.com/p/142384/Zoho-Expense/pricing/)  — ₹99-199/user/mo, 5-user min
+- [Fyle (Sage Expense Management) — Capterra India](https://www.capterra.in/software/162066/fyle)  — Duplicate-detection errors, heavy setup, customization limits
+- [Fyle Reviews — Capterra](https://www.capterra.com/p/162066/Fyle/reviews/)  — Email-sync duplicate entries
+- [Happay Reviews — Capterra India](https://www.capterra.in/reviews/143249/happay)  — Buggy app, prepaid-card fraud/security, opaque rejections
+- [Happay Reviews — Software Advice](https://www.softwareadvice.com/accounting/happay-profile/reviews/)  — Support/approval complaints
+- [SAP Concur reviews: pros, cons, pricing — Rho](https://www.rho.co/blog/sap-concur-reviews)  — ~$9/report, opaque pricing, long implementation, SMB-unfriendly (cites G2)
+- [SAP Concur Reviews — G2](https://www.g2.com/products/sap-concur/reviews)  — Cost + complexity complaints
+- [12 Best Expense Management Software in India 2026 — Mysa](https://www.mysa.io/blogs/expense-management-software)  — India pricing band, Tally integration importance
+- [GST Input Tax Credit (ITC) — ClearTax](https://cleartax.in/s/gst-input-tax-credit)  — ITC mechanics, Nov-30 deadline, IMS
+- [Cases where ITC is unavailable — ClearTax](https://cleartax.in/s/gst-cases-where-input-tax-credit-is-unavailable)  — Blocked ITC on employee meals/travel
+- [Input Tax Credit Rules — CBIC (Govt of India)](https://cbic-gst.gov.in/input-tax-credit-rules.html)  — Primary regulator source
+- [Taxability of Per Diem Allowance — Hinote](https://www.hinote.in/taxability-of-per-diem-allowance-while-on-business-travel/)  — Post-2018 bill-submission requirement for per-diem exemption
+- [What is Per Diem Allowance — Digit](https://www.godigit.com/finance/salary/what-is-per-diem-allowance)  — No statutory rates; company-policy driven disputes
+- [MSME Act & 45-day payment under new GST returns — ClearTax](https://cleartax.in/s/msme-act-new-gst-returns)  — Section 43B(h) 45-day rule
+- [India's 45-Day MSME Payment Rule — Webnewswire](https://www.webnewswire.com/2026/05/22/indias-45-day-msme-payment-rule-exposes-structural-gap-in-industrial-supply-chain-finance/)  — ₹7.34 lakh cr trapped; TReDS >₹1.9 lakh cr FY25
+- [MSME Samadhaan — Delayed Payment Monitoring System (Govt)](https://samadhaan.msme.gov.in/)  — Primary govt portal for delayed-payment redressal
+- [Detect and Prevent Expense Report Fraud — Fyle](https://www.fylehq.com/blog/detect-and-prevent-expense-report-fraud)  — ACFE 2024 stats (vendor blog citing ACFE)
+- [Are you Stuck in Expense Approval Bottlenecks? — Fyle](https://www.fylehq.com/blog/expense-approval-bottlenecks)  — Manager-inbox bottleneck
+- [The Expense Management Guide — Procurify](https://www.procurify.com/blog/expense-management/)  — 2-3 day vs 15-20 day benchmarks (vendor blog)
+- [Expense Report Automation for Indian Businesses 2025 — Mysa](https://www.mysa.io/blogs/expense-report-automation)  — ~20 min/report, 75% time reduction
+- [End of the expense report as we know it — Mastercard](https://www.mastercard.com/news/perspectives/2024/it-s-the-end-of-the-expense-report-as-we-know-it/)  — Concur dental-drill survey stat
+- [Accenture internet reimbursement question — Glassdoor India forum](https://www.glassdoor.com/Community/accenture-india-atci/hi-all-i-have-newly-joined-accenture-can-anyone-please-help-me-with-how-to-claim-internet-reimbursement-since-i-have-paid)  — Real employee policy-ambiguity instance (page returned 403 to crawler; surfaced via search)
+- [Employee Reimbursement Policy — Volopay](https://www.volopay.com/in/blog/employee-reimbursement-policy/)  — Policy ambiguity → delays (vendor blog)
+- [Accounting software integrations (Tally) — ExpenseOnDemand](https://www.expenseondemand.com/integrations)  — Tally/Xero/QuickBooks integration positioning
+- [Accounting Automation Tools Guide — AIAccountant](https://www.aiaccountant.com/blog/accounting-automation-tools-guide)  — Native Tally reconciliation automation claim
+
+## Indian regulatory & tax rules determining reimbursable vs non-reimbursable expenses (GST ITC, Income Tax, per-diem/LTA/fuel, TDS, record retention) for a B2B expense-reimbursement SaaS rule engine  [regulatory-tax]
+- [Section 17(5) of CGST Act - Blocked Credit Under GST (clause-by-clause)](https://cleartax.in/s/section-175-of-cgst-act)  — Primary-corroborating: motor vehicle 13-seat threshold, food/beverage, club, rent-a-cab, exceptions
+- [Ineligible ITC: Cases Where ITC under GST Cannot Be Availed](https://cleartax.in/s/gst-cases-where-input-tax-credit-is-unavailable)  — ITC block categories incl. 24% interest on wrongful claims
+- [CBIC tax information - Section 17 CGST Act (official statute)](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/acts/2017_CGST_act/active/chapter5/section17_v1.00.html)  — Primary source; TLS cert error at fetch time 2026-06-09 - verify live
+- [Section 37 of Income Tax Act - allowed & disallowed deductions](https://cleartax.in/s/section-37-of-income-tax)  — Wholly & exclusively test; personal/capital/penalty/CSR disallowance
+- [Critical Analysis of Section 37 of the Income Tax Act (Taxmann)](https://www.taxmann.com/post/blog/critical-analysis-of-section-37-of-the-income-tax-act)  — CSR Explanation 2; offence/prohibited-by-law Explanation
+- [CBDT Circular disallowing freebies to medical practitioners is valid (TaxGuru)](https://taxguru.in/income-tax/cbdt-circular-disallowing-expenditure-freebies-medical-practitioners-valid.html)  — Circular 5/2012; freebies disallowance + recipient taxability
+- [Disallowance of Expenses for Offence under Sec 37 - Budget 2022 (Explanation 3)](https://www.taxcorner.co.in/2022/02/disallowance-of-expenses-for-offence-under-section-37-further-clarified-budget-2022.html)  — Finance Act 2022 widening of prohibited-by-law bar
+- [Per diems (Daily allowance) Taxability as Salary (TaxGuru)](https://taxguru.in/income-tax/diems-daily-allowance-taxability-salary.html)  — Unspent per-diem taxable
+- [Prescribed allowances for Section 10(14) - Rule 2BB (Income Tax Dept)](https://incometaxindia.gov.in/rules/income-tax%20rules/103120000000006985.htm)  — Official Rule 2BB allowance list
+- [Leave Travel Allowance (LTA) - Exemption rules (ClearTax)](https://cleartax.in/s/lta-leave-travel-allowance)  — Domestic fare only, 2 journeys/4-yr block, old regime
+- [Valuation of perquisites - Rule 3 (Income Tax Dept)](https://incometaxindia.gov.in/Rules/Income-Tax%20Rules/103120000000007059.htm)  — Official Rule 3; car/driver perquisite valuation
+- [Tax benefit on a car provided by the employer (ClearTax)](https://cleartax.in/s/tax-benefit-salaried-employee-car-provided-employer)  — Rs 1,800/2,400 + Rs 900 driver; official-use logbook/certificate
+- [Perquisites - Gift, Voucher or Token - Rule 3(7)(iv)](https://www.taxmanagementindia.com/visitor/detail_manual.asp?ID=887)  — Rs 5,000 gift/voucher exemption threshold
+- [Fuel & Petrol Allowance exemption under section 10 (Pazcare)](https://www.pazcare.com/employee-benefits/fuel-allowance)  — ~Rs 7,000/month interpretive fuel cap (low confidence)
+- [TDS Rates (Income Tax Department)](https://www.incometaxindia.gov.in/w/tds-rates-1)  — Official TDS section-wise rates
+- [TDS Rate Chart (ClearTax)](https://cleartax.in/s/tds-rate-chart)  — 194C/194J/194H rates & thresholds, no-PAN 20%
+- [TDS on Commission and Brokerage - Section 194H (Bajaj)](https://www.bajajfinserv.in/about-tds-on-commission)  — 194H 5%->2% Oct 2024; threshold Rs 15k->20k Apr 2025
+- [All about Reverse Charge Mechanism (RCM) under GST (ClearTax)](https://cleartax.in/s/reverse-charge-gst)  — RCM scope: legal, GTA, unregistered supplier, aggregator cabs
+- [Reverse Charge Mechanism flyer (GST Council)](https://gstcouncil.gov.in/sites/default/files/e-version-gst-flyers/Reverse%20charge%20Mechanism.pdf)  — Official GST Council RCM flyer
+- [Section 128 Books of account - Companies Act 2013 (CAIRR)](https://ca2013.com/128-books-of-account-etc-to-be-kept-by-company/)  — 8-year retention
+- [Period of Retention of Accounts - Section 36 GST (AUBSP)](https://www.aubsp.com/cgst-act-section-36-explained/)  — 72-month GST record retention + extension during proceedings
+- [Period of Retention of Accounts under GST Sec 36 / Income Tax 6-year rule](https://incometaxmanagement.com/Pages/Tax-Ready-Reckoner/GST-India/66-Period-of-Retention-of-Accounts-under-GST-Section-36-of-the-CGST-Act.html)  — Income tax 6-year-from-AY-end retention
+
+## Expense-policy / audit rule engines: design of a configurable rule engine for an India-focused B2B expense & vendor reimbursement SaaS  [rule-engine]
+- [SAP Learning — Configuring Audit Rules (Concur Standard for Admins)](https://learning.sap.com/learning-journeys/getting-started-with-concur-expense-standard-for-administrators/configuring-audit-rules)  — Audit rule = General Settings + Conditions + Exception; red vs yellow flag severity; if/then model.
+- [SAP Help — Audit Rules (Concur Expense)](https://help.sap.com/docs/CONCUR_EXPENSE/bb83754b1c5541808d50c09901e11475/18834fe66f091014b9c6f7af97b6e9cd.html)  — Authoritative (gated) reference for Concur audit rule data objects and exceptions.
+- [SAP Learning — Configuring Random Audit Rules](https://learning.sap.com/courses/working-with-secondary-configuration-and-administrative-tools-in-concur-expense-professional-edition/configuring-random-audit-rules-2)  — Percentage-based and sequential sampling = the 'route to manual audit' rule type.
+- [Fyle Help — Configure Company Policies](https://help.fylehq.com/en/articles/1203330-configure-company-policies)  — User vs Expense property conditions; aggregation windows; actions Flag/Cap/Popup/Critical/Skip-approver.
+- [Fyle Help — Configuring a policy to mandate receipts](https://www.fylehq.com/help/en/articles/8523314-configuring-a-policy-to-mandate-receipts)  — Explicit 3-tier action model (Flag / Warn+reason / Mark incomplete-Critical) and receipt threshold scoping.
+- [Fyle — Expense Compliance product page](https://www.fylehq.com/product/compliance)  — Real-time policy engine, duplicate-receipt detection, violation types, flag-before-approval.
+- [Zoho Expense — Rules (User Guide)](https://www.zoho.com/us/expense/help/managing-policies/rules/)  — Limit types Fixed/Count/Mileage over Daily/Monthly/Yearly/Custom; Warn vs Block; INR custom example.
+- [Zoho Expense — Per Diem](https://www.zoho.com/us/expense/per-diem/)  — Per-diem by location, split by expense type, % of location amount, by travel hours.
+- [Brex — Policy Engine](https://www.brex.com/support/policy-engine)  — if-this-then-that, AND conditions, action set, 'last rule wins' ordering, real-time re-evaluation, $75 receipt default.
+- [Ramp — Spend Controls](https://ramp.com/spend-controls)  — Pre-spend limits/restrictions, receipt+memo requirements, AI Policy Agent 100% review / 99% in-policy claim.
+- [Ramp Help — Setting up category and merchant restrictions](https://support.ramp.com/hc/en-us/articles/1500001319081-Setting-up-category-and-merchant-restrictions)  — MCC allow-list / merchant allow-list / merchant block-list model; decline on unauthorized category.
+- [Ramp — Merchant Category Code Reference Guide](https://ramp.com/blog/merchant-category-code-list)  — MCC reference for category-based controls.
+- [ClearTax — Know your GSTIN](https://cleartax.in/s/know-your-gstin)  — 15-char GSTIN structure and components.
+- [The GST Calculator India — GSTIN Validator & Decoder](https://thegstcalculator.in/tools/gst-number-validator)  — Luhn mod 36 checksum algorithm detail for offline GSTIN validation.
+- [Busy — GSTIN: 15-Digit Format, Importance & Common Issues](https://busy.in/gst/gstin-everything-you-need-to-know/)  — State code / PAN / entity / Z / checksum breakdown; cancelled-but-valid caveat.
+- [ClearTax — GST Input Tax Credit](https://cleartax.in/s/gst-input-tax-credit)  — ITC needs invoice in GSTR-2B + valid tax invoice; 180-day reversal rule.
+- [DMA — Input Tax Credits for Employee Reimbursements](https://dmainc.com/news-and-insights/input-tax-credits-for-employee-reimbursements/)  — ITC on reimbursements requires company GSTIN on the invoice.
+- [TaxBuddy — GST on reimbursement of travel expenses](https://www.taxbuddy.com/blog/gst-reimbursement-travel-expenses)  — Invoice must carry company GSTIN and reflect in GSTR-2B for ITC.
+- [Taggd — Per Diem Allowance for Indian Businesses](https://taggd.in/hr-glossary/per-diem-allowance/)  — No government-mandated per-diem; tax-exempt only up to actual business spend; city-tier system.
+- [Rydoo — India Per Diem compliance](https://www.rydoo.com/compliance/india/india-per-diem/)  — India per-diem is employer-set; compliance context.
+- [FinanceToolsPro — HRA Metro vs Non-Metro rules 2026](https://www.financetoolspro.com/guides/tax/metro-vs-non-metro-hra-rules.html)  — 50% metro / 40% non-metro; 8-city list from Budget 2025.
+- [TaxGuru — HRA exemption: 8 cities qualify for 50%](https://taxguru.in/income-tax/hra-exemption-8-cities-qualify-50-percent-exemption-practical-guide.html)  — Authoritative-style breakdown of the 8 metro cities, effective FY2026-27.
+- [Mysa — Duplicate Expense Detection: Process, Benefits, Challenges](https://www.mysa.io/glossary/duplicate-expense)  — Duplicate = same amount+date+vendor plus metadata; detection approach.
+- [AppZen — Double dipping: detect duplicate receipts](https://www.appzen.com/blog/duplicate-receipts)  — Cross-employee receipt matching and duplicate detection.
+- [Emburse — Complete Guide to Expense Fraud Detection](https://www.emburse.com/resources/complete-guide-to-expense-fraud-detection)  — ~5% revenue lost to fraud/errors; duplicate share.
+- [University of Colorado — Concur Reconciling Cash Advances](https://pschelp.cu.edu/s/article/Concur-Expense-Reconciling-Cash-Advances)  — Advance netting math ($600-$500=$100) and reconciliation flow.
+- [Columbia — Reconcile personal/non-reimbursable transactions in Concur](https://travel-expense.finance.columbia.edu/news/how-do-i-reconcile-personal-or-non-reimbursable-transactions-concur)  — Mark line items Personal/Non-Reimbursable = partial coverage of one bill.
+
+## OCR/document-AI for receipts and Indian GST invoices + receipt-fraud detection, for a small/indie team building B2B expense-reimbursement SaaS in India  [ocr-docai]
+- [AWS Textract Pricing](https://aws.amazon.com/textract/pricing/)  — Official per-page pricing for AnalyzeExpense, DetectDocumentText, AnalyzeDocument with volume tiers.
+- [Google Cloud Document AI Pricing](https://cloud.google.com/document-ai/pricing)  — Official Expense/Invoice parser ($0.10/10 pages) and Enterprise OCR pricing.
+- [Azure Document Intelligence Pricing](https://azure.microsoft.com/en-us/pricing/details/document-intelligence/)  — Official prebuilt invoice/receipt and Read OCR pricing and commitment tiers.
+- [Nanonets Pricing](https://nanonets.com/pricing)  — Per-block pricing model and free credits.
+- [Veryfi OCR API Plans & Prices (Help Center)](https://faq.veryfi.com/en/articles/3743986-what-are-the-plans-prices-for-ocr-api)  — Per-document receipt/invoice pricing and $500/mo minimum.
+- [Veryfi Artifact Analysis (fraud detection)](https://faq.veryfi.com/en/articles/11499197-artifact-analysis-handwriting-digital-ai-detection-for-receipts)  — Handwriting, digital-tampering, AI-generated detection categories.
+- [Mindee OCR API Pricing](https://www.mindee.com/pricing)  — Per-page credit subscription tiers and overage rates.
+- [Klippa DocHorizon / Doxis Document Fraud Detection](https://www.klippa.com/en/dochorizon/document-fraud-detection/)  — Fraud signals: EXIF, duplicate, copy-move, pixel-level; quote-based pricing.
+- [Klippa - How to Detect Fake Receipts](https://www.klippa.com/en/blog/information/detect-fake-receipts/)  — Receipt fraud detection techniques overview.
+- [Gemini Developer API Pricing](https://ai.google.dev/gemini-api/docs/pricing)  — Official Gemini 2.5 Flash/Flash-Lite/Pro token pricing; image/PDF billed at image-token rate.
+- [Claude API Pricing](https://platform.claude.com/docs/en/about-claude/pricing)  — Official Claude Opus/Sonnet/Haiku token pricing, batch and prompt-caching discounts.
+- [ClearTax - GST e-Invoice QR Code Generation](https://cleartax.in/s/gst-e-invoice-qr-code-generation)  — QR 8 fields, IRN generation, e-invoicing turnover-threshold timeline.
+- [GST e-Invoice System (IRP)](https://einvoice1.gst.gov.in/)  — Official e-invoice portal / IRN registration source.
+- [GSTExtract - GST QR Code on Invoice](https://gstextract.com/blog/gst-qr-code-on-invoice)  — QR fields and missing-QR-as-fraud-signal explanation.
+- [Decoding GST Number Checksum Digit (Medium)](https://medium.com/@dhananjaygokhale/decoding-gst-number-checksum-digit-1ef2c8c53ad6)  — GSTIN 15-digit structure and Luhn-mod-36 checksum algorithm.
+- [Busy.in - GSTIN format guide](https://busy.in/gst/gstin-everything-you-need-to-know/)  — GSTIN field breakdown and portal status verification.
+- [AppZen - Detecting AI-Generated Fake Receipts](https://www.appzen.com/resources/ai-generated-fake-receipts)  — ~14% AI-generated fraud stat; detection methodology.
+- [ICAEW - How to spot an AI-generated receipt](https://www.icaew.com/insights/viewpoints-on-the-news/2025/nov-2025/expenses-fraud-how-to-spot-an-ai-generated-receipt)  — Professional-body view on AI expense-fraud surge and detection cues.
+- [PYMNTS - Phony AI-Created Receipts Become Real Problem](https://www.pymnts.com/news/security-and-risk/2025/phony-ai-created-receipts-become-real-problem-for-businesses/)  — Industry-impact data points (3.5M fakes, 30% of finance pros, Ramp $1M).
+- [TurboLens - Image Forgery Detection for Receipts/Invoices](https://www.turbolens.io/blog/2026-05-16-image-forgery-detection-for-receipts-invoices-and-claims-documents)  — Evasion of pHash/EXIF; multi-layered detection rationale.
+- [Koncile - Top OCR tools for invoices](https://www.koncile.ai/en/ressources/top-10-ocr-tools-for-invoices-2025)  — Field-accuracy ranges and vendor comparison caveats.
+- [ReceiptExtract - OCR Accuracy Benchmarks](https://blog.receiptextract.com/2025/07/20/ocr-accuracy-benchmarks-why-receipt-specific-training-data-matters/)  — Clean vs thermal-paper accuracy drop figures.
+- [BharatOCR - Hindi/Devanagari OCR difficulty](https://bharatocr.com/blog/what-is-hindi-ocr)  — Why generic OCR fails on Hindi; India-tuned accuracy claims.
+- [InvoiceDataExtraction - Open Source OCR for Invoices](https://invoicedataextraction.com/blog/open-source-ocr-invoice-extraction)  — PaddleOCR vs Tesseract; CER benchmark; pipeline guidance.
+- [InvoiceDataExtraction - Best LLM for Invoice Extraction](https://invoicedataextraction.com/blog/best-llm-for-invoice-extraction)  — Claude/Gemini/GPT invoice extraction cost and accuracy comparison.
+- [Hugging Face - Accelerating Document AI](https://huggingface.co/blog/document-ai)  — LayoutLMv3/donut multimodal accuracy context.
+
+## Employee & vendor onboarding/verification in India for an expense-reimbursement SaaS — capturing and verifying identity (PAN/GSTIN/Aadhaar/Udyam) and bank details for whitelisting payout accounts  [kyc-onboarding]
+- [Setu — Bank Account Verification API (pricing Rs 3/verification)](https://setu.co/data/kyc/bank-account-verification/)  — Transparent price anchor; penny-drop returns account/IFSC/name
+- [Setu — Reverse Penny Drop quickstart (Re 1, 48h refund)](https://docs.setu.co/data/bav/reverse-penny-drop/quickstart)  — UPI RPD flow and refund timing
+- [Setu — KYC API suite (PAN/GSTIN/bank/DigiLocker)](https://setu.co/data/kyc/)  — Sales-gated onboarding
+- [Cashfree — Bank Account Verification (Rs 3 + GST, 600+ banks, 97%)](https://www.cashfree.com/bank-account-verification/)  — Price + coverage anchor
+- [Cashfree — PAN Verification (Rs 100 credits, returns name/holder type)](https://www.cashfree.com/PAN-verification/)  — PAN API fields and trial credits
+- [Cashfree — Secure ID KYC suite](https://www.cashfree.com/kyc-verification/)  — PAN/Aadhaar/GSTIN/bank bundle
+- [Protean (NSDL) — Online PAN Verification charges](https://www.protean-tinpan.com/services/online-pan-verification/pan-verification-charges.html)  — Rs 12,000/yr registration; official OPV
+- [Protean — Online PAN Verification FAQ (free limits, slabs)](https://tinpan.proteantech.in/faqs/online-pan-verification/faq-pan-verify-general.html)  — 750/day free; per-PAN slabs
+- [Income Tax Dept — Verify Bulk PAN/TAN](https://www.incometax.gov.in/iec/foportal/help/how-to-verify-bulk-pan-tan)  — Agency-only; first 750 free then Rs 0.05–0.30/entry
+- [Income Tax Dept — PAN Verification user manual (PDF)](https://www.incometax.gov.in/iec/foportal/sites/default/files/2022-08/PAN%20Verification_v1.0.pdf)  — File/Screen/API modes; Yes/No field match
+- [BusinessToday — RBI free beneficiary name look-up for NEFT/RTGS](https://www.businesstoday.in/technology/news/story/you-will-soon-be-able-to-verify-beneficiary-details-during-rtgs-neft-payments-for-free-459083-2024-12-31)  — Free, mandatory 1 Apr 2025
+- [Probe42 — RBI circular on beneficiary name look-up](https://resources.probe42.in/regulatory-updates/rbi-circulars/rbi-circular-beneficiary-name-look-up-for-rtgs-and-neft-transactions/)  — CBS-based lookup; NPCI does not store data
+- [HyperVerge — Reverse Penny Drop 101 (97% success)](https://hyperverge.co/blog/reverse-penny-drop-101/)  — RPD mechanics and success rates
+- [HyperVerge — What is Penny Drop (RBI KYC acceptance)](https://hyperverge.co/blog/what-is-penny-drop/)  — Penny-drop accepted under RBI Master Direction
+- [Surepass — Penny-less bank account verification](https://surepass.io/penny-less-bank-account-verification/)  — Validation-only, no money moved
+- [Sandbox — Penny-less bank verification API docs](https://developer.sandbox.co.in/reference/bank-account-verification-penny-less-api)  — Penny-less endpoint
+- [Sandbox — pricing (cost calculator)](https://sandbox.co.in/pricing)  — Sales/calculator-gated pricing
+- [Lexology — Aadhaar Authentication for Private Entities: 2025 Amendment](https://www.lexology.com/library/detail.aspx?g=d22ac806-db2b-48d8-85a7-582c39237fac)  — 31 Jan 2025 amendment, approval process
+- [SSRana — Aadhaar authentication by private entities & privacy](https://ssrana.in/articles/aadhaar-authentication-by-private-entities-from-data-privacy-perspective/)  — Restrictions on private Aadhaar auth
+- [UIDAI — Aadhaar Paperless Offline e-KYC](https://www.uidai.gov.in/en/ecosystem/authentication-devices-documents/about-aadhaar-paperless-offline-e-kyc.html)  — Offline XML KYC path
+- [HyperVerge — DigiLocker for KYC (RBI 2025 acceptance)](https://hyperverge.co/blog/power-of-video-kyc-through-c-kyc-and-digilocker/)  — DigiLocker OVD acceptance
+- [EY — Decoding the DPDP Act 2023 / Rules 2025](https://www.ey.com/en_in/insights/cybersecurity/decoding-the-digital-personal-data-protection-act-2023)  — Compliance timeline ~May 2027, SDF/DPO
+- [MeitY — Digital Personal Data Protection Act, 2023 (PDF)](https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf)  — Primary law text; Rs 250 crore penalty
+- [Perfios — OneClick Onboarding (KYB: GSTIN/PAN/TAN/Udyam)](https://perfios.ai/in/products/oneclick-onboarding/)  — Single KYB API; 30M+ businesses
+- [SignalX — MSME (Udyam) Verification API](https://signalx.ai/msme-verification-api/)  — Udyam by URN/PAN/GSTIN for vendor onboarding
+- [AuthBridge — Udyam Aadhaar / MSME Verification](https://authbridge.com/checks/udyam-aadhaar-verification/)  — Udyam verification endpoint
+- [Signzy — Top 10 KYC providers in India](https://www.signzy.com/blogs/top-10-kyc-verification-solution-providers-in-india)  — Market positioning of enterprise providers
+- [HyperVerge — types of bank account verification (name match)](https://hyperverge.co/blog/types-of-bank-account-verification/)  — Fuzzy name-match score behavior
+- [Volopay — Expense management (maker-checker, UPI/bank payout)](https://www.volopay.com/in/expense-management/)  — Maker-checker and payout patterns
+- [Happay — Top expense management software India](https://happay.com/blog/top-10-best-expense-management-software-india/)  — HRMS sync + self-registration + payroll/UPI payout
+
+## Disbursing reimbursements & vendor payouts in India: bank bulk-file formats, payout rails/APIs, multi-source-bank-account design, and the RBI-licensing reality for a B2B expense-reimbursement SaaS  [payouts-disbursement]
+- [Reserve Bank of India (Regulation of Payment Aggregators) Directions, 2025 (full text PDF)](https://www.fidcindia.org.in/wp-content/uploads/2025/09/RBI-PAYMENT-AGGREGATORS-DIRECTIONS-15-09-25.pdf)  — Primary RBI Master Direction dated 15 Sep 2025; PA definition (collections-aggregation + settlement), escrow, net-worth, deadlines.
+- [RBI Guidelines on Regulation of Payment Aggregators and Payment Gateways (2020, RBI/DPSS/2019-20/174)](https://gujfed.com/circular/2020-Circular/17.03.2020%20Guidelines%20on%20Regulation%20of%20Payment%20Aggregators%20and%20Payment%20Gateways.pdf)  — Original PA/PG guidelines; escrow with one scheduled commercial bank, net worth, nodal-account transition.
+- [Saraf & Partners – Analysis of RBI (Regulation of Payment Aggregators) Directions, 2025](https://sarafpartners.com/rbi-issues-the-reserve-bank-of-india-regulation-of-payment-aggregators-directions-2025/)  — Confirms PA definition covers collections only; no payout-only carve-out / no payout-platform coverage.
+- [AuthBridge – RBI Payment Aggregator Master Direction 2025: Key Details](https://authbridge.com/blog/rbi-payment-aggregator-master-direction-2025/)  — Net worth ₹15cr/₹25cr, deadlines (31 Dec 2025 / 28 Feb 2026), PA-CB ₹25 lakh cap, third-party payout ₹40 lakh threshold.
+- [Enterslice – RBI Compliance for Payment Aggregators and Gateways](https://enterslice.com/learning/rbi-compliance-for-payment-aggregators-and-gateways/)  — Authorization trigger, apply 30 days before business, escrow, PG-vs-PA fund-handling distinction.
+- [Castler – RBI Guidelines for Payment Aggregators and Escrow Accounts (2025 Update)](https://castler.com/learning-hub/rbi-guidelines-for-payment-aggregators-and-escrow-accounts-explained-(2025-update))  — Escrow permitted credits/debits, third-party payout permission and merchant turnover threshold.
+- [ClearTax – Differences between NEFT, RTGS and IMPS (limits, charges, timings)](https://cleartax.in/s/differences-between-neft-rtgs-imps)  — NEFT no min/max, RTGS min ₹2 lakh, IMPS max ₹5 lakh, 24x7 timings.
+- [NPCI Circular UPI-OC-185A (FY24-25): ₹5 lakh per-transaction limit for specific categories](https://www.npci.org.in/PDF/npci/upi/circular/2024/UPI-OC-No-185A-FY-24-25-Implementation-of-Rs-5-Lakh-limit-per-transaction-for-specific-categories-in-UPI.pdf)  — Primary NPCI circular on enhanced UPI per-transaction limits.
+- [DD News – NPCI raises daily UPI P2M limit to ₹10 lakh (2025)](https://ddnews.gov.in/en/npci-raises-daily-upi-payment-limit-on-p2m-transactions-to-%E2%82%B910-lakh/)  — 2025 increase of UPI P2M daily limit.
+- [ICICI Bank – Bulk Payment / Cash Management Services](https://www.icicibank.com/business-banking/cash-management-services/payments)  — CIB bulk upload for NEFT/RTGS/IMPS/cheque/DD; encrypted file upload.
+- [ICICI Bank – File Format for Bulk upload in CIB (v3.3, PDF)](https://www.icici.bank.in/managed-assets/docs/form-center/File_Format_Bulk_%20Transfers_3.3.pdf)  — Field names/positions for salary/vendor/dealer/external NEFT-RTGS files (PDF; not machine-parseable, confirm fields via converter templates).
+- [HDFC Bank – ENet Payment & Collection Solutions](https://www.hdfcbank.com/wholesale/financial-institutions-and-trusts/enet)  — ENet/CBX bulk payments; NEFT/RTGS/IMPS/A2A; vendor/salary modules.
+- [HDFC Bank – Bulk Payment Upload Manual](https://www.scribd.com/document/317956116/Upload-Manual-Bulk-Payments-040216)  — Columns: Beneficiary Name, Account No., IFSC, Amount, Remarks; ~1,000 txn / ₹10cr per file.
+- [Axis Bank – Bulk Payment Uploads (Cash Management Services)](https://www.axisbank.com/corporate/transaction-banking/cash-management-services/bulk-payment-uploads)  — PayPro CSV/XLS/TXT single-file upload; RTGS/NEFT/IMPS auto-segregation; UTR-level reports.
+- [SBI – Corporate Banking File Upload](https://corp.sbi.bank.in/corporate/sbi/corp_fileupload.html)  — Single-debit-multiple-credit bulk files; NEFT/RTGS; PKI/symmetric encryption; RTGS/NEFT ₹50 lakh/txn, ₹2cr/day.
+- [RazorpayX – Payouts product page](https://razorpay.com/x/payouts/)  — NEFT/RTGS/IMPS/UPI payouts; ₹5 lakh/txn; 250 free payouts/month; bulk CSV/XLSX.
+- [RazorpayX Docs – Payout Status & Webhooks](https://razorpay.com/docs/x/payouts/status-details/)  — UTR delivery and payout-update webhooks for reconciliation.
+- [RazorpayX Docs – Payouts Best Practices (reconciliation)](https://razorpay.com/docs/x/payouts/best-practices/)  — UTR + reference-ID reconciliation, daily reports.
+- [Cashfree – Payouts product page](https://www.cashfree.com/payouts/)  — Bulk NEFT/RTGS/IMPS/UPI/card 24x7; ~99.98% success; pricing.
+- [Cashfree – Payouts API Reference](https://www.cashfree.com/docs/api-reference/payouts/overview)  — Payout API/modes documentation.
+- [Open / Zwitch – Developers (connected banking, payouts API)](https://open.money/developers)  — Direct API to 20+ banks; initiate payouts from existing current accounts.
+- [Open – Connected Banking](https://open.money/connected-banking)  — Manage multiple current accounts; collect and disburse.
+- [Decentro – Instant Payouts](https://decentro.tech/products/instant-payouts)  — UPI/IMPS/NEFT/RTGS payouts 24x7.
+- [Decentro – Virtual Accounts](https://decentro.tech/products/virtual-accounts)  — Programmatic virtual accounts with payer-identifying webhooks.
+- [Setu – Fintech APIs](https://setu.co/)  — AA, UPI (NPCI-certified switch), BBPS, eSign/KYC; Pine Labs subsidiary.
+- [EnKash – Connected Banking](https://www.enkash.com/connected-banking)  — States 'not a bank, no banking license'; multi-current-account orchestration without holding funds (reference compliant model).
+- [Outlook Startup – RBI asks Razorpay, Cashfree to pause onboarding new customers](https://startup.outlookindia.com/sector/fintech/rbi-asks-razorpay-cashfree-to-pause-onboarding-of-new-customers-news-6907)  — Dec 2022 collections-PA onboarding freeze; RazorpayX (payouts) continued.
+- [Inc42 – Razorpay walks the tightrope of regulations and profits](https://inc42.com/features/razorpay-fintech-regulations-profits-payments-aggregator/)  — Context on PA licensing journey; payouts vs collections distinction.
+- [ProductGrowth – RazorpayX Payouts review (pricing/limits 2026)](https://productgrowth.in/tools/payments/razorpay-x/)  — Indicative per-rail payout fees and volume discounts.
+
+## Integration ecosystem for Indian employee & vendor expense-reimbursement SaaS: table-stakes vs nice-to-have, and the single biggest deal-maker/breaker  [integrations]
+- [Tally Software India 2025 (cites Gartner 75%, McKinsey 78%)](https://dataman.in/tally-software-india-2025/)  — Tally SME market-share statistics; secondary source republishing analyst figures.
+- [Integration with TallyPrime — TallyHelp (official)](https://help.tallysolutions.com/integrate-with-tallyprime/)  — Primary: Tally HTTP/ODBC/XML integration capabilities and port 9000.
+- [XML Integration — TallyHelp (official)](https://help.tallysolutions.com/xml-integration/)  — Primary: XML-over-HTTP integration mechanics.
+- [Tally Prime Reconciliation Automation: XML, ODBC, and Connector Integration — Terra Insight](https://www.terra-insight.com/insights/tally-prime-reconciliation-automation-india/)  — Integration pain points: HTTP 200 on failure, no concurrency, must be running.
+- [ChatGPT for Tally Prime Automation — ClearlyComply](https://clearlycomply.org/blog/chatgpt-tally-prime-automation-guide/)  — TDL payload over HTTP port 9000 / watched-folder import.
+- [tally-prime-api-docs (GitHub)](https://github.com/NoumaanAhamed/tally-prime-api-docs/blob/main/index.md)  — Community developer docs for Tally XML API.
+- [How to Integrate Tally with Third-Party Apps — Vyapar/TaxOne](https://taxone.vyapar.com/post/how-to-integrate-tally-to-third-party-apps)  — Tally connector overview, middleware bridging REST/JSON to XML.
+- [India Accounting Software Market — Maximize Market Research](https://www.maximizemarketresearch.com/market-report/india-accounting-software-market/44134/)  — Tally/Zoho Books/Busy as leading players; Tally dominance.
+- [India Accounting Software Market Size — IMARC](https://www.imarcgroup.com/india-accounting-software-market)  — Market size ~USD 640M (2024).
+- [Most Used Accounting Software in India 2025 — Suvit](https://www.suvit.io/post/most-used-accounting-software-india)  — Tally ~80% share, 20 lakh+ businesses.
+- [Intuit's QuickBooks to exit India — TechHerald](https://techherald.in/enterprise-technology/intuits-quickbooks-to-exit-india-vantage-tally-zoho-4/)  — QuickBooks India product exit context.
+- [Best Expense Management Software in India — Happay](https://happay.com/blog/best-expense-management-software-india/)  — Competitor integration lists (Tally, SAP, Oracle, Zoho Books, QuickBooks).
+- [Best Expense Management Software in India 2026 — Mysa](https://www.mysa.io/blogs/expense-management-software)  — Accounting integration cited as critical Indian buying requirement.
+- [Sage Expense Management (Fyle) Integrations](https://www.fylehq.com/product/integrations)  — Primary: lists Sage/QuickBooks/NetSuite/Xero; no Tally or Dynamics.
+- [Connect Zoho Expense with QuickBooks Online — Intuit](https://quickbooks.intuit.com/app/apps/appdetails/ze/en-us/)  — QuickBooks Online expense integration.
+- [Zoho Payroll — Expense Integration (official)](https://www.zoho.com/in/payroll/help/employer/integrations/integrations-expense.html)  — Primary: reimburse-via-payroll between Zoho Expense and Zoho Payroll.
+- [Zoho People + GreytHR Payroll Integration — Techjockey](https://www.techjockey.com/blog/advanced-payroll-processing-with-greythr-zoho-integration)  — Employee master + reimbursement sync to GreytHR payroll.
+- [Zoho Expense Direct Feed / Corporate Cards (official)](https://www.zoho.com/us/expense/help/corporate-cards/direct-feed/)  — Card feeds Visa/Mastercard/Amex; India payout via ICICI/HSBC.
+- [RazorpayX Payroll API Integration — Truto](https://truto.one/integrations/detail/razorpayxpayroll)  — Unified HRIS API: employee directory + bank details for auto-match.
+- [Razorpay Payroll (official)](https://razorpay.com/payroll/)  — WhatsApp reimbursement filing / payslip access.
+- [Keka Market Share — 6sense](https://6sense.com/tech/hrms/keka-market-share)  — Keka HRMS share/customers.
+- [Keka vs Darwinbox — 6sense](https://6sense.com/tech/hrms/keka-vs-darwinbox)  — Darwinbox share/customers.
+- [Outgrowing Keka, Darwinbox & GreytHR — HROne](https://hrone.cloud/blog/outgrowing-keka-darwinbox-greythr-india)  — HRMS segmentation by company size; ERP connectors at 500+ employees.
+- [India HR Management Market — Credence Research](https://www.credenceresearch.com/report/india-human-resource-management-market)  — India HRM market size and CAGR.
+- [Understanding SCIM — Okta Developer](https://developer.okta.com/docs/concepts/scim/)  — SAML/OIDC + SCIM provisioning with Okta/Entra/Google.
+- [Add SCIM provisioning — Okta Help](https://help.okta.com/en-us/content/topics/apps/apps_app_integration_wizard_scim.htm)  — SCIM + SAML single-app provisioning.
+- [Slack Approval Workflow — Suptask](https://www.suptask.com/blog/slack-approval-workflow)  — In-chat Approve/Deny expense approvals.
+- [Approval Workflows in Slack and Microsoft Teams — hoop.dev](https://hoop.dev/blog/integrate-approval-workflows-into-slack-and-microsoft-teams-for-faster-smarter-decisions)  — Teams actionable approval cards.
+- [WhatsApp Business API Pricing India 2026 — Whautomate](https://whautomate.com/whatsapp-business-api-pricing-india)  — Meta India per-message rates; BSP markup 10-30%.
+- [WhatsApp Template Categorization / New Guidelines — Meta for Developers](https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines/)  — Primary: 2025 template reclassification + per-message pricing rules.
+- [WhatsApp API Pricing India 2026 comparison — Codingclave](https://codingclave.com/guides/whatsapp-api-pricing-india-2026-comparison)  — Interakt/Gupshup/WATI BSP pricing comparison.
+- [Volopay Corporate Cards (India)](https://www.volopay.com/in/corporate-cards/)  — Corporate cards + GL auto-reconciliation.
+- [Best Prepaid Cards in India — EnKash](https://www.enkash.com/resources/blog/top-10-best-prepaid-cards-in-india-features-benefits-how-to-get-one)  — RBI prepaid card context.
+- [Best Prepaid Cards — Volopay (RBI ₹2 lakh cap)](https://www.volopay.com/in/blog/best-prepaid-cards/)  — RBI prepaid balance cap.
+
+## Pricing & Go-to-Market benchmarks for employee/vendor expense-reimbursement and B2B SaaS in India, plus freemium viability for an indie team  [pricing-gtm]
+- [Zoho Expense Pricing (India)](https://www.zoho.com/in/expense/pricing/)  — Primary: free tier limits, INR Standard/Premium monthly & annual, 5-user min, 25% annual discount
+- [Fyle / Sage Expense Management Pricing](https://www.fylehq.com/pricing)  — Primary: USD 11.99-14.99 per active user/mo, 5/10-user minimums, active-user billing
+- [Happay Expense Management Pricing & Reviews (Techjockey)](https://www.techjockey.com/detail/happay-expense-management)  — ~INR 199/user/mo, no free trial, quote-based
+- [SutiExpense Pricing (Capterra)](https://www.capterra.com/p/118974/SutiExpense/pricing/)  — ~USD 6.50 per active submitter/mo; approvers free
+- [ExpenseOnDemand UK Pricing](https://www.expenseondemand.com/uk-pricing)  — From ~GBP 4.34/user/mo; pay-per-feature; charge active users only
+- [SAP Concur Pricing Guide (GetApp)](https://www.getapp.com/finance-accounting-software/a/concur-expense/pricing/)  — ~USD 9/user/mo + ~USD 8-9 per report; quote-only
+- [SAP Concur Licensing Guide for CIOs/CTOs](https://redresscompliance.com/sap-concur-licensing-guide-for-cios-and-ctos/)  — Hybrid base+overage and per-report model detail
+- [Volopay India Pricing](https://www.volopay.com/in/pricing/)  — No public pricing; sales-led/custom
+- [CAC Benchmarks for Indian B2B SaaS by ARR Band (upGrowth)](https://upgrowth.in/cac-benchmarks-indian-b2b-saas-arr-band-2026/)  — CAC, ACV, LTV:CAC, payback, channel-level CAC, sales cycle
+- [India SaaS Trends 2026 (productgrowth.in)](https://productgrowth.in/insights/saas/india-saas-trends/)  — PLG vs sales-led CAC; PLG default sub-$10M ARR
+- [ChartMogul SaaS Conversion Report](https://chartmogul.com/reports/saas-conversion-report/)  — Free-to-paid conversion benchmarks
+- [SaaS Freemium Conversion Rates (First Page Sage)](https://firstpagesage.com/seo-blog/saas-freemium-conversion-rates/)  — 3-5% good, 8-12% great freemium conversion
+- [AWS Textract Pricing](https://aws.amazon.com/textract/pricing/)  — OCR per-page and AnalyzeExpense receipt pricing
+- [Google Cloud Vision Pricing](https://cloud.google.com/vision/pricing)  — OCR free tier and per-1,000 unit pricing
+- [RazorpayX Fees and Taxes (Docs)](https://razorpay.com/docs/x/manage-teams/billing/)  — 250 free payouts/mo, per-payout fee, payout fee example
+- [RazorpayX Payouts](https://razorpay.com/x/payouts/)  — Payout limits, 24x7 processing, instant bulk payouts
+- [Indian GST for SaaS (Lemon Squeezy)](https://www.lemonsqueezy.com/blog/indian-sales-tax-gst-saas)  — 18% GST, RCM, B2B ITC, invoice requirements
+- [GST Registration for Software/IT Services (RegisterKaro)](https://www.registerkaro.in/post/gst-registration-for-software-it-services)  — 18% rate, SAC codes, LUT/e-invoicing
+- [Tally Partners](https://tallysolutions.com/partners/)  — 28,000+ partner ecosystem; 3-star/5-star tiers
+- [Zoho Marketplace Partner Program](https://marketplace.zoho.com/become-a-partner)  — 60M+ users, free to publish, lead-gen reach
+- [Zoho Business Model (GrowthX)](https://growthx.club/blog/zoho-business-model)  — Bootstrapped PLG + freemium India exemplar
+- [SaaSBoomi](https://saasboomi.org/)  — 4,000+ India SaaS founder community for GTM/distribution
+
+## Stakeholders, personas & the B2B buying committee for employee & vendor expense-reimbursement software in Indian companies  [personas-buying]
+- [Expense Management Software India: Claim Automation, Policy Enforcement & Fraud Prevention](https://hrone.cloud/blog/expense-management-software-india-hr)  — HRMS-vendor (HROne) view of HR-led ownership, personas, TAT/fraud/ITC numbers, vendor positioning. Marketing source - directional.
+- [Setting Up Expense Approval Workflows in Expense and Travel Management in India (MYND)](https://www.myndsolution.com/best-practices/setting-up-expense-approval-workflows-in-expense-and-travel-management-in-india/)  — India finance-ops view: roles, DoA rupee tiers, maker-checker, GST ITC gating, CFO/Controller ownership.
+- [Managing Segregation of Duties in Finance Operations in India (MYND)](https://www.myndsolution.com/best-practices/managing-segregation-of-duties-in-finance-operations-in-india/)  — Maker-checker as golden rule of Indian financial control; four-function SoD framework.
+- [Maker-checker - Wikipedia](https://en.wikipedia.org/wiki/Maker-checker)  — Neutral definition of 4-eyes principle.
+- [Maker Checker for Better Control on Expense Approvals (Volopay)](https://www.volopay.com/expense-management/maker-checker-workflow-for-expense-approvals/)  — Vendor framing of maker-checker in expense approvals.
+- [What Is Expense Management Software? Best Tools for Field Sales (FieldAssist)](https://www.fieldassist.com/blog/what-is-expense-management-software-top-systems-india)  — Field-agent persona pains, attrition link, mobile-first speed stats, 36% integration figure.
+- [Expense Management for Field Sales (BreezeFSM)](https://breezefsm.in/blog/expense-management-for-field-sales/)  — Field-sales out-of-pocket pain and churn cost framing.
+- [Taxability of Reimbursement of Expenses to Employees in India: TDS, GST & ITC (mysa)](https://www.mysa.io/blogs/taxability-reimbursement-expenses-employees-india)  — ITC eligibility (Sec 16), documentation, employee reimbursement tax treatment.
+- [Reimbursable Expenses: Avoid GST, TDS Traps for Indian Marketing Agencies (AIAccountant)](https://www.aiaccountant.com/blog/reimbursable-expenses-gst-tds-india)  — Vendor reimbursement, pure-agent GST, separate invoicing requirement.
+- [TDS on Reimbursement of Expenses (ClearTax)](https://cleartax.in/s/tds-on-reimbursement-of-expenses)  — 194C/194J TDS treatment of reimbursements.
+- [Section 194R Additional Guidelines (Lexology)](https://www.lexology.com/library/detail.aspx?g=cddb5047-6d05-4ae1-869f-c424a6e557ec)  — 194R applicability when provider invoice in own name and takes ITC.
+- [Statutory Auditor's ITC Audit Checklist (TaxTMI)](https://www.taxtmi.com/article/detailed?id=15562)  — Auditor persona ITC audit framework.
+- [Expense Compliance Monitoring India (AIAccountant)](https://www.aiaccountant.com/blog/expense-compliance-monitoring-india)  — Audit trail / view-only auditor access for IFC and statutory audits.
+- [Decoding the DPDP Act 2023 and DPDP Rules 2025 (EY India)](https://www.ey.com/en_in/insights/cybersecurity/decoding-the-digital-personal-data-protection-act-2023)  — DPDP timeline, penalties, functional impact - IT/Security blocker driver.
+- [DPDP Act: What SaaS Providers Must Know (Wattlecorp)](https://www.wattlecorp.com/saas-providers-guide-to-dpdp-act-india/)  — SaaS as Data Fiduciary/Processor obligations.
+- [MSME Samadhaan - Delayed Payment Monitoring System (Govt of India)](https://samadhaan.msme.gov.in/)  — Primary gov source: 45-day vendor payment rule, self-service claim/status portal.
+- [Section 43B(h) of Income Tax Act (ClearTax)](https://cleartax.in/s/section-43bh-of-income-tax-act)  — Deduction disallowance for delayed MSME payments.
+- [MSME 45-days payment rule - how Zoho Books can help (Zoho)](https://www.zoho.com/in/books/academy/taxes-and-compliance/msme-45-days-payment-rule.html)  — Vendor reimbursement payment-clock context.
+- [Mapping the B2B Buying Committee / ABM for 11-stakeholder deals (Smarketers)](https://thesmarketers.com/blogs/buying-committee-marketing-abm/)  — Enterprise committee size 11-20.
+- [The Real Differences Between SMB, Midmarket, and Enterprise AEs (ZoomInfo)](https://pipeline.zoominfo.com/sales/difference-between-smb-midmarket-enterprise-account-executives)  — Economic buyer + sales-cycle differences by segment.
+- [Top B2B buyer personas for SaaS companies (DemandWorks)](https://www.dwmedia.com/blog/top-b2b-buyer-personas-for-saas-companies/)  — Champion/economic buyer/technical validator/admin/procurement roles.
+- [Enterprise Expense Management Software: 2026 Buyer's Guide (Navan)](https://navan.com/blog/enterprise-expense-management-software)  — Objections: rigid workflows, weak ERP integration, security.
+- [Importance of ERP Integrations with Expense Management Software (Payhawk)](https://payhawk.com/en-us/blog/importance-of-erp-integrations-with-expense-management-software)  — ERP integration as buying trigger/objection; month-end close pain.
+- [Expense Management Software Market Size (Fortune Business Insights)](https://www.fortunebusinessinsights.com/expense-management-market-107094)  — Global market size/CAGR; India drivers; productivity/fraud stats.
+- [Expense Management Software Market (Mordor Intelligence)](https://www.mordorintelligence.com/industry-reports/expense-management-software-market)  — Asia-Pacific fastest-growth rate; India compliance/smartphone drivers.
+- [Expense Management Software to Simplify Tracking (Keka)](https://www.keka.com/expense-management-software)  — HRMS-led vendor; claims auto-flow to Keka Payroll.
+- [Volopay Reviews 2023: Pricing, Features (Happay)](https://happay.com/blog/volopay-reviews-pricing/)  — Custom/quotation pricing model for Indian spend/expense vendors.
+
+## Feasibility, risk, and defensibility of an indie/2-person team building employee & vendor expense-reimbursement SaaS in India (2023-2026)  [build-feasibility]
+- [DPDP Act 2023 — Penalty Schedule (Sec 33)](https://www.dpdpa.com/theschedule.html)  — Primary penalty amounts: Rs 250cr security, Rs 200cr breach-notification.
+- [Penalties & Adjudication under India's DPDP Act 2023 (K&K)](https://ksandk.com/data-protection-and-data-privacy/penalties-adjudication-under-indias-dpdp-act-2023/)  — Legal overview of penalties and fiduciary obligations.
+- [Rule 15 DPDP Rules 2025 — Transfer of Personal Data Outside India](https://www.dpdpa.com/dpdparules/rule15.html)  — Cross-border/data-residency permissive blacklist model.
+- [DPDP Rules 2025 Implementation Roadmap (TCSA)](https://www.tcsa.in/resources/dpdp-rules-2025-implementation-roadmap)  — Notification date and phased compliance timeline to May 2027.
+- [RBI FAQs — Prepaid Payment Instruments (PPIs)](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812)  — Primary regulator source on PPI net-worth/licensing.
+- [Best Payout APIs in India 2025 (Bulkpe)](https://bulkpe.in/blog/best-payout-apis-in-india2025)  — Per-payout pricing (~Rs 2-5) for RazorpayX/Cashfree.
+- [RazorpayX Payouts](https://razorpay.com/x/payouts/)  — Primary product page for payout-as-partner option.
+- [SOC 2 Type 2 Compliance Cost in India (Codesecure)](https://codesecure.in/blogs/soc-2-type-2-compliance-cost-india)  — India-specific SOC 2 cost/timeline estimates.
+- [SOC 2 vs ISO 27001 for Indian Startups (TCSA)](https://www.tcsa.in/resources/soc-2-vs-iso-27001-indian-startups)  — ISO vs SOC sequencing, buyer expectations, costs.
+- [Tally — Integration with TallyPrime (official)](https://help.tallysolutions.com/integrate-with-tallyprime/)  — Primary docs: XML/TDL/ODBC integration methods, no cloud API.
+- [Tally ERP Market Share (6sense)](https://6sense.com/tech/enterprise-resource-planning-erp/tally-erp-market-share)  — Tally India dominance figures.
+- [Invoice OCR India Guide (AIAccountant)](https://www.aiaccountant.com/blog/invoice-ocr-india-guide)  — OCR accuracy and India GST-specific challenges.
+- [GST e-Invoicing for businesses above Rs 5 crore (ClearTax)](https://cleartax.in/s/e-invoicing-businesses-above-rs-5-crore-turnover)  — Mandatory e-invoicing threshold and rules.
+- [India B2B e-invoicing threshold drops to Rs 5cr (vatcalc)](https://www.vatcalc.com/india/india-b2b-e-invoicing-threshold-drops-to-%E2%82%B95-january-2023-faqs-update/)  — Threshold history corroboration.
+- [Zaggle Prepaid — Consistently Performing Stocks analysis](https://compass.finvezto.com/p/zaggle-prepaid-ocean-services-consistently)  — Revenue, interchange split, client/card counts.
+- [Zaggle Q4FY24 Investor Presentation (primary)](https://ipo.zaggle.in/wp-content/uploads/2024/05/investor-presentation-zaggle-Q4FY24.pdf)  — Primary issuer source for revenue mix and economics.
+- [Zaggle results (INDmoney)](https://www.indmoney.com/stocks/zaggle-prepaid-ocean-services-ltd-share-price/results)  — FY25 results and SaaS per-user pricing.
+- [Fyle / Sage Expense Management Pricing](https://www.fylehq.com/pricing)  — Primary pricing + integrations list (no Tally).
+- [Happay company profile (Latka)](https://getlatka.com/companies/happay)  — Customer count, funding, MakeMyTrip acquisition.
+- [Volopay company profile (Latka)](https://getlatka.com/companies/volopay)  — Funding and revenue figures.
+- [Kodo funding (Tracxn)](https://tracxn.com/d/companies/kodo/__kpY2538u-xk6yA_o4hFcVz97tssfYS4K_wLOcS7UXKM/funding-and-investors)  — Kodo funding history.
+- [Pluxee India](https://www.pluxee.in/)  — Incumbency scale in meal/benefit cards.
+- [AP Automation Market (Mordor Intelligence)](https://www.mordorintelligence.com/industry-reports/ap-automation-market)  — Adjacent AP automation market size/CAGR.
+- [AP Automation Market (Custom Market Insights)](https://www.custommarketinsights.com/report/accounts-payable-automation-market/)  — Alternate AP market sizing.
+- [Top AP Automation Software for India (Mysa)](https://www.mysa.io/blogs/top-accounts-payable-automation-software-for-india)  — India-native AP entrant signal.
+- [WhatsApp Business API India Guide (MessageCentral)](https://www.messagecentral.com/en-in/blog/whatsapp-business-api-india-guide)  — User base, DPDP, integration context.
+- [WhatsApp Business API Pricing India (Whautomate)](https://whautomate.com/whatsapp-business-api-pricing-india)  — Per-message and platform pricing.
+
+## Edge cases & workflow nuances for India employee & vendor expense-reimbursement SaaS, plus a canonical maker-checker approval state machine  [edge-cases]
+- [Taxability of Reimbursement of Expenses to Employees in India: TDS, GST & ITC (2026) - Mysa](https://www.mysa.io/blogs/taxability-reimbursement-expenses-employees-india)  — Primary synthesis of TDS sections, Rule 33 pure agent, Sec 17(5) blocked ITC, Sec 16 ITC, audit trail.
+- [Employee Reimbursement under GST - IndiaFilings](https://www.indiafilings.com/learn/employee-reimbursement-under-gst/)  — GST not applicable when employee buys from registered dealer for employer.
+- [RCM under GST - Applicability, E-Invoice, Import of Services - BinarySemantics](https://www.binarysemantics.com/blogs/reverse-charge-mechanism-rcm-under-gst-applicability-e-invoicing-import-of-services/)  — Rule 47A 30-day self-invoicing (effective 1 Nov 2024).
+- [Period of Retention of Accounts - Section 36 of GST - A R Dhorajiya & Co](https://ardhorajiya.com/period-of-retention-of-accounts-section-36-of-gst/)  — 72-month retention, litigation extension.
+- [Accounts & other records under GST & retention period (Sec 35-36) - TaxGuru](https://taxguru.in/goods-and-service-tax/accounts-other-records-gst-retention-period.html)  — List of records to retain; electronic records acceptable.
+- [Section 36 - CBIC GST Act explorer](https://taxinformation.cbic.gov.in/content-page/explore-act/1000306/1000001)  — Primary CBIC text of Section 36.
+- [Employees - Benefits allowable - Income Tax Department](https://www.incometaxindia.gov.in/w/employees-benefits-allowable)  — Primary IT Dept page on Sec 10(14) reimbursements and perquisites.
+- [Fuel Reimbursement Taxation Rules - Hinote](https://www.hinote.in/taxability-of-fuel-expense-reimbursement-to-employees-part-i-hinote-systems-outsourced-payroll-services-online-payroll-software/)  — Rule 3 fuel/running-maintenance Rs 0 perquisite for official-only use.
+- [Perquisites in Income Tax - ClearTax](https://cleartax.in/s/perquisites-in-income-tax)  — Rule 3(7)(ix) telephone/mobile; Sec 17(2) taxable benefits.
+- [India - Individual - Income determination - PwC Tax Summaries](https://taxsummaries.pwc.com/india/individual/income-determination)  — Reimbursements excluded from salary regardless of direct vs on-behalf payment.
+- [Advance Expense Management India - aiaccountant](https://www.aiaccountant.com/blog/advance-expense-management-india)  — Employee advance vs vendor prepayment vs salary advance ledgers; settlement.
+- [Petty Cash Accounting - Happay](https://happay.com/blog/petty-cash-accounting/)  — Petty cash float Rs 5,000-20,000; reconciliation.
+- [Imprest Cash System / Petty Cash Management - EnKash](https://www.enkash.com/resources/blog/what-is-imprest-cash-meaning)  — Imprest float top-up/replenishment model.
+- [RBI Reference Rate Archive](https://www.rbi.org.in/scripts/referenceratearchive.aspx)  — Authoritative daily INR reference FX rates; FBIL since Jul 2018.
+- [Foreign Currency Reconciliation India - aiaccountant](https://www.aiaccountant.com/blog/foreign-currency-reconciliation-india)  — RBI reference vs AD-bank TT vs gateway rate policy.
+- [Accounting for Foreign Currency - Expensify](https://use.expensify.com/blog/accounting-foreign-currency-expense-reports)  — Rate-date and rate-source choices in expense reports.
+- [International Per Diem Rates - Navan](https://navan.com/blog/international-per-diem-rates)  — Per-diem flat-rate vs actuals tradeoffs.
+- [Reimbursement for using a private vehicle - Motolog](https://motolog.app/vehicle-reimbursement-in-india)  — No statutory per-km rate; ~Rs5/Rs3 examples; logbook for Sec 10(14).
+- [India Mileage - Rydoo Compliance](https://www.rydoo.com/compliance/india/india-mileage/)  — India mileage compliance overview.
+- [GST Multi-state Branch Registration - Tally Solutions](https://tallysolutions.com/gst/multi-gst-registration-in-different-states/)  — Per-state GSTIN mandatory; distinct persons.
+- [ISD vs Cross Charge (post Finance Act 2024) - Taxmann](https://www.taxmann.com/post/blog/analysis-input-service-distributor-isd-vs-cross-charge)  — Mandatory ISD from 1 Apr 2025; cross-charge deemed supply.
+- [CBIC Circular 199/11/2023-GST](https://gstcouncil.gov.in/sites/default/files/2024-06/circular-cgst-199.pdf)  — Primary circular on cross-charge / HO-branch services.
+- [What is e-Invoicing Under GST - ClearTax](https://cleartax.in/s/e-invoicing-gst)  — Thresholds, 30-day IRP reporting, penalties.
+- [Mandatory GST E-Invoicing Rules & Deadlines - TaxGuru](https://taxguru.in/goods-and-service-tax/mandatory-gst-e-invoicing-rules-deadlines.html)  — 30-day IRP reporting for Rs 10cr+ from 1 Apr 2025.
+- [E-Invoice Limit in India Updated Guide 2026 - GimBooks](https://www.gimbooks.com/blog/e-invoice-limit-in-india/)  — Threshold trajectory toward Rs 2 crore.
+- [Maker Checker for Expense Approvals - Volopay](https://www.volopay.com/expense-management/maker-checker-workflow-for-expense-approvals/)  — Maker-checker states/roles; auto-approval params.
+- [Multi Level Approval Workflow for Reimbursement - Volopay](https://www.volopay.com/blog/multi-level-approval-for-reimbursement/)  — Up to 5-level threshold routing.
+- [Expense Multi-Level Approval Hierarchy - Argano](https://argano.com/insights/articles/microsoft-expense-multilevel-approval-hierarchy-workflow.html)  — Hierarchy and delegation patterns.
+- [Expense Approval Workflow Design - Billdock](https://billdock.io/blog/expense-approval-workflow-design)  — Exception handling, out-of-policy flags, partial review.
+- [Expense Fraud: Detect and Prevent - Coupa](https://www.coupa.com/blog/expense-fraud/)  — OCR-based org-wide duplicate/near-duplicate detection.
+- [Fake Receipt Checker - Taggun](https://www.taggun.io/fake-receipt-checker)  — Receipt-fraud / duplicate detection.
+- [India Receipt OCR for Expense Claim - Asprise](https://asprise.com/receipt-ocr/blog-IN-india-receipt-ocr-for-expense-claim)  — India receipt OCR / GSTIN extraction.
+- [OCR Receipt Scanner Apps and APIs 2026 - HyperVerge](https://hyperverge.co/blog/receipt-scanner-app/)  — Indic-script OCR, GSTIN/line-item extraction, India data-residency note.
+- [India Income-tax Rules 2026 Payroll Audit - India Briefing](https://www.india-briefing.com/news/india-income-tax-rules-2026-employer-payroll-compliance-43610.html/)  — Allowance exemptions more tightly linked to actual expenditure under Income-tax Act 2025.
+
+
+# VERIFICATION SOURCES
+
+
+## VERIFY: "The India expense-management software market is large and fast-growing." (SaaS feasibility study on India expense-reimbursement software — verify market size with analyst reports including year & CAGR, separate credible data from vendor marketing, give a defensible range, and sanity-check via bottoms-up.)  [v-market-size]
+- [Expense Management Software Market Size, Growth, Share & Research Report 2031 — Mordor Intelligence](https://www.mordorintelligence.com/industry-reports/expense-management-software-market)
+- [Expense Management Software Market Size, Share [2032] — Fortune Business Insights](https://www.fortunebusinessinsights.com/expense-management-market-107094)
+- [Expense Management Software Market press release — Market Research Future (MRFR)](https://www.marketresearchfuture.com/press-release/expense-management-software-market)
+- [Travel And Expense Management Software Market Report 2030 — Grand View Research](https://www.grandviewresearch.com/industry-analysis/travel-expense-management-software-market)
+- [Spend Management Software Market size & insights 2024-2030 — Valuates Reports](https://reports.valuates.com/market-reports/QYRE-Auto-30V2400/global-spend-management-software)
+- [Over 2.8 million companies registered in India, 65% active: Govt data — Business Standard (MCA data)](https://www.business-standard.com/companies/news/over-2-8-million-companies-registered-in-india-65-active-govt-data-125021800695_1.html)
+- [Top 10 Best Expense Management Software in India [2026] / pricing — Happay](https://happay.com/blog/top-10-best-expense-management-software-india/)
+
+## VERIFY: Under GST Section 17(5), input tax credit is BLOCKED on certain employee/T&E expenses (food & beverages, club membership, travel benefits to employees, rent-a-cab, motor vehicles), with key exceptions: obligatory under law; same-category onward supply; for making outward taxable supply.  [v-gst-17-5]
+- [Section 17(5) of the CGST Act, 2017 — Official CBIC Tax Information Portal (authoritative statutory text)](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/acts/2017_CGST_act/active/chapter5/section17_v1.00.html)
+- [Section 17(5) in The Central Goods and Services Tax Act, 2017 — IndianKanoon](https://indiankanoon.org/doc/134183062/)
+- [Section 17(5) of CGST Act - Blocked Credit Under GST — ClearTax](https://cleartax.in/s/section-175-of-cgst-act)
+
+## VERIFY: A SaaS that generates bank payout files or initiates reimbursements does NOT itself need an RBI Payment Aggregator / PPI license, as long as money never flows through the SaaS's own accounts (file hand-off to the customer's bank, connected banking on the customer's current account, or a regulated partner like RazorpayX/Cashfree initiates the payout).  [v-rbi-license]
+- [RBI's Guidelines on Regulation of Payment Aggregators and Payment Gateways — Trilegal](https://trilegal.com/knowledge_repository/rbis-guidelines-on-regulation-of-payment-aggregators-and-payment-gateways/)
+- [RBI Guidelines on Regulation of Payment Aggregators and Payment Gateways — Mondaq](https://www.mondaq.com/india/compliance/918062/rbi-guidelines-on-regulation-of-payment-aggregators-and-payment-gateways)
+- [Payment Aggregators and Gateways — India's Regulatory Framework — AZB & Partners](https://www.azbpartners.com/bank/payment-aggregators-and-gateways-indias-regulatory-framework/)
+- [PA & PG: Guidelines on Settlement and Escrow Account Management — VJM Global](https://www.vjmglobal.com/blog/payment-aggregators-and-payment-gateways-guidelines-on-settlement-and-escrow-account-management-and-other-instructions)
+- [Prepaid Payment Instruments (PPIs) — RBI FAQ](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812)
+- [Master Direction on Regulation of Payment Aggregators (15 Sept 2025) — RBI / FIDC mirror](https://www.fidcindia.org.in/wp-content/uploads/2025/09/RBI-PAYMENT-AGGREGATORS-DIRECTIONS-15-09-25.pdf)
+- [RazorpayX Payouts — Razorpay Docs](https://razorpay.com/docs/x/payouts/)
+- [Decoding RBI's Overhaul of the Payment Aggregator Directions — IndiaCorpLaw](https://indiacorplaw.in/2025/10/09/decoding-rbis-overhaul-of-the-payment-aggregator-directions/)
+- [RBI Rewrites the Payment Aggregator Rulebook — Ikigai Law](https://www.ikigailaw.com/article/639/rbi-rewrites-the-payment-aggregator-rulebook)
+
+## VERIFY: A SaaS storing employee/vendor PAN, bank details, Aadhaar, and salary/expense data must comply with India's DPDP Act 2023, with penalties up to Rs 250 crore for breaches — including obligations on consent, purpose limitation, data-fiduciary duties, breach notification, and penalties; plus enterprise buyer expectations of ISO 27001 / SOC 2 Type II / VAPT.  [v-dpdp]
+- [Penalties Schedule - Digital Personal Data Protection Act, 2023 (dpdpa.com)](https://www.dpdpa.com/theschedule.html)
+- [DPDPA Penalties Explained: Rs 50 Crore to Rs 250 Crore Fines](https://www.dpdpa.com/blogs/dpdpa_penalties_explained_50_crore_250_crore_fines.html)
+- [Transforming data privacy: DPDP Rules 2025 - EY India](https://www.ey.com/en_in/insights/cybersecurity/transforming-data-privacy-digital-personal-data-protection-rules-2025)
+- [DPDP Rules 2025 Notified - India Briefing](https://www.india-briefing.com/news/dpdp-rules-2025-india-data-protection-law-compliance-40769.html/)
+- [Data Breach Reporting Timeline of DPDP Rules 2025 Explained - MediaNama](https://www.medianama.com/2025/11/223-data-breach-reporting-timeline-of-dpdp-rules-2025-explained/)
+- [DPDP Rules, 2025 Notified - Press Information Bureau (Govt of India)](https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/nov/doc20251117695301.pdf)
+- [Is VAPT Mandatory for the IT Industry? 2026 Compliance Guide - Pacific Cert](https://blog.pacificcert.com/vapt-is-a-mandatory-requirement-for-the-information-technology-it-industry/)
+- [SOC 2 vs ISO 27001 for Indian SaaS - codesecure.in](https://codesecure.in/blogs/soc-2-vs-iso-27001-which-first-india)
+
+## VERIFY: PAN, GSTIN and bank-account (penny-drop) verification are available via API from providers like Karza/Perfios, Signzy, Cashfree, Setu, Protean, Sandbox, Hyperverge, IDfy at low per-verification cost. (Plus: verify which providers offer these, the legality/authorized channels for PAN and Aadhaar, and indicative per-API pricing.)  [v-kyc-pricing]
+- [Setu - Bank Account Verification API (penny drop) + pricing](https://setu.co/data/kyc/bank-account-verification/)
+- [Deepvue - Pricing (pay-per-call / annual)](https://deepvue.ai/pricing/)
+- [Protean - PAN OPV (Online PAN Verification by Authorized Entities)](https://www.proteantech.in/services/pan-opv/)
+- [BankBazaar - Bulk PAN Verification (methods, eligibility, Rs 12,000+GST/yr)](https://www.bankbazaar.com/pan-card/bulk-pan-verification.html)
+- [Sandbox (Quicko) - KYC API: Aadhaar/DigiLocker, PAN, GSTIN, Bank, MCA](https://sandbox.co.in/kyc)
+- [Cashfree - Penny Drop / Bank Account Verification API](https://www.cashfree.com/penny-drop-verification/)
+- [HyperVerge - Bank Account Verification (Penny Drop) API](https://hyperverge.co/in/integrations-marketplace/bank-account-verification-api/)
+- [Gridlines - Top KYC API Providers in India (Signzy, Karza/Perfios, IDfy, HyperVerge, Setu)](https://gridlines.io/blogs/top-11-kyc-api-providers-in-india/)
+- [UIDAI - Authentication Requesting Agency (AUA/KUA)](https://uidai.gov.in/en/ecosystem/authentication-ecosystem/authentication-requesting-agency.html)
+- [PRS - The Aadhaar and Other Laws (Amendment) Bill, 2019](https://prsindia.org/billtrack/the-aadhaar-and-other-laws-amendment-bill-2019)
+- [Lexology - Aadhaar Authentication for Private Entities: 2025 Amendment](https://www.lexology.com/library/detail.aspx?g=d22ac806-db2b-48d8-85a7-582c39237fac)
+- [Biometric Update - India to regulate private-sector Aadhaar verification (registration mandate)](https://www.biometricupdate.com/202512/india-to-ban-aadhaar-photocopying-as-uidai-moves-to-regulate-private-sector-verification)
+- [GST portal - Search Taxpayer (official GSTIN verification)](https://services.gst.gov.in/services/searchtp)
+- [Noble Web Studio - Buy Bank Account Verification API (indicative pricing/setup fees)](https://www.noblewebstudio.com/blog/buy-bank-account-verification-api/)
+
+## VERIFY: "Happay was acquired by CRED (2021); Fyle is a US-India expense startup; Zoho Expense has transparent low pricing; Volopay/EnKash/Kodo bundle corporate cards + expense; Zaggle/Pluxee/Sodexo do meal & benefit cards." — verify current status, ownership, funding, and public pricing (2024-2026) for these India expense-reimbursement players.  [v-competitors]
+- [Cred Closes $180M Acquisition Deal for Happay (2021)](https://www.pymnts.com/news/partnerships-acquisitions/2021/cred-closes-180m-acquisition-deal-for-expense-management-firm-happay/)
+- [MakeMyTrip to Acquire Happay Expense Management Platform from CRED (BusinessWire, 18 Nov 2024)](https://www.businesswire.com/news/home/20241118432629/en/MakeMyTrip-to-Acquire-Happay-Expense-Management-Platform-from-CRED)
+- [MakeMyTrip Acquires Happay (Skift, Nov 2024)](https://skift.com/2024/11/18/makemytrip-acquires-happay-in-move-to-strengthen-corporate-travel-biz/)
+- [Sage Expense Management — Company page (formerly Fyle)](https://www.fylehq.com/company)
+- [Fyle Crunchbase profile](https://www.crunchbase.com/organization/fyle)
+- [Zoho Expense — India pricing](https://www.zoho.com/in/expense/pricing/)
+- [Volopay Raises $29 Million in Series A (Entrepreneur)](https://www.entrepreneur.com/en-in/finance/volopay-raises-29-million-in-series-a/421063)
+- [EnKash unveils unified corporate card ecosystem (PR Newswire, Oct 2025)](https://www.prnewswire.com/in/news-releases/enkash-unveils-indias-first-unified-corporate-card-ecosystem-for-businesses-302582732.html)
+- [Kodo raises $8.75M from Brex (IBS Intelligence)](https://ibsintelligence.com/ibsi-news/indian-corporate-card-start-up-kodo-raises-8-75m-from-brex/)
+- [Zaggle IPO listing (Zee Business)](https://www.zeebiz.com/markets/stocks/live-updates-zaggle-ipo-listing-date-today-live-news-zaggle-prepaid-ocean-services-share-price-target-2023-nse-bse-anil-singhvi-recommendation-stoploss-buy-sell-hold-255266)
+- [Zaggle Prepaid Ocean Services — Screener.in](https://www.screener.in/company/ZAGGLE/)
+- [Pluxee lists on Euronext Paris following spin-off from Sodexo (Pluxee Group)](https://www.pluxeegroup.com/historic-milestone-for-pluxee-now-listed-on-euronext-paris-following-its-spin-off-from-sodexo/)
+- [Pluxee India (formerly Sodexo BRS)](https://www.pluxee.in/)
+- [Volopay revenue/ARR (getlatka)](https://getlatka.com/companies/volopay)
+
+## VERIFY: Tally is the dominant accounting software for Indian SMBs, so Tally integration is a critical deal-maker for expense software, and integration is technically painful (desktop, XML/ODBC/TallyConnector).  [v-tally]
+- [How Tally Solutions' software empowers businesses — Business India](https://businessindia.co/magazine/corporate-report/how-tally-solutions-software-empowers-businesses)
+- [Tally Solutions — Wikipedia](https://en.wikipedia.org/wiki/Tally_Solutions)
+- [TallyPrime ERP — enlyft technology profile](https://enlyft.com/tech/products/tallyprime)
+- [XML Integration — TallyHelp (official)](https://help.tallysolutions.com/xml-integration/)
+- [Integration using ODBC Interface / ODBC Integrations — TallyHelp (official)](https://help.tallysolutions.com/using-odbc-interface/)
+- [TallyConnector (C#/.NET library) — GitHub, Accounting-Companion](https://github.com/Accounting-Companion/TallyConnector)
+- [How to Connect Tally Prime to Server — TallyStack](https://www.tallystack.in/blog/tally-prime/how-to-connect-tally-prime-to-server/)
+- [Add TallyPrime EXE/Ports to Firewall Exceptions — TallyHelp (official)](https://help.tallysolutions.com/add-tallyprime-exe-ports-to-firewall-exceptions/)
+- [Can we configure Suvit with Tally cloud? — Suvit Help](https://help.suvit.io/articles/can-we-configure-suvit-with-tally-cloud)
+- [Tally Connector: How to Integrate Tally with Third-Party Apps — Vyapar/TaxOne](https://taxone.vyapar.com/post/how-to-integrate-tally-to-third-party-apps)
+- [India Accounting Software Market — Jadhavar Business Intelligence](https://www.jadhavarbusinessintelligence.com/market-research-report/india-accounting-software-market/1134)

@@ -1,0 +1,114 @@
+---
+title: Verified Pain Points
+description: "The demand evidence: repeated, India-flavoured pains for employees and finance teams, with what is solved and what is not."
+---
+
+The demand is real, repeated, and India-flavoured, but the evidence quality is uneven. The pains that recur most are not missing-tool problems; they are speed, manual finance load, cash-advance opacity, GST/ITC capture, and field/mobile UX. Incumbents already solve receipt capture, approvals, and accounting sync acceptably. The durable, unsolved gaps cluster in exactly the SMB and field-heavy segments that anchor our wedge: see [the whitespace](/market/whitespace/) and [the MVP cut line](/product/mvp-scope/).
+
+A blunt caveat up front, because it governs how to read every number below.
+
+:::caution[Read the provenance before the number]
+Most "pain" statistics here come from vendor and marketing blogs (Cashbook, OneFinOps, Procurify, Fyle) with an incentive to dramatize. Treat them as directional, confidence <span class="pill pill--med">Medium</span>, and validate with primary interviews. Reddit, Quora, and G2 primary threads were largely un-fetchable (reddit blocked the crawler; Glassdoor and G2 returned 403), so employee-voice evidence is under-sampled. No usable verbatim employee quote was retained, so the employee-voice claims here rest on aggregated G2/Capterra review corpora, not on primary threads. Treat that as a known gap to close with interviews.
+:::
+
+## The pain table
+
+Each pain is scored by audience, severity, what incumbents already solve, and what stays unresolved. "Solved-by-incumbents" means a competent buyer can get it today from Zoho Expense, Fyle/Sage, Happay (now in MakeMyTrip's travel suite), or SAP Concur. "Unresolved" is the part that survives the purchase, and that is where the wedge lives.
+
+| Pain | Audience | Severity | Solved by incumbents | Unresolved gap |
+|---|---|---|---|---|
+| Cycle time 30-45 days to repay employees | Employee | High | Digital flows reach 2-3 days; tooling exists | The process gap, not the tool; speed-to-pay is rarely productised as a headline KPI for SMBs |
+| Manual finance load (chasing, reconciling) | Finance/AP | High | OCR + approval workflows cut effort | Load still scales sharply past ~50 employees; Tally/GST reconciliation stays heavy |
+| GST ITC capture + IMS / GSTR-2B reconciliation | Finance/AP | High | Accounting sync exists | Eligible-vs-blocked ITC tagging on scattered employee bills, mapped to GSTR-2B, is messy and manual |
+| Per-diem bill rules (post-2018) | Both | Medium | Policy fields exist | No statutory rates; bill-backed exemption tracking and city/grade disputes under-served |
+| Cash-advance / float tracking for field staff | Both | High | Largely unaddressed | The "black box" between advance and settlement; no verifiable trail, pilferage thrives |
+| Fraud and duplicate claims | Finance/AP | High | Basic policy + dupe checks | Most violations are sub-₹5,000 and escape scrutiny; AI receipt fraud is rising |
+| OCR on Indian thermal/handwritten bills | Employee | High | Clean printed bills are fine | Faded thermal, crumpled, handwritten, Devanagari still need manual correction |
+| Duplicate-detection accuracy | Finance/AP | Medium | Dupe flags shipped | False positives (same amount, different bill) and false negatives (lagging card feed) both persist |
+| Clunky multi-click approvals | Both | Medium | Workflows configurable | Email approvals stall in busy managers' inboxes; rigid, multi-click UIs |
+| Buggy / slow mobile apps | Employee (field) | High | Apps exist | Slow sync, web-only features, repeated logins; worst for blue-collar field capture |
+| Concur prohibitive for SMBs | Finance/AP | High | Enterprise-grade product | Sales-gated opaque pricing, months-long implementation, ~$9/report unaffordable for SMBs |
+| Tally reconciliation + native sync | Finance/AP | Medium | Advertised, unevenly delivered | Native Tally is table-stakes but inconsistently real; the operational pain deters competitors |
+| Vendor pay: Sec 43B(h) 45-day MSME clock | Finance/AP | High | Mostly unaddressed in expense tools | Adjacent market; deadline tracking and interest-exposure flagging are open |
+
+<p class="source-note">Sources: OneFinOps, Cashbook, AIAccountant, ClearTax, Hinote, G2/Capterra review corpora (mixed vendor + analyst, medium confidence). Severity is our synthesis.</p>
+
+## Cycle time: the most emotionally resonant pain
+
+Indian companies commonly take 30-45 days to repay employees, while best-in-class digital flows settle in 2-3 days and legacy-but-digital systems average 15-20 days. The gap is a process problem, not an absent tool. This is the most viscerally felt employee pain, which is why speed-to-reimburse (for example, a "48-hour payout" promise) is the headline KPI worth owning.
+
+<p class="source-note">Source: OneFinOps; Procurify/Fyle-cited benchmarks (vendor blogs, medium confidence). 30-45 days <span class="pill pill--high">High</span> as a recurring claim; the 2-3 vs 15-20 day figures are vendor-sourced.</p>
+
+## Manual finance load: real but vendor-quantified
+
+The recurring figure is 40-60 hours per month that finance teams at mid-size Indian firms spend processing expenses by hand, with each manual report taking roughly 20 minutes, and a "tipping point" past ~50 employees where manual tracking collapses.
+
+:::note[Soft number, label it]
+The 40-60 hours/month figure is vendor-sourced (OneFinOps, Cashbook) and dramatized; carry it as <span class="pill pill--med">Medium</span> confidence, not a hard fact. The directional truth (manual load scales painfully with headcount) is well-supported; the exact hours are not audited. The ~20-minutes-per-report and "75%+ time reduction" claims trace to a widely-cited SAP Concur survey, also vendor-sourced.
+:::
+
+## GST/ITC and per-diem: the India-specific compliance grind
+
+GST ITC capture on employee and vendor reimbursements is a genuine India-specific pain, sharpened by the 2024 Invoice Management System (IMS) that made GSTR-2B reconciliation a manual action, and by the hard ITC claim deadline of 30 November following the end of the financial year (i.e. in the next FY); confirm against the live CBIC/Sec 16(4) wording before hard-coding. Food and beverages, outdoor catering, and leave/home-travel concession (LTC/LTA) are blocked ITC under Sec 17(5)(b), with an obligatory-under-law exception from 1 Feb 2019. Ordinary business travel (air/rail for work) is generally ITC-eligible. Capturing GST off scattered employee bills to preserve eligible ITC is the clearest localization moat versus global tools. See [the regulatory map](/compliance/regulatory-map/) for the statute detail.
+
+Per-diem is a tax-rule dispute, not a UX nuisance. Since 2018, employees must submit actual bills to claim per-diem tax exemption; the unspent balance is taxable salary. No statutory per-diem rates exist, so policy is company-defined, which breeds city-and-grade disputes.
+
+<p class="source-note">Sources: ClearTax, CBIC, Hinote, Digit (tax-advisory + govt, high on statute direction). Confirm live CBIC notification before hard-coding in-product.</p>
+
+## Cash-advance float: the under-served black box
+
+This is the pain incumbents most clearly leave open. A ₹10,000 site advance to pay carpenters and materials has no verifiable trail; a route manager handed ₹15,000 on Monday and settling Friday is, in the source's words, a black box. Tracking fragments across WhatsApp and spreadsheets, worst in construction, logistics, retail, and field sales, and month-end reconciliation stretches 2-3 weeks past close when ~10% of claims have unclear docs.
+
+:::tip[This is the wedge, not a feature]
+Lead with cash-advance issuance and settlement reconciliation, not just receipt capture. Field-heavy verticals are exactly where Happay and Concur apps are reported buggy and where per-user pricing excludes blue-collar teams. This pairs with [the MVP scope](/product/mvp-scope/) and the float-tracking edge cases.
+:::
+
+## Fraud and duplicates: real, but read the caveat carefully
+
+Expense fraud appears materially worse in India than the global average, and most occurs in small amounts that escape scrutiny. PwC's Global Economic Crime Survey 2024 (India) reports 59% of Indian organisations hit by economic or financial fraud in 24 months versus 41% globally.
+
+:::danger[Do not over-attribute the 59%]
+The PwC 59% figure is ALL economic fraud, with procurement fraud as the top type, not expense-reimbursement fraud specifically. Do not launder it into an expense-fraud statistic. Use it as context for a high-fraud environment, nothing tighter.
+:::
+
+Adjacent claims (vendor-sourced, medium confidence): ~24% of employees admit expensing personal costs as business; expense-reimbursement fraud appears in 13% of occupational-fraud cases and takes ~18 months to detect (ACFE 2024, cited by Fyle); policy violations plus duplicate invoices reportedly drain 15-25% of operational spend, with most violations under ₹5,000. Separately, AI-generated receipt fraud rose from roughly 0% to ~14% of fraudulent documents in about 12 months (AppZen, per THESIS), which is why deterministic checks (GSTIN validation, e-invoice IRN/QR, arithmetic, perceptual-hash duplicates, EXIF) must sit before any auto-approval. See [bill digitization and fraud](/product/ocr/).
+
+## OCR, duplicates, approvals, mobile: the durable product gaps
+
+These are review-corpus complaints from G2 and Capterra, so they are real but version-specific; treat them as the more durable gaps rather than permanent indictments.
+
+- **OCR on Indian receipts** still struggles with handwritten bills, faded thermal paper, and non-standard layouts; users "still need to double-check." Fyle markets handwritten-invoice detection as a differentiator, which confirms the problem is India-specific and worth solving.
+- **Duplicate detection** is imperfect both ways: card feeds lag so the same charge is not caught, and two different bills with the same value get flagged as duplicates.
+- **Approvals** are multi-click and rigid; email approvals "get lost in the manager's inbox." One-tap WhatsApp or email approve/reject with traveling-manager escalation is the obvious fix.
+- **Mobile/field UX** draws concrete complaints (buggy, slow sync, repeated logins, web-only features), which is most damaging for field and blue-collar users capturing at point of spend.
+
+## Pricing friction and the SMB exclusion
+
+SAP Concur is widely seen as too expensive and complex for Indian SMBs: roughly $9 per expense report plus monthly fees, sales-gated opaque pricing, and months-long implementation. Per-user pricing is itself a barrier; the India band runs roughly ₹50-500/user/month, with Zoho Expense at ₹99/user/mo (Standard) and ₹199 (Premium) on a 5-user minimum. Cashbook's flat ₹999/month unlimited-user model is positioned explicitly as the budget alternative for petty-cash and field use. Our own stance on pricing is at [pricing and packaging](/business/pricing/).
+
+<p class="source-note">Sources: Rho/G2 (Concur), Capterra/Mysa (India band). Aggregator figures may be stale; verify on official pages. Vendor + aggregator, medium confidence.</p>
+
+## The adjacent vendor-payment pain
+
+Section 43B(h) of the Income Tax Act (effective 1 April 2024) requires buyers to pay micro and small suppliers within 45 days (15 if no written agreement) to claim the expense as deductible the same year, with RBI-rate-times-three compound interest on delay. Roughly ₹7.34 lakh crore is reportedly tied up in unpaid MSME invoices, with delays often beyond 90 days; TReDS discounting exceeded ₹1.9 lakh crore by FY2025. Both figures rest on a single vendor press-wire (Webnewswire); treat them as <span class="pill pill--low">Low</span> confidence pending a primary source.
+
+This is adjacent to, not the same as, employee expense reimbursement. Bundling vendor payments is a strategic choice toward the larger AP-automation market, not an established single market. Treat it as an expansion vector, not MVP.
+
+## What this means for the build
+
+The pains that survive incumbent purchase, and therefore define the wedge, are: cash-advance float reconciliation, GST/ITC capture against Tally and GSTR-2B, OCR on real Indian bills, field/mobile UX, SMB-friendly pricing, and speed-to-pay. Verdict on the demand evidence: <span class="pill pill--build">Build</span> on the durable gaps, with confidence <span class="pill pill--med">Medium</span> pending primary interviews to replace under-sampled employee voice. Read this alongside [the whitespace](/market/whitespace/) and [the MVP scope](/product/mvp-scope/).
+
+## Sources
+
+- [Employee Expense Management in India: A Guide, OneFinOps](https://onefinops.com/blog/employee-expense-management-guide-india) (vendor) : 30-45 day cycles, 40-60 hrs/month finance load
+- [How to Prevent Employee Expense Fraud and Cash Pilferage, Cashbook](https://cashbook.in/blogs/employee-expense-fraud) (vendor) : sub-₹5,000 violations, 15-25% leakage, field-staff risk
+- [Advance Expense Management India, AIAccountant](https://www.aiaccountant.com/blog/advance-expense-management-india) (vendor) : cash-advance black box, month-end overrun
+- [59% of Indian organisations faced economic fraud in 24 months, PwC India](https://www.pwc.in/press-releases/2024/59-of-indian-organisations-faced-financial-or-economic-fraud-in-the-past-24-months-where-procurement-fraud-emerged-as-the-top-threat-pwc-survey.html) (analyst) : primary fraud survey
+- [Zoho Expense Reviews, G2](https://www.g2.com/products/zoho-expense/reviews) (primary) : OCR limits, multi-click approvals, rigid setup
+- [Fyle (Sage Expense Management), Capterra India](https://www.capterra.in/software/162066/fyle) (primary) : duplicate-detection errors, heavy setup
+- [Happay Reviews, Capterra India](https://www.capterra.in/reviews/143249/happay) (primary) : buggy mobile app, opaque rejections
+- [SAP Concur reviews: pros, cons, pricing, Rho](https://www.rho.co/blog/sap-concur-reviews) (vendor, cites G2) : ~$9/report, SMB-unfriendly
+- [GST Input Tax Credit (ITC), ClearTax](https://cleartax.in/s/gst-input-tax-credit) (vendor) : ITC mechanics, Nov-30 deadline, IMS
+- [Input Tax Credit Rules, CBIC](https://cbic-gst.gov.in/input-tax-credit-rules.html) (govt) : primary regulator source
+- [Taxability of Per Diem Allowance, Hinote](https://www.hinote.in/taxability-of-per-diem-allowance-while-on-business-travel/) (vendor) : post-2018 bill-submission rule
+- [India's 45-Day MSME Payment Rule, Webnewswire](https://www.webnewswire.com/2026/05/22/indias-45-day-msme-payment-rule-exposes-structural-gap-in-industrial-supply-chain-finance/) (vendor) : ₹7.34 lakh cr trapped, TReDS volume

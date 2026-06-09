@@ -1,0 +1,115 @@
+---
+title: Personas and Jobs to be Done
+description: Every stakeholder in a reimbursement flow, what they need, and their influence on the purchase.
+---
+
+Reimbursement is a contested-ownership process with one immovable spine: the **maker-checker** (4-eyes) split. The person who initiates or validates a claim cannot be the one who authorizes and records it. Build for nine distinct personas, but design first for the two that the control mandates: the Finance/AP **maker** and the Controller/CFO **checker**. Everyone else (employee, field agent, manager, HR, auditor, vendor, admin, IT/Security) orbits that control.
+
+This page maps each stakeholder to a job-to-be-done, top pains, what they value, and their purchase influence. For who actually signs the cheque and how the buying committee assembles, read [the buying committee and ICP](/users/buyers-icp/). For the control rendered as a state machine, read [maker-checker and Delegation of Authority](/product/maker-checker/).
+
+:::tip[The spine, in one line]
+The Maker validates documents, checks GST ITC eligibility and TDS treatment, and prepares the payout. The Checker (Controller/CFO) approves against a rupee-tiered Delegation-of-Authority matrix and owns the budget. Segregation of duties across custody, authorization, record-keeping and reconciliation is the golden rule of Indian financial control. Treat it as a first-class feature, not a setting.
+:::
+
+## The persona map
+
+Each row is a real human in the flow, not a job title on an org chart. "Influence" is their leverage over the buying decision: champion (drives the deal), blocker (can veto), user (adopts but rarely buys), or buyer (holds budget).
+
+| Persona | Job-to-be-done | Top pains | Values | Purchase influence |
+| --- | --- | --- | --- | --- |
+| Employee / claimant | Get money back fast with minimum friction | Slow payout (manual TAT ~8-12 days, vendor-stated), re-keying, opaque status | One-tap capture, transparent status, payout in one payroll cycle | User |
+| Field agent / road-warrior | Recover daily out-of-pocket cash without waiting | Out-of-pocket cash strain, no connectivity, payout latency that drives attrition | WhatsApp/offline capture, advances, fast settlement | User (strongest trigger) |
+| Manager / approver | Approve correct claims in seconds, stay covered on leave | Off-system WhatsApp exceptions that break the audit trail, approval bottlenecks | One-tap mobile approval, delegation-on-leave, clear policy flags | User / influencer |
+| Finance / AP executive (the Maker) | Validate docs, classify GST/TDS, prepare payout | Manual JV re-keying across disconnected systems, GST/TDS classification, fragmented handoffs | Tally/ERP sync, GSTIN validation, line-item control | Champion |
+| Finance Controller / CFO (the Checker) | Approve to budget, sign the DoA matrix, close the month | ITC leakage, fraud exposure, month-end close drag, audit findings | Rupee-tiered DoA, ITC recovery, immutable trail | Economic buyer |
+| HR Head (HRMS-first) | Own claim experience and payroll-cycle disbursal | Reimbursement TAT as an attrition-linked KPI, manual payroll reconciliation | Native payroll disbursal, Super-Inbox experience | Champion or co-sponsor |
+| Internal / statutory auditor | Verify controls, ITC eligibility, segregation of duties | Missing receipts/approval trails, reimbursements bundled with fees | View-only access, exportable timestamped trails | Influencer / gatekeeper |
+| Vendor (contractor/MSME) | Get paid on time, reimbursements invoiced cleanly | TDS on bundled reimbursements, late payment past the MSME 45-day clock | Separate-invoice handling, on-time payout, status visibility | External user |
+| System owner / admin | Configure policy, masters, roles without breakage | Rigid workflows that need professional services to change | Self-serve config, role-based access, delegation | User / influencer |
+| IT / Security | Approve the vendor on data and access risk | DPDP exposure, SSO, data residency, breach liability | SSO, RBAC, immutable logs, processor terms | Blocker |
+
+<p class="source-note">Personas synthesized from HROne, MYND, FieldAssist and finance-ops content (vendor-marketing, medium confidence). Many TAT/fraud/ITC figures are vendor-sourced and dramatized; see caveats below.</p>
+
+## The makers and the checkers: the split that defines the product
+
+### Finance / AP executive (the Maker) <span class="pill pill--high">Champion</span>
+
+The AP executive is where a claim becomes an accounting fact. Their pain is mechanical and quantifiable: re-keying journal entries across five disconnected systems (claim app, policy PDF, approval email, advance register, payroll sheet), with each handoff said to add ~1.5-2 days (vendor-sourced, directional). <span class="pill pill--low">Low</span> They map GST ITC (GSTIN validation, eligible-versus-blocked, GSTR alignment) and TDS sections (194C for contractors, 194J for professional services) by hand.
+
+This is the persona your wedge serves first: Tally-native two-way sync and GST ITC capture turn their drudgery into automation. Win the Maker in the demo and the rest of the committee follows.
+
+### Finance Controller / CFO (the Checker) <span class="pill pill--high">Buyer</span>
+
+The Checker approves against the budget and the Delegation-of-Authority matrix, then owns the close and the audit. They do not feel the data-entry pain; they feel the **rupee** pain. Two numbers move them, both vendor-sourced and to be carried as directional:
+
+- ITC leakage when invoices lack a valid company-name GSTIN: the credit lost is the **embedded GST** on those line items (commonly up to 18% of their taxable value), not 18% of total spend. Vendor-sourced and directional. <span class="pill pill--low">Low</span>
+- Reimbursement fraud leakage of **4-8% of spend** (HRMS-vendor estimate, target under 1.5%). <span class="pill pill--med">Medium</span>
+
+The DoA matrix is rupee-tiered. Indian guidance cites example ceilings: a junior manager up to ~₹10,000, a department head up to ~₹1,00,000, high-value claims escalating to the CFO who signs the matrix itself. Delegation must cover approvers on leave. Encode this as configuration, not code. See [maker-checker and DoA](/product/maker-checker/).
+
+:::danger[Why the split is non-negotiable]
+Maker-checker is the single most India-specific buying requirement and a credibility signal to Finance and Auditors. A product that lets the same identity submit and approve fails the auditor's first question. Build segregation of duties (custody, authorization, record-keeping, reconciliation) into the data model, not the UI.
+:::
+
+## The users who never sign the cheque but decide adoption
+
+### Employee and field agent <span class="pill pill--info">User</span>
+
+The employee wants money back without thinking about it. The field agent is sharper: they pay daily travel out of pocket, work without connectivity, and churn when payout lags. This persona is the **strongest buying trigger**, because delayed reimbursement maps directly to field-sales attrition, and losing a good rep costs lakhs.
+
+WhatsApp-first plus offline mobile capture is the under-served wedge here; incumbents skew to web and corporate cards. This is product surface the [whitespace analysis](/market/whitespace/) treats as defensible.
+
+### Manager / approver <span class="pill pill--flag">Flag-handler</span>
+
+The approver's pain is the informal exception: a field-sales manager green-lights an over-policy claim on WhatsApp, and the audit trail breaks. They value one-tap mobile approval, delegation coverage on leave, and a rule engine that surfaces the policy flag instead of forcing a side-channel. Route exceptions through the system, not around it.
+
+### HR Head <span class="pill pill--high">Co-sponsor</span>
+
+In HRMS-first firms, HR owns claim intake, treats TAT as an employee-experience KPI inside the same inbox that runs leave and attendance, and wants disbursal on the payroll cycle. HR ownership is genuinely shared with Finance, not exclusive. The conclusion that HR "owns" experience leans on HRMS-vendor content with its own bias; resolve ownership per deal. The two-question qualifier (who owns the policy, where does payout happen) lives in [the buyers and ICP](/users/buyers-icp/). <span class="pill pill--med">Medium</span>
+
+## The gatekeepers and the external party
+
+### Internal / statutory auditor <span class="pill pill--info">Gatekeeper</span>
+
+The auditor needs view-only access to invoices and documents, exportable timestamped action logs, and proof of segregation for Internal Financial Controls (IFC), statutory and GST ITC audits. Tribunals disallow reimbursements that lack receipts, approval trails or clean separation from fees. The auditor rarely champions, but an immutable trail closes the deal and a missing one kills it. See [audit and retention](/compliance/audit-retention/).
+
+### IT / Security <span class="pill pill--low">Blocker</span>
+
+The most common veto. Under the DPDP Act 2023 (Rules notified 14 Nov 2025, most substantive obligations phased to ~May 2027), the SaaS is typically a Data Processor, with a penalty ceiling up to **₹250 crore** for failure of reasonable security safeguards. IT/Security wants SSO, role-based access, immutable logs and processor terms covering deletion and breach notification. Note that the DPDP urgency is partly forward-looking, not yet a present-day mandate for most clauses. Pre-empt this persona with [data protection and security](/compliance/data-protection/).
+
+### Vendor (contractor / MSME) <span class="pill pill--info">External</span>
+
+Vendor reimbursement is the underserved adjacency, not the same job as employee expense. Under GST pure-agent rules, expenditure incurred as a pure agent is excluded from the value of supply, and TDS (194C/194J) applies only to the fee, but only if reimbursements are invoiced separately with receipts. Bundle them and the whole amount is taxed. The vendor also wants payment inside the MSME 45-day clock; miss it and the buyer pays compound interest at 3x the RBI bank rate and loses the deduction under Section 43B(h). This persona points the roadmap toward AP automation.
+
+### System owner / admin <span class="pill pill--info">User</span>
+
+The admin configures policy, masters, roles and delegation. Their fear is rigidity: fixed approval paths that need expensive professional services to rewire during a reorg. Self-serve configuration of the rule engine and the DoA matrix is what keeps them, and what stops the deal from stalling in year two.
+
+## How influence shifts by segment
+
+The same personas carry different weight as the company scales. The economic buyer moves; the committee grows.
+
+| Segment | Economic buyer | Champion | Likely blocker |
+| --- | --- | --- | --- |
+| SMB (10-200) | Owner / founder | Finance/AP or HR-Ops lead | Price-vs-spreadsheets, Tally-fit |
+| Mid-market (200-2000) | CFO / Finance Head (HR co-sponsor) | Finance/AP or HR-Ops lead | IT/Security, proven ERP integration |
+| Enterprise (2000+) | CFO staff | Functional ops lead | 11-20 person committee, procurement, security |
+
+<p class="source-note">Segment economic-buyer pattern drawn from general B2B SaaS research (not India-specific); Indian SMB committees are likely smaller and more owner-led. Confidence: medium.</p>
+
+:::caution[Carry the caveats]
+The persona pains and the TAT, fraud, ITC and integration figures here come largely from vendor marketing (HROne, FieldAssist, MYND) with an incentive to dramatize. Treat them as directional, medium-to-low confidence, not audited fact. Employee-voice evidence is under-sampled; primary interviews are recommended before hard-coding any pain number.
+:::
+
+## Sources
+
+- [Expense Management Software India: HR view of ownership, personas, TAT/fraud/ITC](https://hrone.cloud/blog/expense-management-software-india-hr) (vendor)
+- [Setting Up Expense Approval Workflows in India (MYND): DoA tiers, maker-checker, ITC gating](https://www.myndsolution.com/best-practices/setting-up-expense-approval-workflows-in-expense-and-travel-management-in-india/) (vendor)
+- [Managing Segregation of Duties in Finance Operations in India (MYND)](https://www.myndsolution.com/best-practices/managing-segregation-of-duties-in-finance-operations-in-india/) (vendor)
+- [Maker-checker, 4-eyes principle (Wikipedia)](https://en.wikipedia.org/wiki/Maker-checker) (primary)
+- [Expense Management for Field Sales: agent persona, attrition link (FieldAssist)](https://www.fieldassist.com/blog/what-is-expense-management-software-top-systems-india) (vendor)
+- [Reimbursable Expenses, GST/TDS pure-agent and separate invoicing (AIAccountant)](https://www.aiaccountant.com/blog/reimbursable-expenses-gst-tds-india) (vendor)
+- [Statutory Auditor's ITC Audit Checklist (TaxTMI)](https://www.taxtmi.com/article/detailed?id=15562) (primary)
+- [Decoding the DPDP Act 2023 and Rules 2025 (EY India)](https://www.ey.com/en_in/insights/cybersecurity/decoding-the-digital-personal-data-protection-act-2023) (analyst)
+- [MSME Samadhaan, 45-day payment rule (Govt of India)](https://samadhaan.msme.gov.in/) (govt)
+- [Mapping the B2B Buying Committee (Smarketers)](https://thesmarketers.com/blogs/buying-committee-marketing-abm/) (analyst)
