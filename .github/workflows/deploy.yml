@@ -25,6 +25,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Configure GitHub Pages (auto-enable for Actions deployment)
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - name: Build with Astro
         # Auto-detects the package manager (npm here, from package-lock.json),
         # installs deps, runs `astro build`, and uploads ./dist as the Pages artifact.
