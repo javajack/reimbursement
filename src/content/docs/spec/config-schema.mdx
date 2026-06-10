@@ -259,7 +259,7 @@ The published schema file sets `additionalProperties: false` on every object and
           "additionalProperties": {
             "type": "array",
             "uniqueItems": true,
-            "items": { "enum": ["email", "push", "whatsapp"] }
+            "items": { "enum": ["in_app", "email", "web_push"] }
           }
         },
         "quiet_hours": {
@@ -393,7 +393,7 @@ Every key ships working. The wizard writes a handful; everything else is a syste
 | `payouts.bank_accounts` | `[]` | Required before the first payout run, never the first claim |
 | `payouts.default_rail` | `"neft"` | Uncapped and batch-native; IMPS/UPI per-transaction caps make them per-instruction choices |
 | `payouts.payout_calendar.frequency` | `"manual"` | No calendar should fire before a bank account exists |
-| `notifications.events.*` | `["email"]` for all eight events | Email is the only universal day-one channel; push after PWA install; WhatsApp later via BSP |
+| `notifications.events.*` | `["email"]` for all eight events | Email is the only universal day-one channel; `web_push` after PWA install; `in_app` is always available; `native_push` arrives later with the future native apps |
 | `notifications.quiet_hours` | `21:00` to `08:00`, `Asia/Kolkata` | Approver nudges respect IST nights (approver-UX canon) |
 | `locale.languages` | `["en-IN", "hi-IN"]` | Hindi plus English from day one is the vernacular stance |
 | `locale.default` | `"en-IN"` | Tenants flip the default in one edit; the worked example does |
@@ -522,13 +522,13 @@ Saral Krishi Equipments sells farm implements through 120 field staff across Mah
       "version": 1,
       "events": {
         "claim_submitted": ["email"],
-        "approval_requested": ["email", "push"],
+        "approval_requested": ["email", "web_push", "in_app"],
         "approval_reminder": ["email"],
-        "claim_sent_back": ["email", "push"],
-        "claim_decided": ["email", "push"],
-        "payout_paid": ["email", "push"],
-        "credits_alert": ["email"],
-        "awaiting_credits": ["email", "push"]
+        "claim_sent_back": ["email", "web_push", "in_app"],
+        "claim_decided": ["email", "web_push", "in_app"],
+        "payout_paid": ["email", "web_push", "in_app"],
+        "credits_alert": ["email", "in_app"],
+        "awaiting_credits": ["email", "web_push", "in_app"]
       },
       "quiet_hours": { "start": "21:00", "end": "08:00", "timezone": "Asia/Kolkata" }
     },

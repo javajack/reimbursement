@@ -55,8 +55,8 @@ Server availability is necessary, not sufficient: the best Indian mobile network
 | --- | --- | --- |
 | OCR provider down | Extraction only | Capture, upload, manual entry, approvals, payouts all continue; receipts park in `queued`; in-app banner per runbook 1 |
 | Object storage degraded | New uploads | Client outbox holds blobs; claims whose receipts already uploaded proceed normally |
-| WhatsApp BSP down | Nudges | Drop to email; WhatsApp is never the only channel (architecture invariant) |
-| Email provider down | Notifications | In-app plus WhatsApp; digests resume on recovery |
+| Web push service down | Push nudges | Drop to `email` and `in_app`; `web_push` is never the only channel (architecture invariant) |
+| Email provider down | Notifications | `in_app` plus `web_push` where installed; digests resume on recovery |
 | Payment gateway down | Top-ups | Packs cannot be bought; ops grants via ledger `adjustment` against a verified payment (runbook 4) |
 | PostgreSQL down | Everything server-side | The one true single point of failure: full outage; PWA capture to outbox still works offline |
 
@@ -126,17 +126,17 @@ The architecture page modelled a flatter 100 submissions per company per month (
 
 ## The monthly cost envelope
 
-Unit anchors: OCR ₹0.2-0.85 per page (LLM-vision pipeline ₹0.2-0.8 our derivation; Document AI Expense Parser ≈ ₹0.85/page at ₹85/USD, vendor <span class="pill pill--high">High</span> for the price itself); compute plus Postgres ₹0.2-0.5 per submission (THESIS canon); storage under ₹0.05 per submission; WhatsApp utility template ₹0.115-0.145 per message plus 18% GST (Meta/BSP, vendor <span class="pill pill--med">Medium</span>, re-verify at build time); transactional email ≈ ₹0.13 per email at the Postmark anchor ($15 per 10k, vendor; a deliverability-premium ceiling). Behavioral assumptions: 1 WhatsApp nudge and 2 digest-batched emails per claim, every company at the full 160-submission profile (overstates free-tier pilots, so this is an upper-bound envelope).
+Unit anchors: OCR ₹0.2-0.85 per page (LLM-vision pipeline ₹0.2-0.8 our derivation; Document AI Expense Parser ≈ ₹0.85/page at ₹85/USD, vendor <span class="pill pill--high">High</span> for the price itself); compute plus Postgres ₹0.2-0.5 per submission (THESIS canon); storage under ₹0.05 per submission; `web_push` notifications cost effectively nothing (VAPID/Web Push Protocol, no per-message fee); transactional `email` roughly ₹0.05-0.20 per email (SES/Postmark-class, indicative, our derivation; the ₹0.13 Postmark anchor at $15 per 10k sits inside that band as a deliverability-premium ceiling). Behavioral assumptions: 3 digest-batched emails per claim (nudge plus approval and payout notices), `web_push` and `in_app` carry the rest at no marginal cost, every company at the full 160-submission profile (overstates free-tier pilots, so this is an upper-bound envelope).
 
 | Cost line | 100 companies (16k subs/mo) | 1,000 companies (160k subs/mo) | 10,000 companies (1.6M subs/mo) |
 | --- | --- | --- | --- |
 | OCR (2.5 pages × ₹0.2-0.85) | ₹8,000-34,000 | ₹0.8-3.4 lakh | ₹8-34 lakh |
 | Compute + Postgres (₹0.2-0.5/sub) | ₹3,200-8,000, floor-dominated | ₹32,000-80,000 | ₹3.2-8 lakh |
 | S3 (receipts, files, exports) | under ₹800 | under ₹8,000 | under ₹80,000 |
-| WhatsApp nudges (₹0.145 ex-GST) | ≈ ₹2,300 | ≈ ₹23,000 | ≈ ₹2.3 lakh |
-| Email (₹0.13, Postmark ceiling) | ≈ ₹4,200 | ≈ ₹42,000 | ≈ ₹3.3 lakh with tier decline |
-| Total per month | ≈ ₹19,000-49,000 | ≈ ₹1.9-4.9 lakh | ≈ ₹17-48 lakh |
-| Per submission | ₹1.2-3.1 | ₹1.2-3.1 | ₹1.1-3.0 |
+| Web push (VAPID) | ≈ ₹0 | ≈ ₹0 | ≈ ₹0 |
+| Email (3/claim × ₹0.05-0.20) | ₹2,400-9,600 | ₹24,000-96,000 | ₹2.4-9.6 lakh, less with tier decline |
+| Total per month | ≈ ₹14,000-52,000 | ≈ ₹1.4-5.2 lakh | ≈ ₹14-52 lakh |
+| Per submission | ₹0.9-3.3 | ₹0.9-3.3 | ₹0.9-3.2 |
 
 <p class="source-note">Our derivation throughout, from THESIS unit costs and the vendor anchors named above. Linear by construction: volume discounts (OCR tier pricing, email tiers) are noted but not modelled, so large-scale totals skew high.</p>
 
@@ -144,7 +144,7 @@ Unit anchors: OCR ₹0.2-0.85 per page (LLM-vision pipeline ₹0.2-0.8 our deriv
 First, at 2.5 receipts per claim the Document-AI-everywhere worst case is ₹2.13 of OCR alone, pushing the all-in past the ₹2.5 canon top; that is exactly why `OCRProvider` is provider-agnostic and LLM-vision (₹0.2-0.8/page) is the default. The ₹1.0-2.5 COGS canon holds on that midline. Second, below roughly 300 paying companies the fixed floor (managed Postgres, two always-on containers, status page) dominates the variable arithmetic; this envelope is a variable-cost model, not a startup budget.
 :::
 
-Against realised pack prices of ₹5.00-9.98 per credit, the margin canon holds: 67-75% gross at ₹5, 80-90% at ₹8-10, and the ₹4 enterprise floor preserves headroom even at the ₹3.1 worst-case all-in. The revenue side of this arithmetic lives in [Unit economics](/strategy/unit-economics/).
+Against realised pack prices of ₹5.00-9.98 per credit, the margin canon holds: 67-75% gross at ₹5, 80-90% at ₹8-10, and the ₹4 enterprise floor preserves headroom even at the ₹3.3 worst-case all-in. The revenue side of this arithmetic lives in [Unit economics](/strategy/unit-economics/).
 
 ## Browser and device commitments
 
@@ -153,13 +153,13 @@ The test matrix, restated as commitments. Android holds 93.2% of Indian mobile a
 | Tier | Environment | Commitment |
 | --- | --- | --- |
 | 1 | Android 11+, evergreen Chrome, Galaxy A24-class baseline | Full PWA: WebAPK install, Web Share Target, web push, offline outbox; enhanced viewfinder where `deviceMemory >= 4` |
-| 1 | WhatsApp and Gmail in-app browsers (Android) | Capture and submit work end to end on the file-input ladder; no install, no push, no excuses |
-| 1 | iOS Safari, current and previous major version | File-input capture (default in standalone per WebKit bug 252465), A2HS coaching only, notifications via WhatsApp/email; outbox replays on app-open (no Background Sync on Safari) |
+| 1 | Third-party in-app browsers (Android) | Capture and submit work end to end on the file-input ladder; no install, no push, no excuses |
+| 1 | iOS Safari, current and previous major version | File-input capture (default in standalone per WebKit bug 252465), A2HS coaching only, notifications via `email` (and `in_app`); outbox replays on app-open (no Background Sync on Safari) |
 | 1 | Desktop Chrome and Edge, latest two versions | Console fully supported |
 | 2 | Desktop Firefox and Safari, latest two versions | Console supported; capture path functional, not optimised |
 | 2 | Android 9-10 or 2-3 GB RAM devices | File-input path only; functional, best-effort polish |
 
-Done means: every release is smoke-tested on a physical Galaxy A24-class device; the CI bundle gate is green; a bill can be captured and submitted inside the WhatsApp in-app browser; iOS standalone capture uses the file input by default; and the ten monitoring metrics are emitting before any feature flag flips on.
+Done means: every release is smoke-tested on a physical Galaxy A24-class device; the CI bundle gate is green; a bill can be captured and submitted inside a third-party in-app browser; iOS standalone capture uses the file input by default; and the ten monitoring metrics are emitting before any feature flag flips on.
 
 <LinkCard title="Capture pipeline" description="Stage-by-stage contracts and the telemetry event taxonomy these budgets measure." href="/spec/capture-pipeline/" />
 
@@ -172,7 +172,6 @@ Done means: every release is smoke-tested on a physical Galaxy A24-class device;
 - [StatCounter, mobile OS share India](https://gs.statcounter.com/os-market-share/mobile/india) (analyst): Android 93.22% / iOS 6.68%, May 2026.
 - [StatCounter, Android version share India](https://gs.statcounter.com/android-version-market-share/mobile/india) (analyst): Android 11-16 ≈ 90% of the base, May 2026.
 - [Google Cloud Document AI pricing](https://cloud.google.com/document-ai/pricing) (vendor): Expense Parser $0.10 per 10 pages, the ₹0.85/page OCR anchor.
-- [Meta, WhatsApp Business Platform pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing) (vendor): per-message billing since Jul 1, 2025; utility ₹0.115-0.145 via India BSP rate cards.
-- [Postmark pricing](https://postmarkapp.com/pricing) (vendor): $15/month per 10,000 emails; declining overage tiers; the email cost ceiling.
+- [Postmark pricing](https://postmarkapp.com/pricing) (vendor): $15/month per 10,000 emails; declining overage tiers; the email cost ceiling inside the ₹0.05-0.20 indicative band.
 - [Opensignal, India Mobile Network Experience, Oct 2024](https://insights.opensignal.com/reports/2024/10/india/mobile-network-experience) (analyst): best-network Consistent Quality 66.5%; the case for the offline outbox.
 - [caniuse, Background Sync API](https://caniuse.com/background-sync) (primary docs): Chromium-only through Safari 26.x; why iOS replays the outbox on app-open.

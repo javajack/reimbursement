@@ -220,7 +220,7 @@ Steps are the snapshot: chains resolve role-abstracted slots to concrete approve
 | `delegate_id` | text | yes | | out-of-office delegate |
 | `status` | text | no | `'pending'` | 9-state step enum |
 | `acted_by` | text | yes | | who actually decided; delegate-attributed |
-| `channel` | text | yes | | `web`, `email_link`, `whatsapp` |
+| `channel` | text | yes | | `web`, `web_push`, `email_link` (and `native_push` once native apps ship) |
 | `comment` | text | yes | | app-enforced: required on `sent_back` |
 | `sla_due_at`, `acted_at` | timestamptz | yes | | SLA timers, escalation sweeps |
 | `created_at` | timestamptz | no | `now()` | |
@@ -240,7 +240,7 @@ CREATE TABLE approval_steps (
     CHECK (status IN ('pending','active','approved','rejected','sent_back',
                       'skipped','escalated','delegated','expired')),
   acted_by      text REFERENCES memberships(id),
-  channel       text CHECK (channel IN ('web','email_link','whatsapp')),
+  channel       text CHECK (channel IN ('web','web_push','email_link','native_push')),
   comment       text,
   sla_due_at    timestamptz,
   acted_at      timestamptz,
@@ -357,7 +357,7 @@ CREATE TABLE audit_events (
   after        jsonb,
   rule_id      text,
   rule_version integer,
-  channel      text,                              -- web | email_link | whatsapp | api | system
+  channel      text,                              -- web | web_push | email_link | native_push | api | system
   ip           inet,
   user_agent   text,
   created_at   timestamptz NOT NULL DEFAULT now()

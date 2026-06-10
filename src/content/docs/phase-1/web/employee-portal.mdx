@@ -117,7 +117,7 @@ RBI mandates a free beneficiary name look-up for NEFT/RTGS since 1 April 2025. T
 
 ## Notifications and language
 
-Preferences are per-channel, per-event. Email is the universal default; web push is opt-in where the PWA is installed (Android-first; iOS relies on email by design); WhatsApp arrives later via BSP, strictly transactional templates.
+Preferences are per-channel, per-event. The channels are `in_app` (the notifications inbox in the Console for every role), `email` (the universal default and guaranteed channel), and `web_push` (opt-in where the PWA is installed; Android-first, iOS relies on email by design). Native push (`native_push`) arrives later with the future native apps over the API.
 
 | Event | Default | Notes |
 |---|---|---|

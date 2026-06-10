@@ -5,20 +5,20 @@ description: "A boring, observable TypeScript monolith with a worker, Postgres R
 
 import { CardGrid, FileTree, LinkCard, Steps } from '@astrojs/starlight/components';
 
-One repository, one language (TypeScript end to end), two runtime processes, one PostgreSQL 16 cluster, one object-store bucket, one region (ap-south-1, Mumbai). Phase 1 wins on capture quality and workflow depth, not infrastructure novelty, so the risk budget goes where the product is genuinely exposed (OCR vendors, WhatsApp, payout rails) and everything else stays aggressively conventional. The behavior this machine implements is specified in [The end-to-end flow](/phase-1/end-to-end-flow/); this page is the machine, written so an implementing agent can build it without asking questions.
+One repository, one language (TypeScript end to end), two runtime processes, one PostgreSQL 16 cluster, one object-store bucket, one region (ap-south-1, Mumbai). Phase 1 wins on capture quality and workflow depth, not infrastructure novelty, so the risk budget goes where the product is genuinely exposed (OCR vendors, email deliverability, payout rails) and everything else stays aggressively conventional. The behavior this machine implements is specified in [The end-to-end flow](/phase-1/end-to-end-flow/); this page is the machine, written so an implementing agent can build it without asking questions.
 
 ## System context
 
-Five actors touch the system: employees (capture and submit, mostly on the PWA), approvers (web, email actions, WhatsApp nudges), finance (verification, batches, exports), admins (configuration, credits), and auditors (read-only role). India's device reality shapes the client tier: Android 93.2% versus iOS 6.7% (StatCounter, May 2026) <span class="pill pill--high">High</span>, the 4-8 GB RAM segment at 42.3% (IMARC, 2025), so the PWA entry must hold a budget of roughly 150 KiB markup/CSS plus 300-350 KiB gzipped JS on a Galaxy A24-class baseline (Performance Inequality Gap, 2024/2026).
+Five actors touch the system: employees (capture and submit, mostly on the PWA), approvers (the PWA/web inbox, web-push nudges, email magic-link actions), finance (verification, batches, exports), admins (configuration, credits), and auditors (read-only role). India's device reality shapes the client tier: Android 93.2% versus iOS 6.7% (StatCounter, May 2026) <span class="pill pill--high">High</span>, the 4-8 GB RAM segment at 42.3% (IMARC, 2025), so the PWA entry must hold a budget of roughly 150 KiB markup/CSS plus 300-350 KiB gzipped JS on a Galaxy A24-class baseline (Performance Inequality Gap, 2024/2026).
 
 Everything outside the boundary is a contract, never a dependency woven through the code:
 
 | External system | We use it for | Coupling | When it fails |
 | --- | --- | --- | --- |
 | OCR provider (LLM-vision: Gemini Flash family or Claude Haiku class) | Receipt extraction to itemised line items with field confidences | `OCRProvider` adapter, called from the worker only | Receipts hold in `queued`/`processing`; manual entry unaffected; vendor swap stays inside the adapter |
-| Transactional email (ESP) | Magic-link approvals, notifications, invites | `NotificationProvider`, email channel | Retry with backoff; the web inbox remains source of truth |
+| Transactional email (ESP) | Magic-link approvals, notifications, invites; SPF/DKIM/DMARC aligned; bounce/complaint handling | `NotificationProvider`, `email` channel | Retry with backoff; the in-app inbox remains source of truth |
+| Web push service (VAPID / Web Push Protocol) | Approval and credit nudges to the installed PWA (per-device subscriptions, encrypted payloads, TTL) | `NotificationProvider`, `web_push` channel | Drop to `email` + `in_app`; web push is never the only channel |
 | Inbound email | Email-in receipts on a per-company address (editable prefix) | Parse webhook into the capture module | Loud bounce-back to the sender, never a silent drop |
-| WhatsApp BSP | Approver nudges via utility templates (₹0.115-0.145 + 18% GST each, vendor pricing, medium); receipt-in later | `NotificationProvider`, whatsapp channel | Drop to email; WhatsApp is never the only channel |
 | Payout partner (optional, per customer) | Razorpay-style one-click disbursement | `PayoutProvider` adapter plus HMAC-verified webhooks | Fall back to the bank-file rail |
 | Customer banks | Bulk-payment files out, return files in | File formats only; the customer executes in their own net-banking | By design: no credentials held, no API coupling, no money on our books |
 | Payment gateway | Credit-pack purchases (UPI, netbanking, cards) | Hosted checkout plus webhooks | Purchases delay; the soft paywall queues, it never breaks capture |
@@ -53,7 +53,8 @@ export interface OCRProvider {
 }
 
 export interface NotificationProvider {
-  send(msg: { channel: 'email' | 'whatsapp' | 'push'; to: string;
+  // in_app is delivered in-process; native_push (FCM/APNs) is the future native-app channel
+  send(msg: { channel: 'in_app' | 'email' | 'web_push'; to: string;
               template: string; data: Record<string, unknown> }): Promise<{ provider_message_id: string }>;
 }
 
@@ -186,7 +187,7 @@ With Redis the enqueue is a second system: you need an outbox table, a relay, an
 
 ### Approve via a signed token
 
-Email and WhatsApp approvals carry no session; the token is the credential.
+Email magic-link approvals carry no session; the token is the credential.
 
 ```text
 GET  /a/{token}              renders the decision card; changes nothing
@@ -199,7 +200,7 @@ bounded: above the high-value threshold the link carries no decision power; it d
          into an authenticated Console session instead (step-up)
 ```
 
-The GET-then-POST split defeats corporate mail scanners that prefetch every link. The decision transaction verifies HMAC and expiry (expiry tracks the 48-hour SLA, 24 above the high-value threshold), confirms the step is still `active` and the actor still holds it (delegation may have moved it), applies `approved` or `sent_back`, advances or finalizes the claim, and writes an AuditEvent with channel `email_link`, role-at-decision-time, IP, and device. WhatsApp deep links reuse the handler, writing channel `whatsapp`.
+The GET-then-POST split defeats corporate mail scanners that prefetch every link. The decision transaction verifies HMAC and expiry (expiry tracks the 48-hour SLA, 24 above the high-value threshold), confirms the step is still `active` and the actor still holds it (delegation may have moved it), applies `approved` or `sent_back`, advances or finalizes the claim, and writes an AuditEvent with channel `email_link`, role-at-decision-time, IP, and device. The PWA/web inbox decision (reached by `web_push` on an installed PWA, or by an `email` notification) reuses the same decision transaction, writing channel `web`; future native apps add `native_push`.
 
 ## Multi-tenancy and isolation
 
@@ -246,7 +247,7 @@ The scaling story is deliberately dull. 1,000 active companies averaging 100 sub
 | OCR | LLM-vision behind `OCRProvider` with deterministic validation | Dedicated parser APIs | About USD 0.0005-0.003/doc versus ₹670-840 per 1,000 docs (vendor pricing, medium); flexible on Indic and thermal long tail; holds the ₹1.0-2.5 COGS target | Design-partner corpus accuracy underperforms a parser at acceptance thresholds; the adapter localizes the swap |
 | Perspective correction | Server-side in v1, client manual 4-corner rescue editor | Client WASM (OpenCV.js) | OpenCV.js is 7.6-8.4 MB default (2-4 MB trimmed), the practical mobile WASM ceiling is about 300 MB, threaded builds OOM 3 GB phones, and the P75 JS budget is 300-350 KiB | A slim, lazy-loaded build proves reliable on `deviceMemory >= 4` Androids and measurably cuts retakes or upload bytes |
 
-<p class="source-note">Capture-platform constraints (WASM ceilings, OpenCV.js sizes, WebKit bug 252465 forcing the file-input default on iOS standalone) are verified in the v2 capture research; OCR and messaging prices are vendor-stated, medium confidence, re-verify at build time.</p>
+<p class="source-note">Capture-platform constraints (WASM ceilings, OpenCV.js sizes, WebKit bug 252465 forcing the file-input default on iOS standalone) are verified in the v2 capture research; OCR prices are vendor-stated and transactional email is roughly ₹0.05 to 0.20 per email (SES/Postmark class, indicative, our derivation), medium confidence, re-verify at build time.</p>
 
 The contracts this machine enforces are defined once and reused everywhere: entities and DDL next, then the transition tables the three hot paths compile into.
 

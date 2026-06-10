@@ -17,11 +17,11 @@ One credit covers OCR on up to 5 receipt images, storage, the full approval work
 | OCR, Document AI Expense Parser (fallback) | ≈ ₹2.13 | 2.5 pages × ≈ ₹0.85/page ($0.10 per 10 pages at ₹85/USD) | Vendor <span class="pill pill--high">High</span> for the price itself |
 | Object storage (originals + corrected copies) | under ₹0.05 | 200-500 KB/page compressed, S3-class, amortised over retention | THESIS canon, our derivation |
 | Compute, Postgres, bandwidth | ₹0.2-0.5 | Queue workers, RLS queries, exports | THESIS canon, our derivation |
-| Notifications | ₹0.1-0.4 | WhatsApp utility template ₹0.115-0.145 + 18% GST per nudge where enabled; email ≈ ₹0.13 at the Postmark ceiling; ~1 nudge + 2 digest emails per claim | Vendor rate cards <span class="pill pill--med">Medium</span>, re-verify at build |
+| Notifications | ₹0.1-0.4 | `web_push` is free (VAPID / Web Push Protocol); `email` ≈ ₹0.05-0.20 each (SES/Postmark class, indicative, our derivation); ~3 transactional emails per claim, `in_app` is free | Vendor email pricing + our derivation <span class="pill pill--med">Medium</span>, re-verify at build |
 | Support, amortised | ₹0.1-0.3 | Step cost, not per-unit: founder time below ~300 companies (₹0 cash), part-time support amortised at the 1,000-company scenario | Our guess <span class="pill pill--low">Low</span> |
 | **Total** | **₹1.0-2.5 canon (₹2.5 worst case); ₹3.1 stress bound** | Midline holds on LLM-vision; Document-AI-everywhere breaches the top | THESIS canon + non-functionals envelope |
 
-<p class="source-note">Sources: Google Document AI pricing, Gemini API pricing, Meta/BSP WhatsApp rate cards, Postmark (vendor); composition is our derivation. The ₹3.1 stress bound is the all-in upper bound from the cost envelope in /spec/non-functionals/.</p>
+<p class="source-note">Sources: Google Document AI pricing, Gemini API pricing, Postmark/SES transactional-email pricing (vendor); composition is our derivation. The ₹3.1 stress bound is the all-in upper bound from the cost envelope in /spec/non-functionals/.</p>
 
 OCR is the swing line, which is why the extractor sits behind a provider-agnostic interface (argued in [Architecture](/spec/architecture/)): LLM-vision at ₹0.2-0.8/page is the default, the ₹0.85/page dedicated parser is the quality fallback, and the v1 finding stands that LLM-vision beats dedicated parsers (≈₹670-840 per 1,000 docs) by roughly 3-20x while handling thermal paper and Devanagari better <span class="pill pill--med">Medium</span> (vendor pricing, vendor accuracy claims).
 
@@ -131,6 +131,5 @@ The economics close because three v1 decisions carried into v2: no float and no 
 - [AWS Textract pricing](https://aws.amazon.com/textract/pricing/) (vendor): AnalyzeExpense at $8-10 per 1,000 docs, the dedicated-parser cost LLM-vision undercuts.
 - [Setu bank account verification](https://setu.co/data/kyc/bank-account-verification/) (vendor): ≈ ₹3 per successful penny-drop, the firm public anchor for beneficiary verification.
 - [Zoho Expense India pricing](https://www.zoho.com/in/expense/pricing/) (vendor): ₹99/user/month Standard, min 5 users, 20 autoscans/user; the per-seat anchor in the sales arithmetic.
-- [Meta WhatsApp Business Platform pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing) (vendor): per-message billing since Jul 1, 2025; utility ₹0.115-0.145 via India BSP rate cards.
-- [Postmark pricing](https://postmarkapp.com/pricing) (vendor): $15 per 10,000 emails, the transactional-email cost ceiling.
+- [Postmark pricing](https://postmarkapp.com/pricing) (vendor): $15 per 10,000 emails, the transactional-email cost anchor behind the ₹0.05-0.20/email line.
 - [upGrowth CAC benchmarks for Indian B2B SaaS](https://upgrowth.in/cac-benchmarks-indian-b2b-saas-arr-band-2026/) (analyst, low confidence): the channel-CAC figures, calibrated to ₹10-30 Cr ARR firms; use the ranking, not the digits.

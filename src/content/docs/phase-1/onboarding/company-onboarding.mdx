@@ -120,7 +120,7 @@ Everything that is not a gate lands here, sequenced honestly: value first, compl
 | GST details (company and branch GSTINs) | ITC-eligibility tagging, GST-grade reports | The first GST report; claims flow fine without it |
 | Branches | Per-branch GSTIN, approvers, payout accounts | A second entity; single-site companies never touch it |
 | Bulk employee import | The roster beyond the wizard's three invites | Whenever the team outgrows inline invites |
-| Notification channels | WhatsApp nudges, reminder cadence tuning | Optional; email works from the first minute |
+| Notification channels | Web-push and in-app nudges, reminder cadence tuning | Optional; email works from the first minute |
 
 :::caution[Design for the 19%]
 Checklist completion averages about 19% (Userpilot 2024, vendor-published), so the checklist is a map, not a mechanism. The product nudges contextually instead: building a PayoutBatch without a verified BankAccount opens bank setup inline; the first extracted merchant GSTIN prompts "Add your GSTIN to tag ITC eligibility"; a fourth inline invite opens the CSV importer; at the soft paywall, employees get the one-tap "remind your admin" nudge from [credits and metering](/phase-1/credits-and-metering/).

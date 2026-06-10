@@ -9,12 +9,12 @@ Two people cannot out-staff production; they can only out-design it. The v1 feas
 
 ## Support model
 
-Two channels, deliberately. A WhatsApp Business number, because Indian SMB admins already live there: replies inside the 24-hour service window are free, and template-initiated messages cost ₹0.115-0.145 plus 18% GST <span class="pill pill--high">High</span> (Meta/BSP pricing). And a support email, the durable channel for billing, data requests, and anything with attachments. No phone line, no chat-widget SLA theatre. In-product, every error state links to its own doc page, so the first responder is the documentation.
+Two surfaces, deliberately. The in-product notifications inbox (`in_app`) plus web push (`web_push`) where the PWA is installed, because that is where admins and approvers already are when they act. And a support email (`email`), the durable channel for billing, data requests, and anything with attachments, and the guaranteed fallback when web push is unavailable. No phone line, no chat-widget SLA theatre. In-product, every error state links to its own doc page, so the first responder is the documentation.
 
 | Severity | Looks like | First response | Posture |
 | --- | --- | --- | --- |
 | S1 | Bank rejects a payout file; credits paid but not granted; platform down | 2 business hours; best-effort pager off-hours | Both founders until mitigated |
-| S2 | OCR failure spike; one company's approvals all stuck; WhatsApp channel dead | Same business day | Workaround first (manual entry, email fallback), root fix after |
+| S2 | OCR failure spike; one company's approvals all stuck; email delivery degraded | Same business day | Workaround first (manual entry, email fallback), root fix after |
 | S3 | One stuck claim; config how-to; invoice correction | Next business day | Doc link plus assisted fix |
 | S4 | Feature requests; cosmetic bugs | Weekly triage | Backlog with root-cause tag |
 
@@ -71,7 +71,7 @@ Six runbooks cover what actually breaks. Each opens with the metric that trigger
 
 5. Root cause is a matrix hole: claims are never blocked at submission for routing reasons, they land in the admin queue flagged `rule_gap`. Fix the matrix, verify with simulate-a-claim, then re-route the flagged claims.
 
-6. Tag the root cause: approver-absence, matrix-gap, or notification-failure. Notification failures (bounced email, dead template) hand off to runbook 6.
+6. Tag the root cause: approver-absence, matrix-gap, or notification-failure. Notification failures (bounced email, undelivered web push) hand off to runbook 6.
 
 </Steps>
 
@@ -157,19 +157,19 @@ We debug files and API calls; we never move money. The default rail is a file th
 
 </Steps>
 
-### 6. WhatsApp template rejection or recategorization
+### 6. Email deliverability or web-push delivery health
 
-**Trigger:** the BSP webhook flips a template to rejected or paused, WhatsApp delivery failures over 5%, or a per-message cost anomaly on the BSP invoice.
+**Trigger:** transactional email bounce rate over 5% or complaint rate over 0.1% on a rolling window, an SPF/DKIM/DMARC alignment failure flagged by the email provider, a drop in delivered web-push receipts, or the ticket "approvers never got the email".
 
 <Steps>
 
-1. Confirm the fallback fired: every WhatsApp notification degrades automatically to email magic-link buttons (rung 1 of the channel ladder), so a dead template is a cost and latency problem, never an outage.
+1. Confirm the fallback fired: notifications fan out across `in_app`, `email`, and `web_push` (where the PWA is installed), so any single channel degrading is a reach-and-latency problem, never an outage. The `in_app` inbox always holds the notification regardless.
 
-2. Rejected template: strip anything that smells promotional. Utility copy must be strictly transactional ("Claim `clm_01H...` for ₹4,200 needs your approval") because Meta recategorizes utility to marketing without notice (policy since 16 Apr 2025), and marketing runs roughly 6-7x utility: ₹0.8631 per message since 1 Jan 2026 (BSP rate card, medium; re-verify at build), versus the ₹0.115-0.145 utility rate (Meta/BSP, high).
+2. Deliverability drop: check SPF, DKIM, and DMARC alignment for the sending domain. A broken DKIM key or a DMARC policy mismatch silently routes mail to spam. Verify sender reputation on the provider dashboard, confirm the per-company email-in address still passes auth, and re-warm or rotate the sending IP/domain if reputation slipped.
 
-3. Recategorized template: the invoice anomaly catches it. Fix the copy, resubmit, reconcile the month's cost delta.
+3. Bounce and complaint handling: suppress hard-bounced addresses, surface them to the company admin to correct, and treat a complaint spike as a content or consent problem (copy strictly transactional, "Claim `clm_01H...` for ₹4,200 needs your approval"). Persistent bounces for a user fall back to `in_app` and a re-confirm prompt.
 
-4. Keep two pre-approved variants per message class as spares, so a rejection never empties a class. Template health is a weekly-cadence line item.
+4. Web-push health: a fall in delivered receipts usually means expired or revoked subscriptions. Prune dead subscriptions on `410 Gone` from the push service, confirm VAPID keys and payload TTL are correct, and remember web push is best-effort on iOS (installed Home Screen PWA only). When push cannot deliver, `email` plus `in_app` carry the message. Future native apps add reliable FCM/APNs push over the API.
 
 </Steps>
 
@@ -212,9 +212,9 @@ The weekly ops review is Monday, 60 minutes, both founders:
 | Credit ops | Burn anomalies reviewed; expiring balances got the 30-day reminder; promo-grant digest clean |
 | `awaiting_credits` | No company queued over 48 h without a call |
 | Payout watch | No batch in `exported` over 3 business days |
-| WhatsApp health | All template classes have an approved spare; per-message cost matches expected |
+| Notification health | Email bounce/complaint rates in band; SPF/DKIM/DMARC aligned; web-push subscriptions pruned of dead endpoints |
 | DSAR register | Nothing unanswered over 7 days |
-| Monthly extras | Restore-from-backup drill done; volatile prices re-verified (Meta rates, OCR provider, payout API fees) |
+| Monthly extras | Restore-from-backup drill done; volatile prices re-verified (email provider, OCR provider, payout API fees) |
 
 This page closes Phase 1. Everything above assumes the contracts defined earlier in the dossier; the spec section that follows turns them into schemas and endpoints.
 
@@ -226,7 +226,6 @@ This page closes Phase 1. Everything above assumes the contracts defined earlier
 - [Zapier: troubleshoot held Zap runs](https://help.zapier.com/hc/en-us/articles/37454233721869-How-to-troubleshoot-held-Zap-or-step-runs): the queue-not-block precedent and its silent-backlog failure mode.
 - [Alguna on bill shock](https://blog.alguna.com/bill-shock/): Recurly-cited 73% churn within 90 days of bill shock (directional).
 - [OpenAI prepaid billing help](https://help.openai.com/en/articles/8264644-how-can-i-set-up-prepaid-billing): 12-month expiry and the auto-recharge complaint pattern our auto-top-up rules pre-empt.
-- [Meta WhatsApp Business Platform pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing) and [India INR rates, Go4WhatsUp](https://www.go4whatsup.com/guides/meta-whatsapp-pricing/): utility versus marketing per-message economics.
 
 <LinkCard title="Edge cases" description="The failure catalogue these runbooks exist to answer." href="/phase-1/edge-cases/" />
 

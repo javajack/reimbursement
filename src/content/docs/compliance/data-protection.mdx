@@ -68,7 +68,7 @@ Everything below is personal data under DPDP. The inventory is deliberately smal
 | Payout bank details | BeneficiaryAccount | Customer employee | Account number encrypted at rest; UI, exports, and logs show the last 4 digits only; verification-gated before the first payout run |
 | Receipt images | Receipt | Customer employee, plus incidental third parties | A medical bill names a patient; a hotel folio carries a phone number. Every Receipt is personal data regardless of category |
 | Claims and line items | Claim, LineItem | Customer employee | Salary-adjacent spend history; amounts as `amount_paise`; retained 8 financial years |
-| Approver decisions | ApprovalStep, AuditEvent | Customer approver | Actor, role at decision time, channel (web, email link, WhatsApp), IP and device; append-only |
+| Approver decisions | ApprovalStep, AuditEvent | Customer approver | Actor, role at decision time, channel (web, web_push, email_link; native_push once native apps ship), IP and device; append-only |
 | Billing and credits | CreditEntry, billing profile | Billing contact (we are fiduciary) | Name, email, GSTIN, purchase history for invoicing |
 
 Receipts live in Mumbai-region (ap-south-1) object storage behind signed URLs; the database is PostgreSQL with per-tenant row-level security. The control-by-control treatment (encryption, key management, access tiers) is in [the security spec](/spec/security-and-compliance/).
@@ -84,9 +84,11 @@ DPDP consent must be free, specific, informed, unconditional, and affirmative. W
 | Language requirement | Notice rendering | The Act requires the notice in English or an Eighth Schedule language; our vernacular-first UI (Hindi plus 2-3 state languages at launch) makes this cheap to honour |
 | Withdrawal | Profile settings, as easy as granting | Stops further processing; statutory retention of financial records stands, stated plainly in the notice |
 
-### Channel consent: email and WhatsApp
+### Channel consent: email and web push
 
-Approver email actions use signed single-use magic-link buttons; the onboarding notice covers this employment-context channel. WhatsApp is stricter: per-user opt-in recorded before the first message, utility templates only, strictly transactional copy (Meta recategorises marketing-flavoured utility templates without notice since 16 Apr 2025, at roughly 6-7x the cost). Utility messages run ₹0.115-0.145 plus 18% GST, free inside the 24-hour service window since 1 Jul 2025 (Meta/BSP pricing, changes frequently; re-verify at build time). The BSP becomes a named sub-processor the day the channel ships; mechanics live in [the approver experience](/phase-1/web/approver-experience/).
+Phase 1 has exactly three notification channels, all employment-context and transactional: `in_app` (a notifications inbox in the PWA/web Console), `email` (transactional, the universal guaranteed channel), and `web_push` (Web Push over VAPID to an installed PWA, best-effort on iOS). The onboarding notice covers all three; no separate channel opt-in is needed because the copy is strictly transactional reimbursement workflow, scoped to the same reimbursement purpose as the rest of the product.
+
+Approver email actions use signed single-use magic-link buttons inside that transactional email channel. Web push needs the browser's own subscription permission, which the user grants at the OS/browser layer when they install the PWA. The future native mobile apps add `native_push` (FCM/APNs) over the API; that is the only additional channel on the roadmap. The email provider and the web-push service are named sub-processors (see the processor contract below); mechanics live in [the approver experience](/phase-1/web/approver-experience/).
 
 ## Rights handling
 
@@ -134,7 +136,7 @@ Mid-market buyers send a data processing agreement before signature. Pre-write i
 | Clause | What we commit |
 | --- | --- |
 | Documented instructions | Processing limited to the reimbursement purpose; no secondary use |
-| Sub-processors | Named list (cloud, OCR provider, email, WhatsApp BSP) with advance notice of changes |
+| Sub-processors | Named list (cloud, OCR provider, transactional email provider, web-push service) with advance notice of changes |
 | Security safeguards | Encryption in transit and at rest, tenant isolation, access control, append-only audit logs |
 | Breach notice to customer | Within a contractual window tighter than 72 hours, so the customer can meet their own Board clock |
 | Rights assistance | Per-principal access export (DSAR), correction, and anonymisation tooling at no extra charge |

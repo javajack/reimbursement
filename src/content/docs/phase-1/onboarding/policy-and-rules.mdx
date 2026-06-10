@@ -161,7 +161,7 @@ The employee sees at submit: "1 of 3 lines is not covered: alcohol is not reimbu
 Soft outcomes are the approver's to bend, deliberately and on the record:
 
 - An approver can approve a flagged line as-is, restore a capped line up to the claimed amount, trim it further, or accept a warned line with the employee's reason attached. Every override requires a typed reason; there is no silent override path.
-- Each override writes an AuditEvent: actor, role at decision time, rule id and version, before and after amounts, reason, and channel (web, email link, WhatsApp). It is retained with the rest of the trail for 8 financial years, the binding longest period; see [the regulatory map](/compliance/regulatory-map/).
+- Each override writes an AuditEvent: actor, role at decision time, rule id and version, before and after amounts, reason, and channel (`web`, `web_push`, `email_link`, and `native_push` once the native apps ship). It is retained with the rest of the trail for 8 financial years, the binding longest period; see [the regulatory map](/compliance/regulatory-map/).
 - Hard rules are not overridable at decision time, by design. If a hard block is wrong, the admin fixes the policy as a new version and the fix applies to future submissions; in-flight claims keep the policy snapshot they were submitted under.
 - Bulk approve stays restricted to zero-flag claims, so an override is always a single-claim act, never a side effect of clearing a queue.
 - When the right answer is neither approve nor override, the approver sends the claim back with a required comment; resubmission after `sent_back` consumes no new credit.

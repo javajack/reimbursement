@@ -25,7 +25,7 @@ All lifetimes are our design targets, tunable per deployment. Every authenticate
 
 ### One-tap approval tokens
 
-The email and WhatsApp approve buttons from the [approver experience](/phase-1/web/approver-experience/) are bearer credentials and must be engineered as such. Each token is minted per ApprovalStep, per decision verb, and carries:
+The email magic-link approve buttons from the [approver experience](/phase-1/web/approver-experience/) are bearer credentials and must be engineered as such. Each token is minted per ApprovalStep, per decision verb, and carries:
 
 ```json
 {
@@ -43,7 +43,7 @@ Enforcement rules, all server-side:
 - **Single-use:** the `jti` is consumed atomically on first redemption; replays render an "already decided" page, never a second decision.
 - **Amount-bounded:** if the claim's `approved_amount_paise` would exceed `max_amount_paise` (claim edited after mint, or amount above the company's one-tap threshold), the link degrades to a web login step-up instead of acting.
 - **Expiring:** tokens outlive neither the 48-hour approval SLA window plus grace nor a decided step.
-- **Channel-tagged:** `channel` (web, `email_link`, `whatsapp`, api) is written into the AuditEvent for the decision. An auditor can see that a ₹25,000 claim was approved from a WhatsApp deep link at 11pm.
+- **Channel-tagged:** `channel` (`web`, `web_push`, `email_link`, `api`, and `native_push` once the future native apps ship) is written into the AuditEvent for the decision. An auditor can see that a ₹25,000 claim was approved from an email magic-link at 11pm.
 
 ## Authorization: the RBAC matrix
 
@@ -158,7 +158,7 @@ CREATE TABLE audit_events (
   action       text NOT NULL,             -- claim.approved, rule.fired, payout_batch.exported ...
   entity_type  text NOT NULL,
   entity_id    text NOT NULL,
-  channel      text,                      -- web | email_link | whatsapp | api | system
+  channel      text,                      -- web | web_push | email_link | api | system (native_push future)
   ip           inet,                      -- null for system actions
   device       text,                      -- user agent / device fingerprint; null for system
   before       jsonb,

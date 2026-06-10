@@ -217,7 +217,7 @@ Delivery is at-least-once with exponential backoff for 24 hours, then the endpoi
 
 | Method | Path | Role | Purpose and notes |
 | --- | --- | --- | --- |
-| GET | `/audit-events` | `admin`, `auditor` | Append-only query by actor, entity, action, date range. Records role-at-decision-time and channel (web, email-link, WhatsApp). |
+| GET | `/audit-events` | `admin`, `auditor` | Append-only query by actor, entity, action, date range. Records role-at-decision-time and channel (web, web_push, email_link; native_push is the future native-app path). |
 | GET, POST, DELETE | `/api-keys` | `owner`, `admin` | Scoped keys (`read`, `claims:write`, `exports`); secret shown once. |
 | POST | `/ops/requeue-extraction` | `admin` | Runbook hook: re-drive receipts stuck in `processing` after an OCR provider incident. |
 | POST | `/ops/replay-webhooks` | `admin` | Re-deliver events in a time window after a consumer outage. |

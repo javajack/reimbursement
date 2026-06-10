@@ -93,7 +93,7 @@ Sell the MSME dashboard, not "AP automation". It converts a statutory anxiety ev
 
 ## Remittance advice
 
-Unanswered "where is my payment" calls land on your customer's finance team. After a batch reconciles, each vendor gets a remittance advice: invoice numbers and dates from the claim's LineItems, gross amount, TDS section and amount withheld, net paid, UTR, and payment date. Email is the default; WhatsApp utility templates are the India-native option at ₹0.115 to 0.145 plus 18% GST per send, strictly transactional copy (Meta/BSP pricing, medium, re-verify). Advice is outbound-only: no vendor portal in Phase 2, deliberately.
+Unanswered "where is my payment" calls land on your customer's finance team. After a batch reconciles, each vendor gets a remittance advice: invoice numbers and dates from the claim's LineItems, gross amount, TDS section and amount withheld, net paid, UTR, and payment date. Transactional `email` is the channel, sent to the vendor's contact address, strictly transactional copy; delivery rides the provider-agnostic email adapter (SPF/DKIM/DMARC, bounce and complaint handling) at roughly ₹0.05 to 0.20 per send (SES/Postmark-class, indicative, our derivation). Advice is outbound-only: no vendor portal in Phase 2, deliberately.
 
 ## What AP-lite adds, and the line we will not cross
 

@@ -15,14 +15,14 @@ Three rungs, feature-detected at runtime, never UA-sniffed. Each rung degrades s
 
 | Rung | Mechanism | Where it runs | Why it earns its place |
 | --- | --- | --- | --- |
-| 1. Universal primary | `<input type="file" accept="image/jpeg,image/png" capture="environment">` | 100% of targets: every Android browser, in-app browsers (WhatsApp, Slack, Gmail), iOS Safari tabs, iOS standalone | Full-resolution native camera; the OS does focus, HDR, stabilization, orientation; zero permission prompts |
+| 1. Universal primary | `<input type="file" accept="image/jpeg,image/png" capture="environment">` | 100% of targets: every Android browser, third-party in-app browsers, iOS Safari tabs, iOS standalone | Full-resolution native camera; the OS does focus, HDR, stabilization, orientation; zero permission prompts |
 | 2. Enhanced viewfinder | `getUserMedia` + live edge overlay + auto-capture | Android-first progressive enhancement; iOS browser tabs on capable versions | Live guidance makes capture feel like a scanner, not a camera |
 | 3. Full-sensor stills | `ImageCapture.takePhoto()` where present, else canvas grab at stream resolution | Chrome 59+ (2017); Safari and iOS 18.4+ (March 31, 2025); Firefox flag-gated | A true photographic exposure at the camera's still resolution, above the live stream |
 
 <p class="source-note">Source: Chrome Developers, WebKit Safari 18.4 release notes, MDN browser-compat-data (primary docs, high confidence). caniuse still lags WebKit on Safari here; feature-detect with <code>'ImageCapture' in window</code>.</p>
 
 :::tip[Rung 1 is the product, not a fallback]
-File input deletes the whole class of getUserMedia quirks on the guaranteed path: WhatsApp, Slack, and Gmail in-app browsers, and iOS standalone, where WebKit bug 252465 still intermittently delivers black or frozen streams (reproduces through iOS 18.4.1), so installed iOS never calls getUserMedia at all. Expensify and Wave give their web channels plain upload; rung 1 alone matches them.
+File input deletes the whole class of getUserMedia quirks on the guaranteed path: third-party in-app browsers and iOS standalone, where WebKit bug 252465 still intermittently delivers black or frozen streams (reproduces through iOS 18.4.1), so installed iOS never calls getUserMedia at all. Expensify and Wave give their web channels plain upload; rung 1 alone matches them.
 :::
 
 ## The no-distortion rule
@@ -236,17 +236,17 @@ The `intake` stage is wider than the camera; all paths converge on the same pipe
 
 | Intake path | Mechanism | Notes |
 | --- | --- | --- |
-| In-app camera | The capture ladder above | Default everywhere. WhatsApp links open its in-app browser, where getUserMedia is unavailable or prompt-heavy; the file-input rung just works there and in Slack and Gmail webviews |
+| In-app camera | The capture ladder above | Default everywhere. Third-party in-app browsers can leave getUserMedia unavailable or prompt-heavy; the file-input rung just works in those webviews |
 | Photo library | `<input type="file">` without the `capture` attribute | Bills photographed earlier; same EXIF re-encode and HEIC normalization |
-| Android share target | Web Share Target in the installed PWA manifest | Share a bill from WhatsApp or the gallery straight into a draft Claim; Android-only, ships with the Stage 1 PWA |
+| Android share target | Web Share Target in the installed PWA manifest | Share an image from the gallery or another app straight into a draft Claim; Android-only, ships with the Stage 1 PWA |
 | Email-in | Per-company unique address, editable prefix | Joins the pipeline at `upload`; bounce-backs are loud and specific, never silent drops |
 | Console upload | Drag and drop on the web Console | Desk employees and finance; same pipeline from `compress` onward |
 
-Sending bills to a WhatsApp number (WhatsApp-in) is the India fast-follow, not a v1 intake path.
+There is no messaging-app intake path: the four intake paths above (camera, photo library, the Android Web Share Target, and email-in) cover every way a bill gets in.
 
 ## Done means
 
-- File-input capture works at full native resolution, zero permission prompts, on Android Chrome, WhatsApp and Gmail in-app browsers, an iOS Safari tab, and iOS standalone.
+- File-input capture works at full native resolution, zero permission prompts, on Android Chrome, third-party in-app browsers, an iOS Safari tab, and iOS standalone.
 - iOS standalone never calls `getUserMedia`; the viewfinder feature-detects and falls back to rung 1 silently, in the same tap, on any failure.
 - No shippable path produces a stretched image: `object-fit: fill` lint-banned, capture canvases sized only from `videoWidth` and `videoHeight`, aspect assert in CI device tests.
 - Auto-capture fires only on steadiness; torch and zoom render only when `getCapabilities()` reports them.

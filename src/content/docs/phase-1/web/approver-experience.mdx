@@ -76,18 +76,20 @@ Approvers decide where they already are. The India ladder, in priority order:
 
 | Priority | Channel | When it ships | Guardrail | Verdict |
 | --- | --- | --- | --- | --- |
-| 1 | Plain HTML email, magic-link buttons | launch | signed, single-use, amount-bounded; step-up above threshold | <span class="pill pill--build">Build</span> |
-| 2 | WhatsApp utility nudge with deep link | launch | strictly transactional copy; decision happens on web | <span class="pill pill--build">Build</span> |
+| 1 | PWA approver inbox, reached by `web_push` or an `email` notification | launch | one tap to Approve or Send back inside the installed PWA or web Console | <span class="pill pill--build">Build</span> |
+| 2 | Plain HTML email, magic-link buttons | launch | signed, single-use, amount-bounded; step-up above threshold | <span class="pill pill--build">Build</span> |
 | 3 | Outlook Actionable Messages | only on M365 customer demand | org-scope registration in their tenant; plain-link fallback always works | <span class="pill pill--caution">Caution</span> |
 | 4 | Gmail AMP / one-click actions | skipped at launch | whitelisting bar an early-stage sender cannot clear | <span class="pill pill--avoid">Avoid</span> |
+
+**The PWA inbox.** The primary surface is the approver inbox inside the PWA or web Console. An approver on an installed PWA is reached by `web_push`; everyone else by an `email` notification; an in-app notifications bell (`in_app`) carries the same items for any role inside the app. One tap from the notification opens the decision screen. Future native apps over the API add `native_push` (FCM and APNs) for more reliable delivery, especially on iOS.
 
 **Email magic links.** Approve and Send back buttons are signed single-use tokens bound to the ApprovalStep, the approver, and an amount snapshot; they expire when the step resolves or after 7 days. Send back never decides from email: its button always opens the web decision screen with the comment field focused, because a send back requires a comment. Only Approve completes in one tap, and only below the high-value threshold (the top limit of the DoA grid, the same knob that tightens the SLA); at or above it, Approve steps up and opens the web decision screen instead of deciding. A used link lands on a decided-state page; replays are rejected, so a forwarded email cannot fire twice.
 
 :::danger[One-tap is a control surface]
-Every one-tap action is single-use, expiring, amount-bounded, and channel-logged. Submitter and approver must differ, enforced server-side on every decision write, whatever the channel. Each decision writes an AuditEvent: actor, role at decision time, action, before and after values, timestamp, IP and device, channel (`web`, `email_link`, `whatsapp`). Retention is 8 financial years: [audit and retention](/compliance/audit-and-retention/).
+Every one-tap action is single-use, expiring, amount-bounded, and channel-logged. Submitter and approver must differ, enforced server-side on every decision write, whatever the channel. Each decision writes an AuditEvent: actor, role at decision time, action, before and after values, timestamp, IP and device, channel (`web`, `web_push`, `email_link`, and `native_push` once the future apps ship). Retention is 8 financial years: [audit and retention](/compliance/audit-and-retention/).
 :::
 
-**WhatsApp.** A utility-category template nudges the approver with a deep link into the specific claim; the decision happens on the web screen it opens. Utility messages cost roughly ₹0.115 to ₹0.145 plus 18% GST (BSP-quoted: Whautomate, Interakt; rates vary and Meta revises them), free inside the 24-hour service window since per-message billing began on 1 July 2025.
+**Push and email notifications.** A `web_push` notification (VAPID and the Web Push Protocol) reaches an approver on an installed PWA; an `email` notification reaches everyone else and is the guaranteed fallback. Both deep-link into the specific claim; the decision happens on the web screen they open. Notification cost is negligible: `web_push` is free, and transactional email runs roughly ₹0.05 to ₹0.20 per email (SES or Postmark class, indicative, our derivation).
 
 ```text
 Claim clm_…K8NP from Priya Nair is pending your approval.
@@ -96,8 +98,8 @@ Waiting 26 hours of a 48-hour SLA.
 [View claim]
 ```
 
-:::caution[Recategorization is a silent 6-7x price hike]
-Since 16 April 2025 Meta recategorizes utility templates carrying promotional copy to marketing without notice, at roughly 6 to 7 times the price (marketing ₹0.8631 from 1 January 2026, BSP-quoted). Nudge copy stays transaction-specific, the button deep-links to that claim only, and every copy change passes a compliance check. Quick replies (up to 10 per template) make approve-in-chat possible; we defer it, since tokenized in-chat decisions complicate audit and compliance for marginal gain.
+:::caution[Keep transactional copy transactional]
+Nudge copy stays transaction-specific and the button deep-links to that claim only, both so the message is useful and so transactional email stays out of promotional sending reputation. Every copy change passes a compliance check. Email deliverability (SPF, DKIM, DMARC alignment, bounce and complaint-rate monitoring, sender reputation) is the operational risk to manage; when an email cannot be delivered the item still waits in the `in_app` inbox.
 :::
 
 **Outlook Actionable Messages.** Built only when an M365-heavy customer demands it, registered at org scope in their tenant. The constraints are sharp (Microsoft FAQ): single-user mailboxes only, 10 actionable emails open at once, no actions on messages older than a month, gateways like Mimecast silently strip the cards. Legacy auth tokens were retired on 8 June 2026, so any build targets Action.Execute, with the magic-link fallback always working underneath.
@@ -120,7 +122,7 @@ Cadence is admin-tunable; the cap of two nudges per item is not.
 
 </Steps>
 
-Reminders go out only inside configured working hours with IST-aware quiet hours; multiple pending items collapse into one daily digest per approver, WhatsApp nudges included. During period close, reminder copy carries the approve-by date, and the pending-by-approver dashboard with one-click remind-all sits in the [finance console](/phase-1/web/finance-console/), because finance chasing approvers is the documented month-end pain.
+Reminders go out only inside configured working hours with IST-aware quiet hours; multiple pending items collapse into one daily digest per approver across `in_app`, `web_push`, and `email`. During period close, reminder copy carries the approve-by date, and the pending-by-approver dashboard with one-click remind-all sits in the [finance console](/phase-1/web/finance-console/), because finance chasing approvers is the documented month-end pain.
 
 ## Delegation: never route to nobody
 
@@ -137,9 +139,9 @@ The admin-assigned case is a direct gap-shot: on Concur Standard, admins cannot 
 
 ## The approver on a phone
 
-No trustworthy public statistic measures approver-side mobile share; submission-side surveys put mobile preference near 70% (PmarketResearch 2024, vendor-cited) <span class="pill pill--low">Low</span>. Nudges arrive by email and WhatsApp, so design as if the first render is a phone in a hallway.
+No trustworthy public statistic measures approver-side mobile share; submission-side surveys put mobile preference near 70% (PmarketResearch 2024, vendor-cited) <span class="pill pill--low">Low</span>. Nudges arrive by `web_push` and `email`, so design as if the first render is a phone in a hallway.
 
-Layout: single-column card with amount, badge, and merchant in the first viewport; Approve and Send back pinned within thumb reach; send-back comment in a keyboard-safe bottom sheet; full-screen pinch zoom on receipts; flags as expandable rows; line-level actions behind a per-line tap; guided review one flag per screen, swipe to advance. The deep link opens the responsive web app inside WhatsApp's in-app browser with no install: the Stage 0 posture that governs capture.
+Layout: single-column card with amount, badge, and merchant in the first viewport; Approve and Send back pinned within thumb reach; send-back comment in a keyboard-safe bottom sheet; full-screen pinch zoom on receipts; flags as expandable rows; line-level actions behind a per-line tap; guided review one flag per screen, swipe to advance. The deep link opens the responsive web app inside any third-party in-app browser with no install: the Stage 0 posture that governs capture.
 
 ## Done means
 
@@ -148,7 +150,7 @@ Layout: single-column card with amount, badge, and merchant in the first viewpor
 - Send back rejects an empty comment; the comment reaches the employee verbatim and the AuditEvent.
 - A claim with one `approved` and one `rejected` line proceeds at the reduced `approved_amount_paise`.
 - A reused email token changes no state; above-threshold links never decide directly.
-- WhatsApp templates pass utility review; copy changes are gated by a compliance checklist.
+- Notification copy stays transaction-specific; copy changes are gated by a compliance checklist.
 - Every decision AuditEvent records channel and role-at-decision-time; submitter and approver verified distinct server-side.
 - No claim routes to nobody: fallback approver and the unroutable dashboard are covered by tests.
 
@@ -167,6 +169,4 @@ Layout: single-column card with amount, badge, and merchant in the first viewpor
 - [SAP Concur Community: Approvers on extended leave](https://community.concur.com/t5/Concur-Expense-Forum/Approvers-on-extended-leave/m-p/50) (vendor forum): no admin-assigned delegates on Standard.
 - [Zoho Expense Help: Approving reports](https://www.zoho.com/us/expense/help/reports/approving-reports/) (vendor docs): line rejection, edit-with-rationale, required reasons, bulk approve.
 - [Zoho Expense FAQ: Delegate vs out-of-office approver](https://www.zoho.com/us/expense/kb/delegation/difference-delegates-out-of-office-approver/) (vendor docs): the two delegation primitives.
-- [Whautomate: WhatsApp Business API pricing India](https://whautomate.com/whatsapp-business-api-pricing-india) (BSP, vendor): per-message utility and marketing rates plus GST.
-- [YCloud: WhatsApp template category guidelines update, 1 July 2025](https://www.ycloud.com/blog/whatsapp-api-message-template-category-guidelines-update) (BSP, vendor): the no-notice recategorization policy.
 - [Microsoft Learn: Actionable Messages FAQ](https://learn.microsoft.com/en-us/outlook/actionable-messages/actionable-messages-faq) (primary docs): Actionable Message constraints and token retirement.

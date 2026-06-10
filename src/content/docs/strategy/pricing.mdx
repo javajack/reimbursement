@@ -68,7 +68,6 @@ Every mechanic in this model has a working precedent. The table is the argument.
 | OpenAI / Anthropic prepaid credits | Prepaid drawdown mechanics: minimum purchase, 12-month expiry, non-refundable, auto-recharge | Copy the mechanics; avoid the trap of auto-recharge firing unexpectedly (documented complaint threads) |
 | HubSpot Credits | The anti-pattern | Monthly-expiring credits are the single most resented credit mechanic; our packs carry 12-month validity |
 | Clay and Postmark | Declining marginal price curves (Clay ~$75 to ~$16 per 1k credits) | Bigger packs cost less per unit, rewarding prepayment without negotiation |
-| WhatsApp Business API (India) | Indian SMBs already pay true per-unit software pricing in INR (utility ₹0.115-0.145/message since Jul 1, 2025, +18% GST) | Per-unit INR billing is normal here, not novel |
 | Tally TSS | Perpetual license keeps working; the annual value layer lapses | Indian SMBs culturally accept "access retained, premium value paused", which is exactly our soft paywall |
 | Telecom prepaid | Over 90% of Indian mobile users are prepaid in most circles | The recharge-pack-with-validity mental model is the native pricing UX for our buyer |
 
@@ -82,7 +81,7 @@ The loop that converts:
 
 <Steps>
 
-1. Admin alerts fire at 50, 80, 95, and 100% of burn, alongside a standing burn-rate forecast ("out in ~N days") on the admin home, via email, in-app, and a WhatsApp utility message.
+1. Admin alerts fire at 50, 80, 95, and 100% of burn, alongside a standing burn-rate forecast ("out in ~N days") on the admin home, via `in_app`, `email`, and `web_push` (on an installed PWA).
 
 2. Balance hits zero. Uploads keep landing as `queued`; submissions accumulate in `awaiting_credits` with queue depth visible to the admin.
 
@@ -118,7 +117,7 @@ Launch with the five-pack ladder only. No subscription billing on day one: the m
 
 ## GST presentation
 
-All prices are quoted ex-GST with 18% added at invoice, the convention Zoho, Tally, and WhatsApp BSPs have already normalized for this buyer. Every pack purchase issues a proper GST invoice; for GST-registered buyers the 18% is reclaimable as input tax credit, so the sticker comparison against Zoho (also quoted ex-GST) stays apples to apples. Show the GST line explicitly on the pack card and at checkout; hiding it until payment is the kind of billing trap this category is resented for.
+All prices are quoted ex-GST with 18% added at invoice, the convention Zoho and Tally have already normalized for this buyer. Every pack purchase issues a proper GST invoice; for GST-registered buyers the 18% is reclaimable as input tax credit, so the sticker comparison against Zoho (also quoted ex-GST) stays apples to apples. Show the GST line explicitly on the pack card and at checkout; hiding it until payment is the kind of billing trap this category is resented for.
 
 <CardGrid>
 

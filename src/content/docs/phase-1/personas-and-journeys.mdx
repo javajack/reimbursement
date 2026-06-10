@@ -5,7 +5,7 @@ description: "The five people who touch a claim, their day-in-life journeys, and
 
 import { LinkCard, Steps } from '@astrojs/starlight/components';
 
-Five people touch every claim on its way from crumpled bill to bank credit: a field employee, an office employee, an approver, a finance admin, and the owner-admin who configured it all. A sixth, the auditor, only reads. The [Phase 1 overview](/phase-1/overview/) fixed what we build; this page fixes who it is for, then walks one real claim through three day-in-life journeys. The design centre: a field employee on a 4-8 GB Android in patchy coverage, and an approver who lives in WhatsApp, not a dashboard.
+Five people touch every claim on its way from crumpled bill to bank credit: a field employee, an office employee, an approver, a finance admin, and the owner-admin who configured it all. A sixth, the auditor, only reads. The [Phase 1 overview](/phase-1/overview/) fixed what we build; this page fixes who it is for, then walks one real claim through three day-in-life journeys. The design centre: a field employee on a 4-8 GB Android in patchy coverage, and an approver who lives on a phone, not a dashboard.
 
 ## The persona map
 
@@ -13,9 +13,9 @@ Personas map onto canonical `Membership.roles` (`owner`, `admin`, `finance`, `ap
 
 | Persona (role) | Job to be done | Top pains (evidence) | What they value | Device and context |
 | --- | --- | --- | --- | --- |
-| Field employee (`employee`) | Recover daily out-of-pocket cash, from anywhere | Payout latency that drives field attrition (vendor, directional); silent capture failures (Expensify bug #45904: confidently wrong amounts, no warning); "when do I get paid?" unanswered category-wide | Two-tap capture that survives dead zones, a live status timeline, money inside days | 4-8 GB Android (largest RAM segment, 42.3%); Jio consistency ~66%; vernacular preference; often inside WhatsApp's in-app browser |
+| Field employee (`employee`) | Recover daily out-of-pocket cash, from anywhere | Payout latency that drives field attrition (vendor, directional); silent capture failures (Expensify bug #45904: confidently wrong amounts, no warning); "when do I get paid?" unanswered category-wide | Two-tap capture that survives dead zones, a live status timeline, money inside days | 4-8 GB Android (largest RAM segment, 42.3%); Jio consistency ~66%; vernacular preference; often inside a third-party in-app browser |
 | Office employee (`employee`) | Clear expenses without breaking the workday | OCR misreads that force re-keying; hotel itemisation, the most hated data-entry task (Concur forums); opaque status | Email-in forwarding, web submission, multi-page bills, async OCR they can walk away from | Laptop plus mid-range Android on office Wi-Fi; the Console as much as the PWA |
-| Approver / manager (`approver`) | Approve correct claims in seconds; stay covered on leave | The admitted #1 bottleneck is their inbox; WhatsApp side-approvals break the audit trail (vendor); whole-report bounces punish one bad line | A decision card with plain-language flags, exactly two primary actions, delegation and out-of-office | Phone-first: WhatsApp and email, low desktop time; decisions happen between meetings |
+| Approver / manager (`approver`) | Approve correct claims in seconds; stay covered on leave | The admitted #1 bottleneck is their inbox; out-of-band side-approvals break the audit trail (vendor); whole-report bounces punish one bad line | A decision card with plain-language flags, exactly two primary actions, delegation and out-of-office | Mobile-PWA and email-first: web push and email, low desktop time; decisions happen between meetings |
 | Finance admin (`finance`) | Verify, batch, pay, reconcile, export; close the month | JV re-keying across ~5 disconnected systems, ~1.5-2 days per handoff (vendor, directional); manual GST/ITC classification (vendor claim: up to 60% of T&E ITC lost, directional); rejected claims vanish from AP visibility; no search-by-amount | The verification queue, the payout-batch builder, their bank's exact file format, UTR reconciliation, Tally export | Desktop Console; Tally on-prem in the same office |
 | Owner / admin (`owner`, `admin`) | Make one product fit their org without consultants; control software spend | Rigid workflows that need professional services to rewire; per-user fees plus scan meters (Zoho Standard ₹99/user/mo with 20 autoscans, vendor page); billing traps | The 15-minute onboarding wizard, simulate-before-activate, burn-rate forecasts, prepaid Credit Packs | Desktop plus phone; pays by UPI or netbanking; owner-led buying below ~200 employees, finance-head-led with an HR co-sponsor above (general B2B research, medium) |
 | Auditor (`auditor`, read-only) | Verify controls and ITC eligibility without meetings | Missing receipts and approval trails; evidence reconstructed from email threads | View-only access, append-only AuditEvent trail with channel, 8 FY retention exports | Desktop, periodic, often external |
@@ -44,7 +44,7 @@ Ravi sells for Deccan Agro, a 120-person FMCG distributor on the Growth pack (1,
 
 <Steps>
 
-1. **Capture.** He opens Kharcha from his home screen (the WebAPK prompt was deferred past his first successful submission) and taps Snap bill. The `intake` stage hands off to the native camera on the file-input path: full sensor resolution, zero permission prompts, same behaviour inside WhatsApp's in-app browser. The enhanced viewfinder is progressive enhancement on capable Androids, never a requirement. Spec: [camera capture](/phase-1/capture/camera/).
+1. **Capture.** He opens Kharcha from his home screen (the WebAPK prompt was deferred past his first successful submission) and taps Snap bill. The `intake` stage hands off to the native camera on the file-input path: full sensor resolution, zero permission prompts, same behaviour inside any third-party in-app browser. The enhanced viewfinder is progressive enhancement on capable Androids, never a requirement. Spec: [camera capture](/phase-1/capture/camera/).
 
 2. **Queue offline.** The shot passes the `quality_gate` blur check and `compress` produces a ~300 KB JPEG. With no usable signal, `queue_upload` writes the blob to the IndexedDB outbox under an idempotency key; the chip reads "Saved on phone, will upload in coverage". He drives on. Spec: [capture pipeline](/spec/capture-pipeline/).
 
@@ -56,26 +56,26 @@ Ravi sells for Deccan Agro, a 120-person FMCG distributor on the Growth pack (1,
 
 </Steps>
 
-## Journey 2: a WhatsApp approval in twenty seconds
+## Journey 2: a one-tap approval in twenty seconds
 
 Meera manages eleven reps and approves between meetings. Review reality is ceremonial (~15-second rubber stamps; AppZen anecdote), so the product optimises honest speed: flags surfaced, maker-checker intact, out of the way.
 
 <Steps>
 
-1. **The nudge.** A WhatsApp utility template (₹0.115-0.145 plus 18% GST per message; strictly transactional copy, since Meta recategorises chatty utility templates to marketing rates, roughly 6-7x) says one claim awaits her and deep links to the decision card. Signed magic-link buttons in plain HTML email are the universal fallback. Spec: [approver experience](/phase-1/web/approver-experience/).
+1. **The nudge.** A `web_push` notification to her installed PWA (free; VAPID / Web Push Protocol) says one claim awaits her and deep links to the decision card in the approver inbox. Where web push is unavailable (iOS not added to Home Screen, or no install), an `email` notification with signed magic-link buttons is the universal, guaranteed fallback; an `in_app` entry sits in her bell either way. Spec: [approver experience](/phase-1/web/approver-experience/).
 
 2. **The card.** Amount ₹1,840, merchant and date, purpose ("Hubballi-Belagavi beat, diesel"), receipt thumbnail, requester context, policy flags in plain language. Ravi's claim fires no rules: approve-recommended <span class="pill pill--allow">allow</span>. A flagged claim shows its outcomes (`flag`, `warn`, `cap`), with per-LineItem reject one tap deeper. Exactly two primary actions: Approve, and Send back with a required comment.
 
 3. **The decision.** She glances at the thumbnail and taps Approve. The button is a signed single-use link bound to this claim and amount; above the high-value threshold it steps up to web login. Her ApprovalStep moves `active` → `approved`. Spec: [approval engine](/phase-1/web/approval-engine/).
 
-4. **The trail.** The AuditEvent records actor, role at decision time, timestamp, and channel (`whatsapp`); the server enforces submitter ≠ approver on every channel. Under the finance threshold the chain completes, the Claim is `approved`, and Ravi is notified before her next meeting. Elapsed: about twenty seconds.
+4. **The trail.** The AuditEvent records actor, role at decision time, timestamp, and channel (`web_push`); the server enforces submitter ≠ approver on every channel. Under the finance threshold the chain completes, the Claim is `approved`, and Ravi is notified before her next meeting. Elapsed: about twenty seconds.
 
 5. **Had she ignored it.** One mid-SLA nudge, a pre-escalation warning against the 48-hour SLA, then auto-escalation to her backup; on leave, her out-of-office delegate would have received it, audit-attributed "as delegate of". Max two reminders per item; IST-aware quiet hours.
 
 </Steps>
 
 :::danger[Product invariant]
-Maker-checker survives every convenience. On any channel (web, email link, WhatsApp) the server rejects a decision whose submitter and approver are the same identity; every decision lands in the append-only audit log with its channel. One tap never means off the record.
+Maker-checker survives every convenience. On any channel (`web`, `web_push`, `email_link`) the server rejects a decision whose submitter and approver are the same identity; every decision lands in the append-only audit log with its channel. One tap never means off the record.
 :::
 
 ## Journey 3: finance closes the month

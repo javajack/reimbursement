@@ -5,7 +5,7 @@ description: "The immutable evidence layer: what gets logged, channel provenance
 
 import { LinkCard } from '@astrojs/starlight/components';
 
-Every paid claim must be reconstructable years later, by someone who was not in the room, against the policy as it stood on the day. That is the whole requirement: cheap to meet at design time, nearly impossible to retrofit. v2 keeps the v1 controls (append-only trail, read-only auditor, 8-financial-year retention) and adds the one thing the new approval channels force: channel provenance. Once decisions happen over [email magic links and WhatsApp](/phase-1/web/approver-experience/), where an approval was made becomes part of whether it can be defended.
+Every paid claim must be reconstructable years later, by someone who was not in the room, against the policy as it stood on the day. That is the whole requirement: cheap to meet at design time, nearly impossible to retrofit. v2 keeps the v1 controls (append-only trail, read-only auditor, 8-financial-year retention) and adds the one thing the new approval channels force: channel provenance. Once decisions happen over [the PWA approver inbox, web push, and signed email magic links](/phase-1/web/approver-experience/), where an approval was made becomes part of whether it can be defended.
 
 ## The AuditEvent record
 
@@ -22,8 +22,8 @@ AuditEvent is a first-class entity, written in the same transaction as the chang
 | `before`, `after` | Field-level diff | Exactly what changed |
 | `occurred_at` | Server time, ISO 8601 UTC | Reliable chronology |
 | `ip`, `user_agent` | Network and device evidence | Location and device, doubly important off-web |
-| `channel` | `web`, `email_link`, `whatsapp`, `api`, `system` | One-tap provenance, the v2 addition |
-| `token_fingerprint` | Hash of the one-tap token, when channel is `email_link` or `whatsapp` | Replay analysis |
+| `channel` | `web`, `web_push`, `email_link`, `api`, `system` (and `native_push` once the future native apps ship) | One-tap provenance, the v2 addition |
+| `token_fingerprint` | Hash of the one-tap token, when channel is `email_link` | Replay analysis |
 | `prev_hash`, `hash` | SHA-256 chain per company | Tamper evidence |
 
 A worked example, an approval decided from an email link:
@@ -105,7 +105,7 @@ Three statutes set three clocks; the product defaults to the longest. <span clas
 | Financial records: Claim, LineItem, Advance, PayoutBatch, PayoutInstruction, CreditEntry | 8 financial years | Companies Act 2013 Sec 128, the binding longest clock (govt) |
 | Receipt images | 8 financial years | Part of the same record; they are the GST and ITC evidence behind the numbers |
 | AuditEvent log | 8 financial years minimum | Our invariant: the trail never expires before the records it explains |
-| Notification delivery records (rendered email and WhatsApp bodies) | 24 months, configurable | Our derivation: the decision evidence is the AuditEvent, not the message; bodies are a PII surface |
+| Notification delivery records (rendered email and web-push bodies) | 24 months, configurable | Our derivation: the decision evidence is the AuditEvent, not the message; bodies are a PII surface |
 | Personal data of exited users | Anonymized once no retention duty remains | DPDP erasure via anonymization, below |
 
 <p class="source-note">Source: Companies Act Sec 128 (8 FY); CGST Sec 36 (72 months); Income Tax (6 years from end of the relevant assessment year). Govt and primary-corroborating, high confidence on the periods; primary CBIC and Income-Tax pages were intermittently un-fetchable during research, re-verify against the live statute before launch.</p>

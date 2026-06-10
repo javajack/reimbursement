@@ -1,11 +1,11 @@
 ---
 title: Integrations
-description: "Accounting export (Tally first), payroll hand-off, email-in, WhatsApp BSP, the optional payout partner, and webhooks."
+description: "Accounting export (Tally first), payroll hand-off, email-in, transactional email, web push, the optional payout partner, and webhooks."
 ---
 
 import { LinkCard, Steps } from '@astrojs/starlight/components';
 
-Phase 1 integrates by file, mail, and signed webhook. Nothing on this page moves money (that discipline lives in [payouts](/phase-1/payouts/)) and nothing creates a second system of record: the customer's books stay in Tally, salaries stay in payroll, and we hand both a clean importable artifact. The one genuinely hard connector, live Tally sync, ships honestly as a file export with the bridge agent designed and deferred. Everything else is either commodity plumbing (email, webhooks) or an adapter behind an interface (WhatsApp BSP, payout partner).
+Phase 1 integrates by file, mail, and signed webhook. Nothing on this page moves money (that discipline lives in [payouts](/phase-1/payouts/)) and nothing creates a second system of record: the customer's books stay in Tally, salaries stay in payroll, and we hand both a clean importable artifact. The one genuinely hard connector, live Tally sync, ships honestly as a file export with the bridge agent designed and deferred. Everything else is either commodity plumbing (transactional email, web push, webhooks) or an adapter behind an interface (the optional payout partner).
 
 ## The v1 surface at a glance
 
@@ -15,7 +15,8 @@ Phase 1 integrates by file, mail, and signed webhook. Nothing on this page moves
 | Zoho Books | Claims CSV for journal import | `finance` session | Same async export-job rules |
 | Payroll | Generic CSV keyed `employee_id` | `finance` session | Re-export until run confirmed; dedupe on batch id |
 | Email-in | Per-company receipts address | SPF/DKIM plus membership match | Loud bounce-back with reason, never a silent drop |
-| WhatsApp | BSP adapter, four utility templates | BSP API key; per-user opt-in | Delivery webhooks; fallback to email |
+| Email out | Transactional provider adapter (SES/Postmark/Resend class) | Provider API key; SPF/DKIM/DMARC aligned | Bounce/complaint handling; fall back to `in_app` |
+| Web push | VAPID/Web Push Protocol to the installed PWA | Per-device subscription, encrypted payloads | Best-effort; `email` and `in_app` always cover the gap |
 | Payout partner | Optional adapter, opt-in per customer | Customer's partner keys, tenant-encrypted | Idempotent execution; signed webhooks |
 | Webhooks out | HMAC-signed events | Per-endpoint signing secret | Backoff 24h, then DLQ and admin alert |
 
@@ -164,23 +165,29 @@ Attachment rules: `image/jpeg`, `image/png`, `application/pdf`; at most 10 attac
 The intake pipeline must structurally refuse system-generated mail: our notification domain is distinct from the intake subdomain, and the loop guard runs before any other rule. Expensify's public tracker logs this exact failure mode (issue #71911), where system mail re-entering intake produced junk expenses. A bounced human email is recoverable; a mail loop is an incident.
 :::
 
-## WhatsApp via a BSP adapter
+## Notifications: transactional email and web push
 
-WhatsApp messaging runs through a Business Solution Provider (Gupshup or Interakt class) behind a provider-agnostic adapter: `sendTemplate`, `sendSessionMessage`, `syncTemplateStatus`, plus an inbound webhook for delivery receipts and replies. Swapping BSPs is a config change, not a rewrite. Opt-in is explicit and per user: OTP-verified number, timestamped consent stored on the User, one-tap opt-out, and automatic fallback to email whenever a user is not opted in or delivery fails. Notification cadence and quiet hours follow the [approver experience](/phase-1/web/approver-experience/) rules: IST-aware, max two reminders per item, digest batching.
+Phase 1 has exactly three notification channels, and only two of them are external integrations. `in_app` is the notifications inbox/bell inside the PWA/web Console and needs no third party. The two external channels are transactional `email` (the universal, guaranteed channel) and `web_push` (best-effort to the installed PWA). A fourth channel, `native_push` (FCM/APNs), is reserved for the future native apps over the API and is not built in v1. There is no messaging-app channel.
 
-The full v1 template catalog is four utility templates. Copy is strictly transactional; variables use Meta's numbered placeholders; every URL button deep-links to the specific record, never a generic page.
+### Transactional email
 
-| Template | To | Trigger | Copy | Button |
+Email is the guaranteed channel: it reaches every role on every device, and it is the fallback whenever web push is unavailable (notably non-installed iOS). It runs through a provider-agnostic adapter (SES, Postmark, or Resend class): `sendTransactional`, `getDeliveryStatus`, plus an inbound webhook for bounces and complaints. Swapping providers is a config change, not a rewrite. Sender hygiene is mandatory: SPF, DKIM, and DMARC must align on the sending domain, which is kept distinct from the email-in intake subdomain so the loop guard above can refuse our own mail. Bounces and complaints are tracked per recipient; a hard bounce or repeated complaint suppresses email to that address and the user is steered to `in_app`. Cadence and quiet hours follow the [approver experience](/phase-1/web/approver-experience/) rules: IST-aware, max two reminders per item, digest batching.
+
+The decision-bearing emails carry signed, single-use, amount-bounded magic-link Approve / Send-back buttons; above a per-company threshold the button steps up to the web app instead of acting inline. Every URL deep-links to the specific record, never a generic page. The same adapter sends the soft-paywall employee nudge ("remind your admin", one tap) and the admin burn alerts at 50/80/95/100%.
+
+| Notification | To | Trigger | Channel | Action |
 | --- | --- | --- | --- | --- |
-| `approval_nudge` | Approver | ApprovalStep `active`, mid-SLA reminder | `Claim {{1}} for ₹{{2}} from {{3}} is awaiting your approval. Respond by {{4}}.` | Review claim (deep link) |
-| `sent_back_notice` | Employee | Claim moves to `sent_back` | `Your claim {{1}} for ₹{{2}} was sent back by {{3}}: "{{4}}". Edit and resubmit; resubmission uses no extra credit.` | Open claim (deep link) |
-| `credits_low_admin` | Admin | `credits.low` at each configured burn threshold (default 50/80/95/100) | `{{1}} of {{2}} submission credits used this period. Estimated {{3}} days remaining. At zero, new claims queue instead of processing.` | View credits (deep link) |
-| `payout_paid_notice` | Employee | Claim moves to `paid` | `₹{{1}} for claim {{2}} was paid on {{3}}. Bank reference (UTR): {{4}}.` | View payment (deep link) |
+| Approval nudge | Approver | ApprovalStep `active`, mid-SLA reminder | `web_push` if installed, else `email`; `in_app` always | Open approver inbox, or signed Approve / Send-back in email |
+| Sent-back notice | Employee | Claim moves to `sent_back` | `email` + `in_app` (+ `web_push` if installed) | Open claim; edit and resubmit, no extra credit |
+| Credits low | Admin | `credits.low` at each burn threshold (default 50/80/95/100) | `email` + `in_app` (+ `web_push` if installed) | View credits and top-up path |
+| Payout paid | Employee | Claim moves to `paid` | `email` + `in_app` (+ `web_push` if installed) | View payment with bank reference (UTR) |
 
-Each delivered utility message costs about ₹0.115-0.145 plus 18% GST outside the 24-hour service window, and is free inside it, under Meta's per-message billing in force since 1 Jul 2025; BSPs add a 10-30% markup (vendor pricing pages, re-verify at build time). <span class="pill pill--med">Medium</span> An inbound reply opens that free window: the adapter answers with a session message carrying the claim summary and link, and the decision itself still happens on the signed magic link or the web, never by chat text.
+### Web push
 
-:::caution[Recategorization is the cost cliff]
-Since 16 Apr 2025 Meta recategorizes utility templates to marketing without notice, and marketing costs ₹0.8631 per message from 1 Jan 2026, roughly 6-7x the utility rate (vendor, medium). One promotional phrase ("upgrade now", a discount code) can reprice the whole channel. Every template change gets a compliance read against Meta's utility criteria before submission, and the adapter alerts ops if `syncTemplateStatus` reports a category change or pause.
+Web push (VAPID keys / Web Push Protocol) reaches the installed PWA: Android Chrome fully, iOS only when the app is added to the Home Screen on 16.4 or later, so we treat it as best-effort and never the sole channel. Each browser registers a subscription stored per device against the User; payloads are encrypted end to end and carry a TTL so a stale notification expires rather than arriving hours late. Delivery failures (expired or unsubscribed endpoints) prune the subscription silently, and `email` plus `in_app` always cover anyone web push cannot reach. The future native apps will add `native_push` (FCM/APNs) over the same notification interface.
+
+:::tip[No channel is ever load-bearing alone]
+Web push is opportunistic and `email` is the guarantee. Because `in_app` and `email` always carry every notification, an undelivered web push degrades quietly rather than dropping a claim. Notification cost stays small: web push is effectively free, and transactional email runs roughly ₹0.05 to 0.20 per message (SES/Postmark class, indicative, our derivation), which keeps the per-submission COGS band unchanged.
 :::
 
 ## The payout partner adapter
@@ -242,11 +249,12 @@ Delivery is at-least-once with exponential backoff and jitter across 24 hours; a
 | SSO (SAML/OIDC) plus SCIM | Email OTP and magic-link sign-in only (passwordless, per the [security spec](/spec/security-and-compliance/)) | First mid-market deal naming SSO in procurement |
 | Outlook Actionable Messages | Magic-link email only | An M365-heavy customer asks; target Action.Execute, legacy tokens end 8 Jun 2026 (primary docs, high) |
 | Gmail AMP | Skipped | The 100-plus-emails-per-day whitelisting bar fits a later, larger sender |
-| Slack / Teams approval cards | Not in v1 | Chat-ops approval named in mid-market deals; email plus WhatsApp covers SMB |
+| Slack / Teams approval cards | Not in v1 | Chat-ops approval named in mid-market deals; email plus web push covers SMB |
+| Native apps with `native_push` | PWA with web push only | Reliable cross-platform push or native camera UX justifies native apps over the API |
 
 ## Secrets and rotation
 
-Per-tenant integration secrets (payout-partner keys, webhook signing secrets, email tokens) and the platform BSP token are envelope-encrypted: AES-256-GCM per secret, data keys wrapped by a KMS master key, decrypted only inside the worker that needs them, never logged, masked to the last four characters in the Console. Secrets are shown in full exactly once, at creation. Webhook signing secrets rotate with a 24-hour overlap during which deliveries carry signatures under both old and new secrets, so consumers switch without a gap; partner keys rotate by re-entry. Create, rotate, and delete each write an AuditEvent. The wider encryption, DPDP, and retention posture is in the security and compliance spec.
+Per-tenant integration secrets (payout-partner keys, webhook signing secrets, email tokens) and the platform email-provider and web-push (VAPID) keys are envelope-encrypted: AES-256-GCM per secret, data keys wrapped by a KMS master key, decrypted only inside the worker that needs them, never logged, masked to the last four characters in the Console. Secrets are shown in full exactly once, at creation. Webhook signing secrets rotate with a 24-hour overlap during which deliveries carry signatures under both old and new secrets, so consumers switch without a gap; partner keys rotate by re-entry. Create, rotate, and delete each write an AuditEvent. The wider encryption, DPDP, and retention posture is in the security and compliance spec.
 
 <LinkCard title="Security and compliance" description="Tenant isolation, encryption, DPDP processor duties, and the 8-financial-year retention clock." href="/spec/security-and-compliance/" />
 
@@ -261,6 +269,3 @@ Per-tenant integration secrets (payout-partner keys, webhook signing secrets, em
 - [Tally Software India 2025, dataman.in](https://dataman.in/tally-software-india-2025/) (vendor/SEO republishing analyst share figures; treat percentages as marketing)
 - [Sage Expense Management (Fyle) integrations page](https://www.fylehq.com/product/integrations) (primary; lists no Tally connector)
 - [Zoho Payroll expense integration docs](https://www.zoho.com/in/payroll/help/employer/integrations/integrations-expense.html) (primary vendor; the reimburse-via-payroll loop)
-- [WhatsApp Business API pricing India, Whautomate](https://whautomate.com/whatsapp-business-api-pricing-india) (vendor; per-message rates, 18% GST, BSP markup)
-- [Interakt WhatsApp pricing structure](https://www.interakt.shop/resource-center/whatsapp-business-api-pricing-structure/) (vendor; ₹0.145 utility figure, Jul 2025 per-message billing)
-- [WhatsApp template category guidelines update, YCloud](https://www.ycloud.com/blog/whatsapp-api-message-template-category-guidelines-update) (vendor; 16 Apr 2025 no-notice recategorization)

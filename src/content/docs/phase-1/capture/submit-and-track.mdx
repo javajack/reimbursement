@@ -122,19 +122,19 @@ The timeline deletes the most common inbound question to HR and finance, and it 
 
 ## Notifications
 
-Web push is Android-first (93.2% of India mobile; StatCounter, May 2026); iOS users get WhatsApp or email instead, per the PWA stance. WhatsApp utility templates cost ₹0.115-0.145 plus 18% GST each (Meta BSP rates, re-verify at build), so paid sends are reserved for events people act on.
+Exactly three channels carry these notifications: `in_app` (the notifications inbox in the PWA/Console, for every role), `web_push` (VAPID Web Push to the installed PWA, Android-first at 93.2% of India mobile per StatCounter, May 2026; iOS only when added to Home Screen on 16.4+, so best-effort there), and `email` (transactional, universal, the guaranteed channel and the iOS or non-installed fallback). Web push costs nothing; transactional email runs roughly ₹0.05 to 0.20 per send (SES or Postmark class, our derivation, re-verify at build). A fourth channel, `native_push` (FCM/APNs), is reserved for the future native apps over the API.
 
-| Event | Recipient | Push (Android) | WhatsApp utility | Email |
+| Event | Recipient | `web_push` (installed) | `email` | `in_app` |
 | --- | --- | --- | --- | --- |
-| Claim submitted | Employee | Yes | No | Summary receipt |
-| Approval needed | Approver | Yes | Nudge with deep link | Magic-link action buttons |
-| Sent back with query | Employee | Yes | Yes | Yes, with query text |
-| Approved | Employee | Yes | No | No (timeline covers it) |
-| Entered payout batch | Employee | Yes | No | No |
-| Paid, UTR available | Employee | Yes | Yes | Yes, payment proof |
-| Landed in `awaiting_credits` | Employee | Yes, calm copy | No | No |
-| Burn alerts at 50/80/95/100% | Admin, Finance | Yes | No | Yes, with top-up link |
-| Recharge drained the queue | Queued claim owners | Yes | No | No |
+| Claim submitted | Employee | Yes | Summary receipt | Yes |
+| Approval needed | Approver | Yes | Magic-link action buttons | Yes |
+| Sent back with query | Employee | Yes | Yes, with query text | Yes |
+| Approved | Employee | Yes | No (timeline covers it) | Yes |
+| Entered payout batch | Employee | Yes | No | Yes |
+| Paid, UTR available | Employee | Yes | Yes, payment proof | Yes |
+| Landed in `awaiting_credits` | Employee | Yes, calm copy | No | Yes |
+| Burn alerts at 50/80/95/100% | Admin, Finance | Yes | Yes, with top-up link | Yes |
+| Recharge drained the queue | Queued claim owners | Yes | No | Yes |
 
 Restraint is a feature: at most 2 reminders per item, IST-aware quiet hours, daily approver digests; Fyle's reviews show undifferentiated volume trains people to ignore the tool. Approver cadence and escalation live on the approver experience page, linked below.
 

@@ -17,7 +17,6 @@ Funds must never touch an account this SaaS owns or controls. The moment they do
 | `awaiting_credits` | The Claim.status entered when a claim is submitted at company credit balance 0. The claim is safe, visible, and queued; a top-up drains the queue FIFO. See [/phase-1/credits-and-metering/](/phase-1/credits-and-metering/). |
 | Background Sync | Browser API (Workbox wrapper) that replays the upload outbox when connectivity returns. Chromium only; zero Safari support through 26.x, so iOS replays on `online`, `visibilitychange`, and app-open events. |
 | bounding box | The pixel region on the receipt image a field was extracted from. Tapping a field zooms to its box (the Rossum tap-to-fix pattern) in the `review_items` stage. |
-| BSP | Business Solution Provider, a Meta-authorised intermediary for the WhatsApp Business API. The route for WhatsApp approval nudges and receipt-in later. |
 | burn rate | Credits consumed per day for a company. Drives the admin forecast ("out in ~N days") and the balance alerts at the 50/80/95/100% thresholds (configurable). |
 | confidence threshold | The per-field extraction score above which a value auto-accepts: 0.80 (Azure convention). Below it the field is flagged; only merchant, date, and total always require explicit confirmation. |
 | credit | The billing unit: 1 credit = 1 claim submitted into the approval workflow, with OCR for up to 5 receipt images, storage, approvals, payout files, and exports inside. Beyond 5 images: +1 credit per additional 5. Resubmission after `sent_back` is free. |
@@ -64,16 +63,17 @@ Funds must never touch an account this SaaS owns or controls. The moment they do
 | soft paywall | The balance-0 behaviour: capture and uploads continue (receipts go `queued`), submissions land in `awaiting_credits`, employees get a one-tap "remind your admin" nudge. Queue, never block; nothing is ever lost. |
 | submission | The metered unit: one Claim entering the approval workflow. Manual-entry claims consume a credit too (the meter is the workflow, not the OCR); failed extraction never consumes extra. |
 | Tally | Desktop accounting software with a claimed ~70 to 80% Indian SMB share [vendor-claimed, not independently audited]. Integrates via XML over HTTP on port 9000; a clean Tally JV export is a category gap the dossier treats as a wedge. |
+| transactional email | Provider-agnostic email (SES/Postmark/Resend class) carrying approval nudges, magic-link buttons, and credit alerts. The `email` notification channel: universal, the guaranteed channel, and the iOS and non-installed fallback. Indicative cost ~₹0.05 to 0.20 per email [our derivation]. |
 | TDS | Tax Deducted at Source on vendor payments (194C, 194J, 194H families; rates change by financial year). Lives in [/phase-2/vendor-tax-engine/](/phase-2/vendor-tax-engine/). |
 | TWA | Trusted Web Activity: the PWA wrapped via Bubblewrap into a Play Store listing ($25 one-time) when customer IT demands store presence. Stage 2 of the delivery ladder. |
 | ULID | Lexicographically sortable 128-bit identifier. All API ids are prefixed ULIDs: `co_`, `clm_`, `li_`, `rcp_`, `cre_`, and the rest of the prefix table in [/spec/api/](/spec/api/). |
 | UPI | Unified Payments Interface, instant account-to-account rail, ₹1 lakh standard per-transaction cap. A pack-purchase payment method and the prepaid-recharge mental model behind credits. |
-| utility template | A Meta pre-approved, strictly transactional WhatsApp message (₹0.115 to 0.145 + 18% GST; free inside the 24h service window since Jul 2025). Marketing flavour risks recategorisation at ~6 to 7x the price. |
 | UTR | Unique Transaction Reference, the identifier a bank returns per completed transfer. Matching UTRs from the bank's return file back to PayoutInstruction rows is how a PayoutBatch reaches `reconciled`. |
 | variance-of-Laplacian | The blur metric in the `quality_gate` stage: low variance means a soft, unreadable image and triggers a retake prompt alongside a brightness-histogram check. |
 | viewfinder | The live camera preview. v2 mandates a true-aspect-ratio viewfinder (the stretched-bill bug is always presentation code); the enhanced viewfinder adds edge overlay and auto-capture as Android-first progressive enhancement. |
 | WebAPK | The real APK Android mints when a user installs a PWA from Chrome: home-screen icon, app-switcher presence, no store. The install prompt is deferred until after the first successful submission. |
 | webhook | An HTTP callback we POST to a customer's WebhookEndpoint on events, signed HMAC-SHA256 in `X-Kharcha-Signature`. |
+| Web Push / VAPID | The `web_push` notification channel: Web Push Protocol with VAPID keys delivering encrypted payloads to the installed PWA per subscribed device. Android Chrome full; iOS only when added to Home Screen (16.4+), so best-effort there, with `email` as the fallback. Future native apps move to `native_push` (FCM/APNs) over the API. |
 
 <p class="source-note">Definitions follow THESIS-V2 canonical contracts; regulatory and rail figures carry their original provenance. Full bibliography at [/reference/sources/](/reference/sources/).</p>
 

@@ -24,9 +24,9 @@ const isStandalone = (): boolean =>
   window.matchMedia('(display-mode: standalone)').matches ||
   (navigator as { standalone?: boolean }).standalone === true;
 
-// Advisory only: in-app browsers (WhatsApp, Slack, Gmail/GSA, Facebook family)
+// Advisory only: third-party in-app browsers (Slack, Gmail/GSA, Facebook family)
 // either lack mediaDevices (WKWebView pre-iOS 14.5) or re-prompt per call.
-const IN_APP_UA = /WhatsApp|Slack|GSA|FBAN|FBAV|Instagram|Line|MicroMessenger/i;
+const IN_APP_UA = /Slack|GSA|FBAN|FBAV|Instagram|Line|MicroMessenger/i;
 
 export function selectCaptureRung(): CaptureRung {
   if (!navigator.mediaDevices?.getUserMedia) return 'file_input'; // gate 1: API absent
@@ -268,7 +268,7 @@ Dashboards derived from these: first-shot gate pass rate and retake rate by reas
 | Samsung mid-range | EXIF/orientation | Landscape-sensor file-input photo never renders rotated after re-encode |
 | iOS 17.x device (pre-18) | Canvas caps, older fleet | 12 MP guard holds; zoom present, focus absent; torch works (17.5.1+) |
 | iOS installed PWA, current iOS | Standalone posture | Never calls `getUserMedia` (WebKit bug 252465); file input first-class; replay on app open |
-| WhatsApp, Gmail, Slack in-app browsers, both platforms | Rung 1 universality | Capture, gate, outbox, upload all work; zero permission prompts |
+| Gmail, Slack, and other third-party in-app browsers, both platforms | Rung 1 universality | Capture, gate, outbox, upload all work; zero permission prompts |
 | Airplane mode on any two above | Outbox semantics | 3 pages show `queued`, sync on reconnect, exactly 3 Receipts created |
 
 <p class="source-note">Matrix derived from the capture-tech research and WebKit bug evidence (primary docs, high); India fleet weighting per StatCounter/IMARC figures carried in THESIS-V2.</p>

@@ -88,7 +88,7 @@ Timers exist because the manager inbox is the category's admitted worst bottlene
 
 | Ladder point | Standard SLA (48h) | High-value SLA (24h) | What fires |
 | --- | --- | --- | --- |
-| Activation | 0h | 0h | decision card to web inbox, signed magic-link email, optional WhatsApp utility nudge |
+| Activation | 0h | 0h | decision card to the PWA/web inbox via `web_push` (installed PWA) and `in_app`, signed magic-link `email` |
 | Mid-SLA nudge | 24h | 12h | reminder 1, digest-batched, IST quiet hours respected |
 | Pre-escalation warning | 40h | 20h | reminder 2, names the escalation target: "escalates to Priya Nair in 8h" |
 | Breach | 48h | 24h | step `escalated`; successor for backup or delegate, fresh 24h clock |
@@ -185,7 +185,7 @@ Done means: an admin answers "who approves Asha's ₹78,000 client event" in one
 :::danger[Engine invariants, non-negotiable]
 - **No self-approval, ever.** Skip-up at resolution, plus server-side rejection of any decision whose actor is the submitter, whatever the chain says. UI toggles regress: Expensify paid a $500 bounty for "admin can approve own report with Prevent Self-Approval on" (GitHub #36425). Enforce in the decision write path; regression-test it.
 - **No orphan claims.** Resolution never fails and submission is never blocked for routing reasons; the floor is the admin queue flagged `rule_gap`.
-- **Every decision is an AuditEvent.** Append-only: actor, role-at-decision-time, action, before and after values, timestamp, IP and device, and channel (`web`, `email_link`, `whatsapp`). One-tap channels make channel provenance mandatory, and tokens are single-use and amount-bounded. Retain 8 financial years, the Companies Act bound that outlasts the rest.
+- **Every decision is an AuditEvent.** Append-only: actor, role-at-decision-time, action, before and after values, timestamp, IP and device, and channel (`web`, `web_push`, `email_link`, and `native_push` once the future native apps ship). One-tap channels make channel provenance mandatory, and tokens are single-use and amount-bounded. Retain 8 financial years, the Companies Act bound that outlasts the rest.
 - **Graph validation on every save.** Cycles, orphan approvers, deactivated references: caught at config time, never at submission.
 :::
 

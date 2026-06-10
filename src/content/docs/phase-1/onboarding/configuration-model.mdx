@@ -20,7 +20,7 @@ Defaults carry the weight, because admins do not finish setup chores: onboarding
 | Approval matrix | Role-abstracted rule stack, optional DoA grid (approver × max amount), priority numbers, the fallback rule | Wizard size template (under 50: manager-only; 50-250: manager → finance above ₹25,000; 250+ adds department head) plus the undeletable fallback | Chain resolved and frozen at submission |
 | Credits | Alert thresholds, burn-rate forecast, optional auto-top-up with a monthly spend cap | Free `plan_grant` of 20 submissions/month; alerts at 50/80/95/100%; auto-top-up off | Balance check at submit decides `submitted` vs `awaiting_credits` |
 | Payout | Source BankAccounts, payout calendar, default rail, bulk-file format per bank | Empty; required before the first payout run, never before the first claim | At PayoutBatch building |
-| Notifications | Channel per event (email, web push, WhatsApp later), digests, IST quiet hours | Email on for every event class; push opt-in after PWA install | At event emission |
+| Notifications | Channel per event (`in_app`, `email`, `web_push`; `native_push` later), digests, IST quiet hours | `in_app` and `email` on for every event class; `web_push` opt-in after PWA install | At event emission |
 | Locale | Display languages, fiscal year, currency | INR; Apr-Mar FY; English + Hindi, state languages toggleable | Language at render time; FY anchors reporting periods and rate versions |
 
 <p class="source-note">Defaults and bounds per THESIS-V2 contracts; category set and size templates from the onboarding canon (our derivation over vendor precedents).</p>

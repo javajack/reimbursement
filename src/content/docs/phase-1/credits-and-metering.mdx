@@ -160,12 +160,12 @@ The console home carries a balance widget: the current balance, each lot with it
 
 | Threshold | Channels | Notes |
 | --- | --- | --- |
-| 50% consumed | In-app | Fires once per cycle against the cycle's grants plus unexpired packs |
-| 80% | In-app + email | Includes the forecast date |
-| 95% | In-app + email + WhatsApp utility | Strictly transactional template copy |
-| 100% (exhausted) | In-app + email + WhatsApp utility | Employee banner flips on; the nudge loop arms |
+| 50% consumed | `in_app` | Fires once per cycle against the cycle's grants plus unexpired packs |
+| 80% | `in_app` + `email` | Includes the forecast date |
+| 95% | `in_app` + `email` + `web_push` (if installed) | Strictly transactional copy |
+| 100% (exhausted) | `in_app` + `email` + `web_push` (if installed) | Employee banner flips on; the nudge loop arms |
 
-A WhatsApp utility message costs ₹0.115-0.145 plus 18% GST (Meta and BSP rate cards, re-verify at build) <span class="pill pill--med">Medium</span>: alerting an admin costs paise and prevents a queue. Thresholds re-arm when a grant or purchase lifts the balance back above them.
+Notification COGS is tiny: `web_push` is free over VAPID, and a transactional `email` runs roughly ₹0.05 to 0.20 each (SES or Postmark class, our derivation, re-verify at build) <span class="pill pill--med">Medium</span>, so alerting an admin costs paise and prevents a queue. The future native apps will add `native_push` (FCM or APNs) over the API. Thresholds re-arm when a grant or purchase lifts the balance back above them.
 
 Auto-top-up exists for companies that never want to see the paywall, and it is engineered against the surprise-charge failure mode:
 
@@ -219,6 +219,5 @@ And the honest flip side: we expect gaming. DocuSign's community threads openly 
 - [HubSpot: credits and billing](https://knowledge.hubspot.com/account-management/understand-hubspot-credits-and-billing): monthly-expiring credits, the anti-pattern we avoid.
 - [Zoho Expense India pricing](https://www.zoho.com/in/expense/pricing/): the ₹99/user per-seat anchor with 20 autoscans per user.
 - [Google Cloud Document AI pricing](https://cloud.google.com/document-ai/pricing): expense-parser COGS input behind the margin arithmetic.
-- [Meta: WhatsApp Business Platform pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing): per-message utility rates used for admin alerts.
 
 <LinkCard title="Payouts" description="From approved claims to money in accounts: bank bulk-payment files by default, an optional payout API per customer, funds never on our books." href="/phase-1/payouts/" />
