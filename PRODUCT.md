@@ -1,39 +1,47 @@
-# PRODUCT.md — Kharcha Dossier
+# PRODUCT.md — Kharcha Dossier v2
 
-> Working product name: **Kharcha** (Hindi/Urdu for "expense / spending"). Placeholder; trivially swappable. Alternatives considered: Raseed (receipt), Vyay (expenditure), Lekha (ledger).
+> Working product name: **Kharcha** (Hindi/Urdu for "expense / spending"). Placeholder; trivially swappable.
 
 ## What this is
 
-This site is **not** the product UI. It is a **product & strategy dossier**: a research-backed, data-validated decision document on whether to build an employee/vendor **expense-reimbursement SaaS for India** as an indie hacker or small team, and how. It reads like a seasoned SaaS operator's build memo: market, competitors, pain points, regulation, rule-engine spec, KYC, payouts, pricing, GTM, and a candid build/no-build verdict.
+This site is a **product and build dossier** for a PURE-SOFTWARE B2B SaaS for expense reimbursement in India, delivered in two phases:
+
+- **Phase 1 (the deep core): employee reimbursement.** Mobile-web/PWA bill capture with a document-scanner-grade camera (no stretched bills), OCR to itemised line items with a manual line-item fallback, web app for submission plus a configurable maker-checker approval flow (levels and amount thresholds), company onboarding and configuration, credit-metered pricing (unlimited users and approvers; submissions are the meter; soft paywall), and payouts via bank bulk-file export (optional Razorpay-style payout API per customer).
+- **Phase 2 (separate, optional): vendor reimbursement and payouts.** Documented as a clearly scoped follow-on.
+
+No cards. No float. No funds ever touch the platform.
+
+The dossier serves two readers at once: a human operator absorbing one connected narrative (strategy -> Phase 1 -> engineering spec -> Phase 2), and **LLM coding agents building the API, backend, mobile web app, and web app directly from these pages** (data models, API surfaces, state machines, config schemas, screen-level UX).
 
 ## Register
 
-**Brand / editorial.** This is long-form, persuasive, numbers-heavy content where the design IS part of the credibility. It must feel like a premium independent research report, not a generic SaaS docs template.
+**Brand / editorial** for strategy pages; **product/spec precision** for Phase 1 and Engineering Spec pages. Same visual system throughout (see DESIGN.md). It must read like a premium independent build memo, not a generic SaaS docs template.
 
 ## Primary users (readers)
 
-- **The operator-founder** (primary): a solo or 2-3 person technical founder evaluating this opportunity. Skeptical, time-poor, wants evidence and a clear verdict, not hype. Reads on a laptop, long sessions.
-- **A prospective co-founder / early hire** being pitched the idea: needs the full picture fast.
-- **An advisor / angel** sanity-checking the thesis and the numbers.
+- **The operator-founder** (primary): evaluating and then building this. Skeptical, time-poor, wants evidence, committed verdicts, and buildable detail.
+- **LLM coding agents**: consuming the Engineering Spec and Phase 1 pages as ground truth for implementation.
+- **A prospective co-founder / early hire / advisor**: needs the full picture fast via the connected narrative.
 
 ## Tone
 
-Authoritative, candid, numerate. Like a16z + a sharp Indian CA + a shipping indie founder. States opinions and commits to a recommendation. Surfaces risk plainly. Cites sources. Never breathless. Never "revolutionary / game-changing" marketing voice.
+Authoritative, candid, numerate. Operator's build memo: states opinions, commits to recommendations, surfaces risk plainly, cites sources. Spec pages are precise and exhaustive without padding. Never breathless marketing.
 
 ## Anti-references (do NOT look like these)
 
 - Generic SaaS docs (Stripe-clone blue, Inter everywhere, identical feature-card grids).
-- Finance/fintech clichés: **navy + gold**, glass dashboards, neon-on-black "fintech."
-- India clichés: tricolour saffron/green, Taj Mahal, rupee-symbol-as-logo.
-- AI-slop: hero-metric template (big number / small label / gradient), em dashes, restated headings, side-stripe callouts.
+- Finance clichés: navy + gold, glass dashboards, neon fintech.
+- India clichés: tricolour, rupee-symbol logos.
+- AI-slop: hero-metric template, em dashes, restated headings, side-stripe callouts.
 
 ## Strategic principles for the content
 
-1. **Evidence over assertion.** Every market number, price, and regulation carries a source. Distinguish analyst data from vendor marketing.
-2. **Commit to a verdict.** The reader wants a recommendation, with the reasoning and the conditions under which it flips.
-3. **Show the spec.** Rule engine, maker-checker state machine, KYC flow, payout architecture as concrete, quotable specs (JSON, tables, diagrams), not vibes.
-4. **Right-size the ask.** "Getting the over-ask right" = an explicit MVP cut line vs the over-built version.
-5. **Regulation is a feature.** GST/Income-Tax/RBI/DPDP framed as moat and trust, not boilerplate.
+1. **Evidence over assertion.** Numbers carry provenance (analyst / vendor / govt / our derivation) and confidence when soft.
+2. **Commit to decisions.** Every open question gets a recommendation and the conditions that flip it.
+3. **Show the spec.** Concrete, quotable artifacts: JSON schemas, API tables, state machines, config examples, screen flows.
+4. **Phase discipline.** Phase 1 is employee-only and deep; Phase 2 is vendors, separate and lighter. Never blur them.
+5. **Pure-software invariants.** No cards, no float, funds never touch our accounts; bank-file export is the default payout; payment-API integration is per-customer opt-in.
+6. **Pricing is a product system.** Unlimited seats, metered submissions, credit ledger, soft paywall (queue, never lose a bill), nudge loops. Specified, not just priced.
 
 ## Voice rules (apply to all authored copy)
 

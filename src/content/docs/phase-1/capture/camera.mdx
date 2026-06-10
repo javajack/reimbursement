@@ -1,0 +1,275 @@
+---
+title: Camera and Document Capture
+description: "Document-scanner-grade capture in the browser: the capture ladder, the no-distortion rule, quality gates, multi-page, and offline."
+---
+
+import { LinkCard, Steps } from '@astrojs/starlight/components';
+
+Capture is the first twenty seconds of every claim, and where incumbents visibly fail: Concur shipped a months-long iPhone 15 blurry-camera regression, Expensify's open bug #45904 turns a blurry receipt into a confidently wrong amount with no warning, and no big-7 vendor ships document-scanner-grade capture in its core mobile flow; they coach ("flat, dark surface, hold steady") instead (evidence in [pain points](/strategy/pain-points/)). We win this surface with platform discipline: a capture ladder that works on 100% of devices, a no-distortion rule enforced by a dev assert, an on-device quality gate, and honest multi-page and offline behavior.
+
+This page owns the client half of the canonical pipeline: `intake` → `frame_analysis` → `capture` → `quality_gate` → `crop_correct` → `review` → `compress` → `queue_upload` → `upload`. Server `extract` and `review_items` live in [OCR and itemisation](/phase-1/capture/ocr-itemisation/); stage contracts for implementing agents in the [capture pipeline spec](/spec/capture-pipeline/).
+
+## The capture ladder
+
+Three rungs, feature-detected at runtime, never UA-sniffed. Each rung degrades silently to the one below within the same tap.
+
+| Rung | Mechanism | Where it runs | Why it earns its place |
+| --- | --- | --- | --- |
+| 1. Universal primary | `<input type="file" accept="image/jpeg,image/png" capture="environment">` | 100% of targets: every Android browser, in-app browsers (WhatsApp, Slack, Gmail), iOS Safari tabs, iOS standalone | Full-resolution native camera; the OS does focus, HDR, stabilization, orientation; zero permission prompts |
+| 2. Enhanced viewfinder | `getUserMedia` + live edge overlay + auto-capture | Android-first progressive enhancement; iOS browser tabs on capable versions | Live guidance makes capture feel like a scanner, not a camera |
+| 3. Full-sensor stills | `ImageCapture.takePhoto()` where present, else canvas grab at stream resolution | Chrome 59+ (2017); Safari and iOS 18.4+ (March 31, 2025); Firefox flag-gated | A true photographic exposure at the camera's still resolution, above the live stream |
+
+<p class="source-note">Source: Chrome Developers, WebKit Safari 18.4 release notes, MDN browser-compat-data (primary docs, high confidence). caniuse still lags WebKit on Safari here; feature-detect with <code>'ImageCapture' in window</code>.</p>
+
+:::tip[Rung 1 is the product, not a fallback]
+File input deletes the whole class of getUserMedia quirks on the guaranteed path: WhatsApp, Slack, and Gmail in-app browsers, and iOS standalone, where WebKit bug 252465 still intermittently delivers black or frozen streams (reproduces through iOS 18.4.1), so installed iOS never calls getUserMedia at all. Expensify and Wave give their web channels plain upload; rung 1 alone matches them.
+:::
+
+## The no-distortion rule
+
+:::danger[Product invariant]
+A stretched bill is always our bug. Stream frames are never distorted at the stream's intrinsic `videoWidth` by `videoHeight`; every stretched receipt comes from presentation or capture code: `object-fit: fill` on the preview, a canvas sized from CSS pixels or `devicePixelRatio`, or a mismatched-aspect `drawImage` (MDN, high confidence).
+:::
+
+Constraints are requests: only `exact`, `min`, and `max` bind (`exact` throws `OverconstrainedError`), so the delivered aspect routinely differs from the requested. The canonical pattern:
+
+```ts
+// stage: capture (enhanced viewfinder). The no-distortion rule, executable.
+
+// 1) Request with `ideal`; the browser picks the closest supported mode.
+const stream = await navigator.mediaDevices.getUserMedia({
+  video: {
+    facingMode: { ideal: 'environment' },
+    width: { ideal: 4096 },
+    height: { ideal: 2160 },
+  },
+});
+video.srcObject = stream;
+
+// 2) Wait for metadata. videoWidth/videoHeight are the ONLY truth about
+//    the stream; the request does not have to match what arrived.
+await new Promise<void>((resolve) =>
+  video.addEventListener('loadedmetadata', () => resolve(), { once: true }),
+);
+
+// 3) Preview is CSS, not JS: explicit box + cover. Cover crops and keeps
+//    aspect; fill stretches. `object-fit: fill` is lint-banned.
+//    .viewfinder video { width: 100%; height: 100%; object-fit: cover; }
+
+// 4) Full-frame capture: canvas sized from STREAM pixels.
+//    Never from CSS pixels, never from devicePixelRatio.
+function captureFullFrame(video: HTMLVideoElement): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height);
+  // Assert against an INDEPENDENT expectation: the track's own reported
+  // frame size, not the values that just sized this canvas.
+  const settings = (video.srcObject as MediaStream)
+    .getVideoTracks()[0]
+    .getSettings();
+  assertAspect(canvas, settings.width! / settings.height!);
+  return canvas;
+}
+
+// 5) WYSIWYG capture: match the cover-cropped preview exactly by
+//    replicating cover's center crop in stream pixel space, via the
+//    9-argument drawImage with that source rect.
+function captureWysiwyg(video: HTMLVideoElement): HTMLCanvasElement {
+  const sw = video.videoWidth;
+  const sh = video.videoHeight;
+  const box = video.getBoundingClientRect();
+  const boxAspect = box.width / box.height;
+  let cw = sw;
+  let ch = sh;
+  if (sw / sh > boxAspect) cw = Math.round(sh * boxAspect); // crop sides
+  else ch = Math.round(sw / boxAspect); // crop top/bottom
+  const cx = Math.round((sw - cw) / 2);
+  const cy = Math.round((sh - ch) / 2);
+  const canvas = document.createElement('canvas');
+  canvas.width = cw;
+  canvas.height = ch;
+  canvas.getContext('2d')!.drawImage(video, cx, cy, cw, ch, 0, 0, cw, ch);
+  // Assert against the preview box the user actually saw, not the crop
+  // math that sized the canvas.
+  assertAspect(canvas, boxAspect);
+  return canvas;
+}
+
+// 6) Dev assert: a distortion regression fails in development and in CI
+//    device tests, never in a finance queue. The tolerance absorbs
+//    integer rounding of crop rects.
+function assertAspect(canvas: HTMLCanvasElement, want: number): void {
+  if (import.meta.env.DEV) {
+    const got = canvas.width / canvas.height;
+    if (Math.abs(got - want) > 0.01) {
+      throw new Error(`capture aspect ${got} != expected aspect ${want}`);
+    }
+  }
+}
+```
+
+## The enhanced viewfinder
+
+On capable devices the same screen upgrades to a live viewfinder: the default on Android after the first granted permission, browser tabs only on iOS. Behaviors:
+
+- **Guide frame.** Full-bleed cover preview with a receipt-shaped overlay, portrait-biased; overlay geometry from `track.getSettings()`, never assumed.
+- **`frame_analysis` at ~10 fps on downscaled (~720p) frames:** edge highlight, stability, glare and blur pre-checks. The full-resolution frame is touched once, at capture.
+- **Auto-capture on steadiness.** Edges stable for a short window fire the shutter; tap-induced shake is a classic capture failure, and commercial SDKs sell auto-capture on steadiness for exactly this reason. We implement it.
+- **Capability-gated controls.** Torch and zoom render only when `track.getCapabilities()` reports them: no dead buttons, no UA assumptions (circulating support claims are stale).
+- **Haptic and audio confirmation** on every capture: the non-visual channel for low-vision users; auto-capture removes the hold-steady-while-tapping gesture entirely.
+- **Permission pre-prompt.** One screen explains why before the first `getUserMedia` call; denial falls to rung 1 in the same tap.
+
+| Control | Android Chrome | iOS Safari | Runtime gate |
+| --- | --- | --- | --- |
+| Full-sensor still | Chrome 59+ (2017) | iOS 18.4 (Mar 31, 2025); `grabFrame` Safari 26.0 | `'ImageCapture' in window` |
+| Torch | Yes, `applyConstraints` | Works since ~iOS 17.5.1; `getSettings()` fix in 18.4 | `getCapabilities().torch` |
+| Zoom | Yes | Safari 17.0+ | `getCapabilities().zoom` |
+| Focus (`focusMode`, `focusDistance`) | Chrome on Android only | Absent through Safari 26.x | `getCapabilities().focusMode` |
+| White balance | Yes | Safari 17.4+ | `getCapabilities().whiteBalanceMode` |
+
+<p class="source-note">Source: WebKit release notes 17.0, 17.4, 18.4; WebKit bug 243075; Chrome Developers; Dynamsoft engineering (primary docs, high confidence). The takePhoto API is present on iOS 18.4+; whether iPhone takePhoto returns true full-sensor resolution (vs stream-sized exposures) is unbenchmarked; verify at build.</p>
+
+## The quality gate
+
+`quality_gate` runs on-device in under a second, when a retake costs three seconds instead of a bounced claim days later. Two cheap signals: variance of Laplacian on a grayscale downscale (blur) and a brightness histogram (too dark, blown out). Thresholds are tuned on our own Indian receipt corpus (thermal, bilingual English-Hindi); blog thresholds are unsourced and not shipped.
+
+| Check | Signal | Gate behavior | Retake microcopy |
+| --- | --- | --- | --- |
+| Blur | Variance of Laplacian below floor | Block, prompt retake | "Too blurry to read. Hold steady; we capture automatically." |
+| Low light | Histogram mass in dark bins | Block, prompt retake | "Too dark. Try the torch or move toward light." |
+| Glare or blowout | Bright-bin spike inside the guide frame | Warn, allow keep | "Glare is hiding part of the bill. Tilt the phone slightly." |
+| Bad cropping | Not reliably detectable at the gate | Rescue editor downstream | none |
+
+The precedent is Scanbot's Document Quality Analyzer, a five-level per-text sharpness grade; even it "cannot detect incorrect or incomplete document cropping" (vendor docs), so crop rescue lives downstream. The stake is Expensify's #45904: blur in, wrong amount out. "Keep anyway" exists for genuinely faded bills but flags the Receipt so extraction tightens confidence thresholds in [OCR and itemisation](/phase-1/capture/ocr-itemisation/); on failure the employee lands in [manual entry](/phase-1/capture/manual-entry/) with the image attached, no extra credit consumed.
+
+## Multi-page and the tray
+
+The `review` stage is a thumbnail tray under the viewfinder, shaped by one constraint: iOS allows effectively one active camera stream: a second `getUserMedia` call kills the first (WebKit bug 179363) and backgrounding suspends tracks. A session runs on one persistent stream, re-acquired on `visibilitychange`, never per page.
+
+<Steps>
+
+1. Capture a page (auto-capture or manual shutter); it passes `quality_gate` and lands in the tray.
+
+2. "Add page" reuses the same stream, no new permission prompt; "Retake" replaces in place.
+
+3. Every page is written to IndexedDB immediately as its own record under the draft Claim; killing the app mid-capture loses nothing.
+
+4. "Done" sends pages through `compress` and `queue_upload` in order, each becoming a Receipt on the Claim.
+
+</Steps>
+
+Long thermal receipts are the honesty test: quad-based perspective correction assumes a planar document, crumpled paper violates it, dewarping is research-grade, and stitching frames is hard. The product answer is multi-shot: "Long bill? Capture it in parts; overlap a few lines." Parts are ordered pages on one Claim.
+
+:::note[Where credits touch capture]
+One credit covers a Claim submitted with up to 5 receipt images; each additional 5 adds one credit (the anti-batching fair-use guard, stated plainly in the pricing FAQ; DocuSign precedent). Pre-submission OCR is free within the fair-use cap; failed extraction never consumes an extra credit. The tray shows a running page count; the rule never surprises. Semantics in [credits and metering](/phase-1/credits-and-metering/).
+:::
+
+## Crop and de-skew: server-side first
+
+`crop_correct` (perspective correction plus de-skew) runs server-side in v1 on the uploaded full-resolution JPEG, with a client-side manual 4-corner rescue editor for the misses. A numbers decision:
+
+| Option | Cost | Client payload | Verdict |
+| --- | --- | --- | --- |
+| Server-side correction + client 4-corner rescue editor | Server compute only | ~0 extra KB | <span class="pill pill--build">Build for v1</span> |
+| jscanify + OpenCV.js in browser | Free (MIT; v1.4.2, ~10k weekly downloads) | 7.6-8.4 MB default WASM; 2-4 MB trimmed; 0.8 MB extreme | <span class="pill pill--caution">Defer</span> |
+| Dynamsoft Document Normalizer | From USD 1,249/yr (vendor price page) | SDK WASM bundle | <span class="pill pill--caution">Revisit at scale</span> |
+| Scanbot Web SDK | ~EUR 20,000/yr (aggregator-reported; vendor is quote-only) <span class="pill pill--low">Low</span> | npm package 106.63 MB unpacked across engine flavors | <span class="pill pill--avoid">Not at our price point</span> |
+
+<p class="source-note">Source: vendor pricing pages and npm registry (high); the Scanbot figure is third-party because the vendor publishes no prices (low confidence).</p>
+
+Why client-side CV is deferred, not rejected:
+
+- **Payload against budget.** Our whole JS budget is 300-350 KiB gzipped for a sub-5s P75 first load on a Galaxy A24-class device; default OpenCV.js WASM is over twenty times that (our derivation). India makes this binding: Android 93.2%, iOS 6.7% (StatCounter, May 2026); 4-8 GB RAM is 42.3% of the market.
+- **Stability.** Threaded OpenCV.js builds OOM-crash 3 GB-RAM phones on refresh (opencv issue 24986); only single-threaded SIMD builds are mobile-safe, and manual `cv.Mat` deletes leak endemically.
+- **Detection quality.** jscanify's docs require a flat surface and solid background; it fails on exactly the bill that matters, crumpled thermal on a cluttered table. Every commercial scanner ships a corner editor because auto-detect fails there; the rescue editor is the real workhorse, so we build it first.
+- **No shortcut exists.** MediaPipe has no web document scanner (Google's is ML Kit, Android-only); a custom ~400 KB ONNX corner model is a model-ops project, not an integration.
+
+Server-side preprocessing pays, but gains are corpus-dependent: PreP-OCR measured 63.9-70.3% relative character-error reduction on historical documents, binarization alone ~27.6% on a specialised corpus (primary papers); popular "15-30%" blog figures are unsourced <span class="pill pill--med">Medium</span>. We A/B on our own thermal, bilingual corpus before claiming numbers.
+
+What flips the decision: if capture telemetry shows server correction failing at material rates, lazy-load a slim single-threaded SIMD OpenCV.js build on the scan screen only, service-worker cached, on `deviceMemory >= 4` devices only, inside the ~300 MB practical mobile WASM ceiling.
+
+## Compress before upload
+
+`compress` runs client-side before anything queues: longest edge 2048 px, JPEG quality 0.8, typically 200-500 KB per page (our derivation from these settings <span class="pill pill--med">Medium</span>).
+
+- **The numbers hold.** Google Vision wants at least 1024 by 768 and at most 20 MB (vendor docs); an 80 mm thermal receipt at Tesseract's 300 DPI guidance needs only ~945 px of width. 2048 px over-satisfies both, with headroom for `crop_correct`.
+- **EXIF-safe.** Only file-input images carry EXIF orientation; every intake image is re-encoded through canvas, baking orientation into pixels and stripping the tag, so a Samsung landscape-sensor photo can never render rotated downstream. getUserMedia captures never carry EXIF.
+- **Formats.** Accept `image/jpeg` and `image/png`. iOS transcodes HEIC to JPEG when picking from Photos; real HEIC still leaks via the Files app and AirDrop, so the server validates magic bytes and normalizes HEIC instead of bouncing the employee.
+- **Memory.** Pre-iOS 18 the canvas area cap is 16,777,216 px: a 12 MP photo (4032 by 3024) just fits, 16 MP fails; iOS 18 raises it to 67,108,864 px. Process at most 12 MP, one page at a time, releasing references between pages.
+
+## The offline outbox
+
+`queue_upload` is an IndexedDB outbox written before any network attempt. Field-sales employees capture in basements and parking lots; the bill is theirs the moment the shutter fires.
+
+```ts
+type OutboxRecord = {
+  blob: Blob;               // compressed JPEG page
+  submission_id: string;    // draft Claim id, e.g. "clm_01J9Z..."
+  page_index: number;
+  idempotency_key: string;  // sent as Idempotency-Key; server dedupes retries
+  attempts: number;
+  last_error: string | null;
+};
+```
+
+Upload is `fetch` with exponential backoff; every POST carries the record's idempotency key per the API conventions, so a retried request can never duplicate a Receipt.
+
+| Chip | Meaning | User action |
+| --- | --- | --- |
+| `waiting` | On this phone; waiting for network or backoff | None; nothing is lost |
+| `syncing` | Upload in flight | None |
+| `synced` | Server acknowledged; local blob deleted only after the ack | None |
+| `failed` | Attempts exhausted or file rejected | One-tap retry, reason in plain language |
+
+Platform honesty: Background Sync is Chromium-only (Chrome 49+, Edge, Samsung Internet; zero Safari support through 26.x). On Android, Workbox's BackgroundSyncPlugin drains the queue even after the tab closes. On iOS we never write "uploads in the background": the queue replays on `online`, `visibilitychange`, and app open, and the UI says so: "3 pages waiting. Open Kharcha on network to finish."
+
+After the first successful capture we request `navigator.storage.persist()`. Safari 17+ grants up to 60% of disk per origin without prompting, installed apps included; the residual risk is the 7-day script-storage eviction for origins untouched across seven days of browser use (installed apps exempt). Mitigations: eager upload, server-ack before local delete, and a loud warning under storage pressure or stale queues: "Unsent receipts may be deleted after 7 days of inactivity. Open Kharcha on network to finish syncing."
+
+:::caution[Two queues that must never be confused]
+The outbox retries only on network exceptions; Workbox never queues 4xx or 5xx responses. Credit exhaustion is not a network failure: the upload succeeds, the server stores the image, the Receipt enters `queued`, and the Claim waits in `awaiting_credits`. That is an application-layer state with its own UI (queue position, one-tap "remind your admin"), never an outbox retry; conflate them and paused uploads retry forever. Soft paywall in [credits and metering](/phase-1/credits-and-metering/), claim-side status in [submit and track](/phase-1/capture/submit-and-track/).
+:::
+
+## Every way a bill gets in
+
+The `intake` stage is wider than the camera; all paths converge on the same pipeline and Receipt records.
+
+| Intake path | Mechanism | Notes |
+| --- | --- | --- |
+| In-app camera | The capture ladder above | Default everywhere. WhatsApp links open its in-app browser, where getUserMedia is unavailable or prompt-heavy; the file-input rung just works there and in Slack and Gmail webviews |
+| Photo library | `<input type="file">` without the `capture` attribute | Bills photographed earlier; same EXIF re-encode and HEIC normalization |
+| Android share target | Web Share Target in the installed PWA manifest | Share a bill from WhatsApp or the gallery straight into a draft Claim; Android-only, ships with the Stage 1 PWA |
+| Email-in | Per-company unique address, editable prefix | Joins the pipeline at `upload`; bounce-backs are loud and specific, never silent drops |
+| Console upload | Drag and drop on the web Console | Desk employees and finance; same pipeline from `compress` onward |
+
+Sending bills to a WhatsApp number (WhatsApp-in) is the India fast-follow, not a v1 intake path.
+
+## Done means
+
+- File-input capture works at full native resolution, zero permission prompts, on Android Chrome, WhatsApp and Gmail in-app browsers, an iOS Safari tab, and iOS standalone.
+- iOS standalone never calls `getUserMedia`; the viewfinder feature-detects and falls back to rung 1 silently, in the same tap, on any failure.
+- No shippable path produces a stretched image: `object-fit: fill` lint-banned, capture canvases sized only from `videoWidth` and `videoHeight`, aspect assert in CI device tests.
+- Auto-capture fires only on steadiness; torch and zoom render only when `getCapabilities()` reports them.
+- `quality_gate` verdicts render in under one second on a 4 GB-RAM Android, with plain-language retake reasons; "keep anyway" flags the Receipt.
+- A five-page capture runs on one stream with no permission re-prompts; killing the app mid-tray loses nothing.
+- Three pages captured in airplane mode show `waiting` chips, sync on reconnect, and produce zero duplicates.
+- A Samsung landscape photo never renders rotated downstream; HEIC leaks are normalized server-side, not bounced.
+- Compressed pages: 2048 px long edge, JPEG quality 0.8, typically 200-500 KB.
+- A credit-exhausted upload succeeds and shows the application-layer queue state, never a retry spinner.
+
+<LinkCard title="OCR and itemisation" href="/phase-1/capture/ocr-itemisation/" description="After upload: async extraction, confidence-threshold routing, tap-to-fix review." />
+
+<LinkCard title="Capture pipeline spec" href="/spec/capture-pipeline/" description="Stage contracts, payloads, quality-gate telemetry, and the upload API." />
+
+## Sources
+
+- [MDN: Taking still photos with getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Taking_still_photos): the canonical undistorted capture pattern.
+- [Chrome Developers: Image Capture API](https://developer.chrome.com/blog/imagecapture): `takePhoto` full-sensor semantics; Chrome 59.
+- [WebKit: Features in Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/): Image Capture API on iOS; torch `getSettings()` fix.
+- [WebKit: Features in Safari 17.0](https://webkit.org/blog/14445/webkit-features-in-safari-17-0/): zoom in MediaTrackCapabilities.
+- [WebKit bug 252465](https://bugs.webkit.org/show_bug.cgi?id=252465): black or frozen streams in iOS standalone web apps.
+- [WebKit bug 179363](https://bugs.webkit.org/show_bug.cgi?id=179363): second getUserMedia call kills the first stream on iOS.
+- [WebKit: Updates to Storage Policy](https://webkit.org/blog/14403/updates-to-storage-policy/): 60%-of-disk quota; the 7-day eviction rule.
+- [caniuse: Background Sync API](https://caniuse.com/background-sync): Chromium-only; zero Safari support.
+- [opencv/opencv issue 24986](https://github.com/opencv/opencv/issues/24986): threaded WASM OOM on 3 GB-RAM devices.
+- [jscanify](https://github.com/puffinsoft/jscanify): MIT scanner on OpenCV.js; the solid-background limitation.

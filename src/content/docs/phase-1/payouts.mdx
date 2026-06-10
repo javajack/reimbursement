@@ -1,0 +1,180 @@
+---
+title: Payouts
+description: "Bank-file export as the compliant default, the optional payout API, payroll hand-off, and reconciliation back to paid."
+---
+
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Payouts keep the product's two core promises at once: the employee gets paid on a date they can see, and the money never passes through us. The compliant default is a bulk-payment file rendered in the customer's own bank format and executed inside their own net banking. A per-customer payout API adds one-click disbursement through a regulated partner; a payroll export covers companies that pay reimbursements with salary. Below: the three modes, the beneficiary-verification gate, source-account routing, the rails, and reconciliation back to `paid`.
+
+## One invariant, three modes
+
+Claims arrive `approved` from the approval engine. Batches start in the [finance console](/phase-1/web/finance-console/) batch builder: finance filters approved claims by department, branch, or date, reviews the total, and locks a PayoutBatch. Adding a claim to a `building` batch reserves it; the claim remains `approved`, and removing it while `building` simply releases the reservation. Claims move to `in_payout` when the batch is exported (file mode) or starts executing (API mode); after that point a claim returns to `approved` only by an explicit finance write-off of a `failed` or otherwise unresolved instruction, always audited with employee notification. There is no per-payout software fee: file generation and exports sit inside the submission credit, per [credits and metering](/phase-1/credits-and-metering/); partner API fees pass through at cost.
+
+:::danger[RBI invariant: funds never touch our accounts]
+
+Every mode below debits an account the customer or a licensed partner controls, never one we own. The RBI Payment Aggregator definition covers customer-to-merchant collections: a non-bank PA needs ₹15 crore net worth at application, ₹25 crore by year three; a non-bank PPI issuer needs ₹5 crore rising to ₹15 crore (govt primary). <span class="pill pill--high">High</span> Any pooled, nodal, swept, or pre-funded account in our name re-characterises us as a PA or PPI issuer. The 2025 Directions offer no explicit payout-only safe harbour (the exemption is by exclusion), so a written legal opinion is mandatory before go-live: [money movement](/compliance/money-movement/).
+
+:::
+
+<Tabs>
+<TabItem label="Bank file (default)">
+
+We render one bulk-payment file per source account in the customer's bank format; they execute it themselves. Per-payout cost on the file path is low and bank-schedule dependent: RBI waived its NEFT/RTGS processing charges and online NEFT is free for savings accounts, but corporate bulk-upload pricing varies by bank; re-verify per customer (govt + bank schedules, medium). It works for any company with corporate net banking: the entire target market.
+
+<Steps>
+
+1. **Build.** Finance locks the `building` batch; every claim gets a PayoutInstruction in `pending`.
+
+2. **Export.** One file per source BankAccount in that bank's layout: ICICI CIB, HDFC ENet, Axis PayPro, SBI CINB, Kotak corporate net banking. Layouts are indicative until verified per bank; per-bank field maps and caps live in [bank files](/reference/bank-files/). Every row carries our `pin_` reference in the remarks field. Batch becomes `exported`, instructions `dispatched`, and member claims move to `in_payout`.
+
+3. **Execute.** Finance uploads the file in their own net banking and authorizes it under the bank's own maker-checker. They mark the batch `executed` in Kharcha.
+
+4. **Reconcile.** Finance imports the bank's return or UTR file (or pastes UTRs for small runs). Matched rows mark instructions `paid` and claims `paid`; reject rows mark instructions `failed` and enter the repair loop. The batch reaches `reconciled` only when no instruction is unresolved.
+
+</Steps>
+
+</TabItem>
+<TabItem label="Payout API (per-customer opt-in)">
+
+A RazorpayX or Cashfree-class regulated partner initiates NEFT, RTGS, IMPS, or UPI payouts from a customer-funded, partner-held account; we are the API caller, never the fund holder. The batch runs `building`, `executing`, `completed` or `partially_failed`, `reconciled`, with status webhooks and UTR on success (vendor docs, high). Per-transaction cost runs roughly ₹1.75 to ₹5 plus GST, passed through to the customer; RazorpayX advertises 250 free payouts a month and a ₹5 lakh single-payout cap. <span class="pill pill--med">Medium</span> (vendor pages, not rate cards; re-verify at build time). Every initiation POST carries an `Idempotency-Key`, so retries never double-pay. Opt-in is per customer; the default stays the file.
+
+</TabItem>
+<TabItem label="Payroll export">
+
+A CSV keyed by employee ID (name, total amount, claim references, period) that finance imports into their payroll tool. When the payroll run is confirmed, finance bulk-marks the claims paid-via-payroll with the payroll run reference as the audit anchor: claims go `paid` with `payment_mode: payroll` and no UTR. Tax posture matters: a receipted business-expense reimbursement is not salary and must not land in a taxable pay head; per-diems are exempt only to the extent actually spent (Sec 10(14)/Rule 2BB). Mapping rules live in the [regulatory map](/compliance/regulatory-map/). This is the slowest mode: monthly payroll cadence stretches time-to-money, and expected dates must say so honestly.
+
+</TabItem>
+</Tabs>
+
+:::caution[Bank formats are versioned and gated]
+
+Field order, fixed-width positions, encryption, and per-file caps differ by bank and channel, and some specs publish only inside the corporate portal. Indicative caps: HDFC ENet near 1,000 transactions and ₹10 crore per file; SBI corporate RTGS/NEFT up to ₹50 lakh per transaction and ₹2 crore per day; Kotak's layout was not independently fetched. Confirm each format against the bank's current spec or the customer's relationship manager before building the renderer (primary/secondary mix; medium on exact fields).
+
+:::
+
+## The beneficiary gate
+
+No PayoutInstruction is ever created against a BeneficiaryAccount that is not `verified`, with exactly one exception, the finance-acknowledged first-payout probation described below; the server enforces this in both modes that carry account numbers (payroll mode delegates account custody to the payroll system). Verification is penny-drop: deposit ₹1 through a verification API, read back the account-holder name as the bank holds it, and match it against the employee's registered name. The check costs about ₹3 per account (Setu, high). Any employee edit to account number or IFSC immediately demotes the account and re-runs the gate.
+
+| Name-match result | Outcome | BeneficiaryAccount status |
+| --- | --- | --- |
+| Strong match (exact, or trivial variation) | <span class="pill pill--allow">Allow</span> auto-verify | `verified` |
+| Partial match (initials, order swap, honorifics) | <span class="pill pill--flag">Flag</span> finance review, both names shown | `pending` (finance review) |
+| Mismatch, or penny-drop failure (invalid or closed account) | <span class="pill pill--block">Block</span> employee must fix details | `failed` |
+
+For the rare customer that refuses every third-party API, the fallback is first-payout probation: the account stays `pending` under an explicit, audited finance acknowledgment, rides only in that single acknowledged batch, and flips to `verified` on its first successful UTR. Penny-drop remains the default; ₹3 once per employee is noise next to one mis-credited payout.
+
+## Source-account routing
+
+Real companies debit travel from one current account and everything else from another, and branch-heavy companies split by branch. BankAccount models the company source account; routing rules map a branch or category to a BankAccount, with the default account as fallback. The source account hangs off the batch, never the individual instruction: the bank-file path emits one file per source account per run, and the API path selects the partner fund account per batch. Spreading runs across banks also cuts single-bank downtime risk (EnKash and Open run exactly this pattern; vendor, high).
+
+```json
+{
+  "bank_account": {
+    "id": "ba_01JXF9W8E5GJ3KM6PRT2VXYZ4A",
+    "bank": "ICICI",
+    "channel": "icici_cib",
+    "ifsc": "ICIC0000123",
+    "account_number_last4": "1234",
+    "is_default": false
+  },
+  "routing_rule": {
+    "match": { "category": "travel" },
+    "bank_account_id": "ba_01JXF9W8E5GJ3KM6PRT2VXYZ4A"
+  },
+  "payout_batch": {
+    "id": "pob_01JXFA2Z6WQ4H8SD3KM5R7TBVN",
+    "bank_account_id": "ba_01JXF9W8E5GJ3KM6PRT2VXYZ4A"
+  },
+  "payout_instruction": {
+    "id": "pin_01JXFA3QK8ZD5M2T7VWB9NRCEG",
+    "batch_id": "pob_01JXFA2Z6WQ4H8SD3KM5R7TBVN",
+    "claim_id": "clm_01JXF9YV4B7DGK2P5RSW8ZQ3MH",
+    "beneficiary_id": "bene_01JXF9XT2C6FHJ4N7QSV9WZB3D",
+    "amount_paise": 482500,
+    "currency": "INR",
+    "rail": "neft",
+    "status": "paid",
+    "utr": "ICICN26061012345",
+    "failure_reason": null
+  }
+}
+```
+
+## The rails
+
+NEFT is the default for employee reimbursements: no cap, batched, cheap. IMPS or UPI serve urgent small payouts on the API path; RTGS covers the rare claim of ₹2 lakh and above.
+
+| Rail | Min | Max per txn | Speed | Indicative partner cost |
+| --- | --- | --- | --- | --- |
+| NEFT | None (₹1) | No maximum | Batched, 24x7 since 16 Dec 2019 | ~₹2-3 + GST |
+| RTGS | ₹2 lakh | No maximum | Near-real-time, 24x7 since 14 Dec 2020 | ~₹1.75-5 + GST |
+| IMPS | None | ₹5 lakh | Instant, 24x7 | ~₹3-5 + GST |
+| UPI | None | ₹1 lakh standard | Instant, 24x7 | ~₹2-5 + GST |
+
+<p class="source-note">Limits and timings: ClearTax and NPCI circular UPI-OC-185A (govt/analyst, high). The cost column applies only to the API path and comes from RazorpayX/Cashfree product pages, not contractual rate cards (vendor, medium); on the file path, per-payout cost follows the customer's bank schedule (RBI waived its own processing charges; corporate bulk-upload pricing varies by bank). Individual banks impose stricter sub-limits than NPCI/RBI ceilings; re-verify at build time.</p>
+
+One nuance worth hard-coding: UPI's ₹5 lakh tier applies only to specific categories (insurance, capital markets, education, hospitals, government e-marketplace, IPO) under NPCI circular UPI-OC-185A. Never assume it for reimbursements: above ₹1 lakh route NEFT; at ₹2 lakh and above prefer RTGS.
+
+## The reconciliation truth table
+
+PayoutInstruction.status runs `pending` (batch building), `dispatched` (in an exported file or accepted by the partner), then `paid` or `failed`; `cancelled` covers instructions in a batch cancelled while `building`. Instructions are immutable attempts: repair creates a new instruction on the same claim, so the audit trail keeps every attempt. A `building` batch can also be `cancelled`, releasing every reservation; its claims never left `approved`. Formal transition tables with guards live in the spec's state machines.
+
+| Batch status | Instruction status | Claim status | Who moves next |
+| --- | --- | --- | --- |
+| `building` | `pending` | `approved` (reserved) | Finance: lock, pull a claim (releases the reservation), or cancel the batch |
+| `exported` | `dispatched` | `in_payout` | Finance: upload and authorize in net banking |
+| `executed` | `dispatched` | `in_payout` | System: awaiting return file or UTR import |
+| `executed` | `paid` | `paid` | System: matched on the stamped `pin_` reference; AuditEvent plus employee notification |
+| `executed` | `failed` | `in_payout` (repair) | Finance: repair queue |
+| `executing` (API) | `dispatched` | `in_payout` | System: awaiting partner webhook |
+| `completed` (API) | `paid` | `paid` | System: UTR captured from webhook |
+| `partially_failed` (API) | mixed | mixed | Finance: repair the failed instructions |
+| `reconciled` | all terminal | `paid` | Nobody: closes only at zero unresolved instructions |
+
+Matching is reference-first: the `pin_` id we stamped into the remarks field is the join key, with UTR stored on match. Return rows that fail reference matching fall into a manual-match queue keyed on amount, account, and a date window. Nothing flips to `paid` without a UTR, a payroll run reference, or an explicit finance confirmation.
+
+## The repair loop
+
+Return files and failure webhooks normalise to a small reason taxonomy: invalid account number, account closed or frozen, invalid IFSC (bank mergers rewrite IFSCs), beneficiary-name mismatch at the receiving bank, credit returned. The repair queue in the finance console shows reason, claim, employee, and one-click reissue. Reissue creates a new PayoutInstruction (new `pin_`) on the same claim in a new `building` batch, with an `instruction.reissued` AuditEvent linking old to new; account-level reasons first demote the BeneficiaryAccount to unverified, which notifies the employee to fix details and re-pass the gate. After three failed attempts the claim parks until the employee updates details. Throughout repair the claim holds at `in_payout`; finance returns it to `approved` only by an explicit write-off of its `failed` or otherwise unresolved instruction (audited, employee notified), say when a payout needs rethinking on a wrong source account. That is the same guard stated in the batch builder above: free removal exists only while the batch is `building`.
+
+### Recovery settlement
+
+Clawback after `paid` (an audit finding, a duplicate caught late) is a separate recovery record referencing the claim and its lines, never a new claim state: the claim stays `paid` and never reopens, per [edge cases](/phase-1/edge-cases/). The record settles by netting against the employee's next PayoutInstruction (the instruction's amount is the approved amount less any netting) or, where the company prefers, by emitting a payroll-deduction export line; finance can also mark it settled on out-of-band collection. The record shape lives in the [data model](/spec/data-model/).
+
+## The payout calendar and expected dates
+
+"When do I get paid" goes unanswered in-product category-wide: 43% of employees say slow reimbursement hurts their work experience, against an average claim-processing cycle near 9 days (Webexpenses UK 2024 survey; vendor, medium, directional). Our answer is a calendar the employee can see, not a vague status.
+
+Companies configure cadence and cut-off per payout mode. The shipped default is `manual`: no calendar fires before a bank account exists. The recommended cadence once payouts are live is a weekly run on Friday with a Thursday 18:00 IST cut-off; twice-monthly and monthly presets exist, and payroll mode inherits the payroll date. Expected-date logic: a claim approved before a run's cut-off shows that run's date; show dates, never hours; if a run slips or a batch is skipped, recompute and notify with the new date. These dates power the claim timeline in [submit and track](/phase-1/capture/submit-and-track/).
+
+| Moment | Employee sees |
+| --- | --- |
+| Approved before cut-off | "Approved. In the Fri 13 Jun payout run." |
+| Batch `exported` or `executing` | "Payment is with Acme's bank." |
+| Paid | "Paid 13 Jun. UTR ICICN26061012345. Banks can take a few hours to reflect it." |
+| Instruction failed | "We could not pay your account ending 4321. Tap to check your bank details." |
+| Payroll mode | "Will be paid with June payroll, expected 30 Jun." |
+
+## Done means
+
+- Finance can build, lock, and export a batch of approved claims; one file per source BankAccount in that account's channel format; regeneration is deterministic and idempotent.
+- The server refuses any PayoutInstruction against a BeneficiaryAccount that is neither `verified` nor under finance-acknowledged first-payout probation, in every mode that carries account numbers.
+- Return-file import auto-matches on the stamped `pin_` reference; unmatched rows queue for manual match; nothing becomes `paid` without UTR, payroll reference, or explicit finance confirmation.
+- Every batch, instruction, and claim transition writes an AuditEvent; paid claims show their UTR to the employee.
+- Failed instructions surface in a repair queue with one-click reissue as a new instruction on the same claim, capped at three attempts before parking.
+- Approved claims display an expected payout date computed from the company calendar, and any date change notifies the employee.
+
+## Sources
+
+- [Reserve Bank of India (Regulation of Payment Aggregators) Directions, 2025, full text PDF](https://www.fidcindia.org.in/wp-content/uploads/2025/09/RBI-PAYMENT-AGGREGATORS-DIRECTIONS-15-09-25.pdf) (primary)
+- [NPCI circular UPI-OC-185A: ₹5 lakh UPI limit for specific categories](https://www.npci.org.in/PDF/npci/upi/circular/2024/UPI-OC-No-185A-FY-24-25-Implementation-of-Rs-5-Lakh-limit-per-transaction-for-specific-categories-in-UPI.pdf) (govt)
+- [ClearTax: differences between NEFT, RTGS and IMPS](https://cleartax.in/s/differences-between-neft-rtgs-imps) (analyst)
+- [RazorpayX Payouts product page: rails, ₹5 lakh cap, 250 free payouts/month](https://razorpay.com/x/payouts/) (vendor)
+- [RazorpayX docs: payout status and webhooks](https://razorpay.com/docs/x/payouts/status-details/) (vendor)
+- [ICICI Bank: file format for bulk upload in CIB, v3.3](https://www.icici.bank.in/managed-assets/docs/form-center/File_Format_Bulk_%20Transfers_3.3.pdf) (primary)
+- [HDFC Bank: ENet payment and collection solutions](https://www.hdfcbank.com/wholesale/financial-institutions-and-trusts/enet) (primary)
+- [Axis Bank: bulk payment uploads, UTR-level reports](https://www.axisbank.com/corporate/transaction-banking/cash-management-services/bulk-payment-uploads) (primary)
+- [SBI: corporate banking file upload](https://corp.sbi.bank.in/corporate/sbi/corp_fileupload.html) (primary)
+- [Setu: fintech APIs, penny-drop verification context](https://setu.co/) (vendor)

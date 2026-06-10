@@ -1,0 +1,265 @@
+---
+title: System Architecture
+description: "A boring, observable TypeScript monolith with a worker, Postgres RLS, S3, and provider adapters: every decision argued."
+---
+
+import { CardGrid, FileTree, LinkCard, Steps } from '@astrojs/starlight/components';
+
+One repository, one language (TypeScript end to end), two runtime processes, one PostgreSQL 16 cluster, one object-store bucket, one region (ap-south-1, Mumbai). Phase 1 wins on capture quality and workflow depth, not infrastructure novelty, so the risk budget goes where the product is genuinely exposed (OCR vendors, WhatsApp, payout rails) and everything else stays aggressively conventional. The behavior this machine implements is specified in [The end-to-end flow](/phase-1/end-to-end-flow/); this page is the machine, written so an implementing agent can build it without asking questions.
+
+## System context
+
+Five actors touch the system: employees (capture and submit, mostly on the PWA), approvers (web, email actions, WhatsApp nudges), finance (verification, batches, exports), admins (configuration, credits), and auditors (read-only role). India's device reality shapes the client tier: Android 93.2% versus iOS 6.7% (StatCounter, May 2026) <span class="pill pill--high">High</span>, the 4-8 GB RAM segment at 42.3% (IMARC, 2025), so the PWA entry must hold a budget of roughly 150 KiB markup/CSS plus 300-350 KiB gzipped JS on a Galaxy A24-class baseline (Performance Inequality Gap, 2024/2026).
+
+Everything outside the boundary is a contract, never a dependency woven through the code:
+
+| External system | We use it for | Coupling | When it fails |
+| --- | --- | --- | --- |
+| OCR provider (LLM-vision: Gemini Flash family or Claude Haiku class) | Receipt extraction to itemised line items with field confidences | `OCRProvider` adapter, called from the worker only | Receipts hold in `queued`/`processing`; manual entry unaffected; vendor swap stays inside the adapter |
+| Transactional email (ESP) | Magic-link approvals, notifications, invites | `NotificationProvider`, email channel | Retry with backoff; the web inbox remains source of truth |
+| Inbound email | Email-in receipts on a per-company address (editable prefix) | Parse webhook into the capture module | Loud bounce-back to the sender, never a silent drop |
+| WhatsApp BSP | Approver nudges via utility templates (₹0.115-0.145 + 18% GST each, vendor pricing, medium); receipt-in later | `NotificationProvider`, whatsapp channel | Drop to email; WhatsApp is never the only channel |
+| Payout partner (optional, per customer) | Razorpay-style one-click disbursement | `PayoutProvider` adapter plus HMAC-verified webhooks | Fall back to the bank-file rail |
+| Customer banks | Bulk-payment files out, return files in | File formats only; the customer executes in their own net-banking | By design: no credentials held, no API coupling, no money on our books |
+| Payment gateway | Credit-pack purchases (UPI, netbanking, cards) | Hosted checkout plus webhooks | Purchases delay; the soft paywall queues, it never breaks capture |
+
+:::danger[Product invariant: funds never touch our accounts]
+The payouts module emits files and instructions; it never moves money. That single property keeps the product outside PA/PPI licensing entirely. Regulatory reasoning: [Money movement](/compliance/money-movement/).
+:::
+
+## Components
+
+| Component | Pick | Responsibility |
+| --- | --- | --- |
+| `apps/web` | One React + Vite codebase, two build entries | The **PWA** (employee capture: installable, file-input capture ladder, IndexedDB offline outbox) and the **Console** (employee portal, approver inbox, finance console, admin). One design system, one API client, one auth |
+| `apps/api` | Node + TypeScript modular monolith on **Hono** | Every synchronous request: auth, claims, approval decisions, configuration, credit purchases, export downloads |
+| `apps/worker` | Same container image, second command | Queue consumers: `extract`, `notify`, `escalate`, `batch`, `exports`, plus housekeeping (credit expiry, burn forecasts, queue drain on top-up) |
+| PostgreSQL 16 | Managed, single cluster | System of record for all entities, RLS tenant isolation, and the pg-boss job tables |
+| Queue | **pg-boss** (jobs live in Postgres) | Async handoff with transactional enqueue, per-queue concurrency, retries with backoff, scheduled jobs for SLA timers |
+| Object storage | S3-compatible, Mumbai | Receipt images (original and corrected), payout files, return files, exports; lifecycle rules; 8-FY retention (Companies Act, the binding longest) |
+| Provider adapters | `OCRProvider`, `NotificationProvider`, `PayoutProvider` | The only modules where vendor SDKs are allowed to appear |
+
+On the framework: NestJS and Hono both work; we pick Hono and pay for discipline ourselves. Hono is a small Web-standard surface (Request/Response, plain-function middleware) with first-class TypeScript and zod-validated routes; an agent can hold the entire framework in context and handlers test as plain functions. NestJS buys a DI container, decorators, and a module system; the module system is the only part we want, and folder boundaries plus dependency-cruiser in CI deliver it without decorator metadata, request-scoped provider traps, or framework magic for generated code to misuse.
+
+Adapter interfaces live in `packages/shared`; implementations in `apps/api/src/providers`, wired by plain constructor arguments:
+
+```ts
+// packages/shared/src/providers.ts
+export interface OCRProvider {
+  extract(req: { image_urls: string[]; merchant_memory?: MerchantHints }): Promise<{
+    merchant: Field<string>; bill_date: Field<string>; gstin?: Field<string>;
+    line_items: ExtractedLine[]; tax: TaxSplit; total_paise: Field<number>;
+  }>; // Field<T> = { value: T; confidence: number } with confidence in 0..1
+}
+
+export interface NotificationProvider {
+  send(msg: { channel: 'email' | 'whatsapp' | 'push'; to: string;
+              template: string; data: Record<string, unknown> }): Promise<{ provider_message_id: string }>;
+}
+
+export interface PayoutProvider {
+  createInstruction(draft: PayoutInstructionDraft): Promise<{ provider_ref: string }>;
+  parseWebhook(req: Request): Promise<PayoutStatusEvent>; // signature-verified or thrown
+}
+```
+
+Deterministic validation (GSTIN Luhn-mod-36 checksum, line arithmetic against totals, date sanity) sits in the capture module, outside `OCRProvider`, so swapping vendors never changes correctness checks. Economics drive the LLM-vision choice: roughly USD 0.0005-0.003 per document against USD 8-10 (about ₹670-840) per 1,000 documents for dedicated parsers <span class="pill pill--med">Medium, vendor pricing</span>, inside a COGS target of ₹1.0-2.5 per submission (our derivation).
+
+## The monorepo
+
+<FileTree>
+
+- apps
+  - web one React + Vite app, two entries
+    - src
+      - pwa/ employee capture entry, offline outbox, capture ladder
+      - console/ portal, approver inbox, finance console, admin
+      - shared/ design system, API client, i18n (Hindi + state languages)
+  - api
+    - src
+      - http/ Hono app, middleware, route mounting, problem+json
+      - modules/ claims, capture, approvals, rules, credits, payouts, config, identity, audit, notifications
+      - providers/ ocr, notifications, payouts (vendor SDKs live here only)
+      - db/ migrations, RLS policies, schema tests
+  - worker
+    - src
+      - consumers
+        - extract.ts crop_correct + OCR + validation
+        - notify.ts channel ladder fan-out
+        - escalate.ts SLA timers, reminders, escalation
+        - batch.ts payout file generation, return-file import
+        - exports.ts CSV and Tally-shaped vouchers
+- packages
+  - shared/ entity types, prefixed-ULID ids, paise money, provider interfaces
+  - config-schema/ company configuration schema, templates, validators (the wizard renders from it, the API validates with it)
+- infra/ Dockerfile, compose.yaml, terraform
+- pnpm-workspace.yaml
+
+</FileTree>
+
+## Module map and dependency rules
+
+Modules map one-to-one onto the entities in [the data model](/spec/data-model/); each exports a public `index.ts` and hides everything else.
+
+| Module | Owns | May call |
+| --- | --- | --- |
+| identity | Company, User, Membership (roles array), ApiKey, sessions, magic links | audit |
+| config | Department, CostCenter, Grade, Policy, approval matrix, templates, simulate-before-activate | audit |
+| capture | Receipt, presigned uploads, `crop_correct`, extract orchestration, fair-use scan caps | OCRProvider, credits, audit |
+| claims | Claim, LineItem, Advance, duplicate detection, submit orchestration | capture, rules, credits, approvals, audit |
+| rules | Rule storage and evaluation; exactly six verbs: allow, flag, warn, cap, block, route | nothing (pure evaluation) |
+| approvals | ApprovalChain, ApprovalStep, SLA timers, delegation, escalation, send-back | notifications (enqueue only), audit |
+| credits | CreditEntry ledger, balance, consumption order, burn forecasts | nothing (leaf) |
+| payouts | PayoutBatch, PayoutInstruction, BankAccount, BeneficiaryAccount (verification-gated; penny-drop about ₹3, Setu, high), file generation, return-file import | PayoutProvider, notifications (enqueue only), audit |
+| notifications | Notification, channel ladder, templates, IST quiet hours, digests | NotificationProvider implementations |
+| audit | AuditEvent, append-only, channel and role-at-decision-time on every row | nothing (leaf) |
+
+The rules that keep the monolith modular:
+
+- **audit and credits are append-only ledgers at the bottom of the graph.** Any module may call `audit.record()` or `credits.consume()`; neither imports another module. Credit balance is always `sum(ledger)`, never a mutable counter.
+- **rules is pure**: condition trees in, verdicts out. Callers persist every firing as an AuditEvent carrying rule id, version, and input snapshot.
+- **claims orchestrates submit**; approvals owns the claim from `in_review` to decision; payouts owns `in_payout` through reconciled batches.
+- **notifications never sends inline in a request.** Handlers enqueue; the worker's `notify` consumer sends. Quiet hours and digest batching are notification concerns, invisible to callers.
+- **Nothing imports UI.** `apps/web` consumes the HTTP API and `packages/shared` types; `apps/api` and `apps/worker` never import from `apps/web`.
+- **Cross-module imports go through each module's public `index.ts`.** dependency-cruiser fails CI on any violation, including upward imports into the ledgers.
+
+## Three hot paths
+
+All paths follow the API conventions (prefixed ULIDs, `amount_paise`, RFC 7807 errors, `Idempotency-Key` on every POST); the full surface lives in [the API spec](/spec/api/).
+
+### Upload and extract: asynchronous, never blocking
+
+<Steps>
+
+1. `POST /api/v1/receipts` with an `Idempotency-Key` returns a `rcp_` id plus a presigned S3 PUT URL for the key `receipts/{company_id}/{receipt_id}/p{page}.jpg`. Image bytes never transit the API process.
+
+2. The client PUTs the compressed page (the `compress` stage: about 2048 px long edge, JPEG quality near 0.8, 200-500 KB/page) from the IndexedDB outbox; offline, pages wait and replay.
+
+3. `POST /api/v1/receipts/{receipt_id}/complete` marks the Receipt `uploaded` and enqueues an `extract` job, or parks it `queued` when credits are exhausted or the free pre-submission scan cap (the larger of 20, or 3 times remaining credits, per month; it applies only while the balance is positive) is hit.
+
+4. The worker's `extract` consumer normalizes HEIC arrivals, runs server-side `crop_correct` (perspective correction and de-skew), calls `OCRProvider`, applies deterministic validation, writes candidate LineItems with field confidences, and sets `extracted`. Failure sets `extraction_failed` and routes to manual entry; the image stays attached as evidence.
+
+5. The client polls or receives a push; the Scanning chip resolves into `review_items`. Target P50 under 5 seconds <span class="pill pill--med">Medium, vendor-claimed comparators</span>; past 10 seconds the UI promises a notification instead. The form never blocks on OCR.
+
+</Steps>
+
+Client-side stage names, the capture ladder, and the no-distortion rule are specified in [the capture pipeline](/spec/capture-pipeline/).
+
+### Submit through the credit gate: a transactional outbox for free
+
+The submit decision, the credit consumption, the chain snapshot, the audit row, and the follow-on jobs must commit or vanish together. Because pg-boss stores jobs in the same Postgres, enqueueing is a row insert inside the business transaction: the transactional outbox pattern with no extra machinery.
+
+```ts
+// POST /api/v1/claims/{claim_id}/submit   (Idempotency-Key honored; replays return the first result)
+await db.tx(async (tx) => {
+  await tx.exec(`SET LOCAL app.company_id = $1`, [ctx.company_id]);
+
+  const claim = await claims.lockForSubmit(tx, claim_id);      // SELECT ... FOR UPDATE
+  const verdicts = rules.evaluate(claim, ruleSet);             // pure; line_item scope then claim scope
+  if (verdicts.hasHardBlock) throw problem(422, verdicts);     // nothing commits
+
+  const balance = await credits.balanceForUpdate(tx, ctx.company_id);
+  if (balance === 0) {
+    await claims.park(tx, claim, 'awaiting_credits');          // capture kept, processing paused
+    await jobs.insert(tx, [{ name: 'notify', data: nudgeAdmin(ctx.company_id) }]);
+    return;
+  }
+
+  await credits.consume(tx, ctx.company_id, claim.id);         // expiring-soonest entry first
+  const chain = await approvals.snapshotChain(tx, claim);      // ApprovalStep rows, immutable
+  await claims.markSubmitted(tx, claim, verdicts);             // draft -> submitted
+  await approvals.activateFirstStep(tx, chain);                // first step pending -> active; claim submitted -> in_review
+  await audit.record(tx, claimSubmitted(claim, verdicts, chain));
+
+  await jobs.insert(tx, [                                      // pg-boss rows, SAME transaction
+    { name: 'notify',   data: { step_id: chain.first.id } },
+    { name: 'escalate', data: { step_id: chain.first.id }, startAfter: chain.first.sla_due_at },
+  ]);
+});
+```
+
+Step activation (`pending` to `active`) and the claim's move from `submitted` to `in_review` commit inside this transaction; the `notify` consumer is delivery-only and idempotent, sending the decision card for the already-active step, so a send failure or quiet-hours hold never strands the workflow and a retry never double-fires a transition. The scheduled `escalate` job is the SLA timer. Resubmission after `sent_back` re-enters here but skips the gate: same claim, same credit, free. A `pack_purchase` webhook triggers the drain job, which replays `awaiting_credits` claims through this exact transaction, FIFO. Semantics and microcopy: [Credits and metering](/phase-1/credits-and-metering/).
+
+:::tip[Why this argues for pg-boss harder than throughput does]
+With Redis the enqueue is a second system: you need an outbox table, a relay, and crash-recovery reasoning. With pg-boss the queue IS a table, so atomicity is a property of the transaction you were already writing.
+:::
+
+### Approve via a signed token
+
+Email and WhatsApp approvals carry no session; the token is the credential.
+
+```text
+GET  /a/{token}              renders the decision card; changes nothing
+POST /a/{token}/approve      applies the decision exactly once
+POST /a/{token}/send-back    requires a comment
+
+token  = base64url(apr_id | action_scope | exp | jti) + HMAC-SHA256(company-scoped secret)
+single use: the jti row is consumed inside the decision transaction; replays get 409 problem+json
+bounded: above the high-value threshold the link carries no decision power; it deep-links
+         into an authenticated Console session instead (step-up)
+```
+
+The GET-then-POST split defeats corporate mail scanners that prefetch every link. The decision transaction verifies HMAC and expiry (expiry tracks the 48-hour SLA, 24 above the high-value threshold), confirms the step is still `active` and the actor still holds it (delegation may have moved it), applies `approved` or `sent_back`, advances or finalizes the claim, and writes an AuditEvent with channel `email_link`, role-at-decision-time, IP, and device. WhatsApp deep links reuse the handler, writing channel `whatsapp`.
+
+## Multi-tenancy and isolation
+
+Every tenant-scoped table carries `company_id` (text, prefixed ULID). The API middleware resolves the session's Membership and sets tenant context per transaction; worker jobs carry `company_id` in their payload and set the same context before touching data.
+
+```sql
+alter table claims enable row level security;
+alter table claims force row level security;  -- binds the table owner too
+
+create policy tenant_isolation on claims
+  for all
+  using      (company_id = current_setting('app.company_id', true))
+  with check (company_id = current_setting('app.company_id', true));
+
+-- api and worker connect as app_rw: NOSUPERUSER, NOBYPASSRLS.
+-- First statement of every transaction:
+--   SET LOCAL app.company_id = 'co_01J9XQ3WPNV6F0R8GZ2K4DTH7M';
+```
+
+A request with no tenant context reads zero rows, not all rows: `current_setting(..., true)` returns NULL and the predicate fails closed. Cross-tenant work (ops dashboards, credit-expiry sweeps) runs as a separate role with its own explicit policies, never an ad hoc RLS bypass.
+
+:::caution[RLS is the net, not the navigation]
+Every query still writes `where company_id = $1` explicitly; the policy exists to catch the bug, not to express the logic. A CI schema test asserts that every table with a `company_id` column has RLS enabled and forced, so a migration cannot quietly ship an unguarded table.
+:::
+
+S3 mirrors the same boundary: keys are prefixed `receipts/{company_id}/...`, `exports/{company_id}/...`, `payouts/{company_id}/...`; clients only ever receive presigned URLs scoped to a single key with short expiry; the bucket blocks public access and listing. Offboarding becomes a prefix operation after retention checks, and per-tenant storage metering falls out of the key scheme.
+
+## Environments, deploy, and scale
+
+One container image, two commands (`api`, `worker`). Local development is docker compose with Postgres, MinIO, and Mailpit; staging and production are the only shared environments. Production runs in ap-south-1 (Mumbai) only: lowest latency to the user base and a clean answer to the data-residency question Indian finance buyers ask in security reviews. Managed Postgres runs cross-AZ with point-in-time recovery; backups stay in-region.
+
+IaC-lite means one small Terraform module (network, two services, database, bucket, DNS) checked into `infra/`; no Kubernetes while a single team owns everything. Migrations are forward-only SQL, expand/contract so release N and N-1 run side by side, executed as a pre-deploy step. Observability is structured: pino JSON logs carrying `request_id` and `company_id`, queue-depth and extract-latency metrics per consumer, an error tracker; AuditEvent answers "who did what", logs answer "what broke".
+
+The scaling story is deliberately dull. 1,000 active companies averaging 100 submissions a month is about 3,300 claims a day; at up to 5 receipt images per claim that is roughly 16,500 extract jobs a day, under 12 a minute on average (our derivation from the pricing ladder). A modest Postgres absorbs that with headroom, the API is stateless and scales horizontally, and each worker queue scales by concurrency setting. The first genuine split, if ever, is the `extract` consumer (CPU-bound image correction) onto its own pool. SLOs and the monthly cost envelope live in [Non-functionals](/spec/non-functionals/).
+
+## Decisions and alternatives
+
+| Decision | We chose | Over | Because | Flips when |
+| --- | --- | --- | --- | --- |
+| Service topology | Modular monolith plus one worker | Microservices | One deploy, one debugger, and transactional consistency across modules (the credit gate) for a 1-3 person team; module seams stay visible for later extraction | A module needs independent scaling or separate ownership; `extract` is the first candidate |
+| Tenancy isolation | Postgres RLS in a shared schema | Schema-per-tenant, database-per-tenant | One migration per release, pooler-friendly connections, cross-tenant analytics stay plain SQL; policy enforcement sits below the app | A regulated enterprise pays for physical isolation: ship the same monolith as a dedicated instance, never schemas |
+| Queue | pg-boss (jobs in Postgres) | Redis + BullMQ | Transactional enqueue is a free outbox; one less stateful service; load is about 12 jobs a minute average at 1,000 companies (our derivation) | Sustained hundreds of jobs per second, sub-100ms queue latency needs, or Redis enters the stack anyway for caching and rate limits |
+| HTTP framework | Hono plus lint-enforced module boundaries | NestJS | Tiny standards-based surface, zod validation, no DI or decorator indirection; agents hold the whole framework in context | Backend team grows past roughly 8 and wants framework-enforced convention; the module folders map one-to-one onto Nest modules |
+| OCR | LLM-vision behind `OCRProvider` with deterministic validation | Dedicated parser APIs | About USD 0.0005-0.003/doc versus ₹670-840 per 1,000 docs (vendor pricing, medium); flexible on Indic and thermal long tail; holds the ₹1.0-2.5 COGS target | Design-partner corpus accuracy underperforms a parser at acceptance thresholds; the adapter localizes the swap |
+| Perspective correction | Server-side in v1, client manual 4-corner rescue editor | Client WASM (OpenCV.js) | OpenCV.js is 7.6-8.4 MB default (2-4 MB trimmed), the practical mobile WASM ceiling is about 300 MB, threaded builds OOM 3 GB phones, and the P75 JS budget is 300-350 KiB | A slim, lazy-loaded build proves reliable on `deviceMemory >= 4` Androids and measurably cuts retakes or upload bytes |
+
+<p class="source-note">Capture-platform constraints (WASM ceilings, OpenCV.js sizes, WebKit bug 252465 forcing the file-input default on iOS standalone) are verified in the v2 capture research; OCR and messaging prices are vendor-stated, medium confidence, re-verify at build time.</p>
+
+The contracts this machine enforces are defined once and reused everywhere: entities and DDL next, then the transition tables the three hot paths compile into.
+
+<CardGrid>
+  <LinkCard title="Data model" href="/spec/data-model/" description="Entities, DDL, ledgers, and the RLS-ready table shapes." />
+  <LinkCard title="State machines" href="/spec/state-machines/" description="Every transition with guards and side effects, byte-for-byte status names." />
+</CardGrid>
+
+## Sources
+
+- [StatCounter, Mobile OS market share India](https://gs.statcounter.com/os-market-share/mobile/india) (analyst). Android 93.2% / iOS 6.7%, May 2026; the Android-first client posture.
+- [Alex Russell, The Performance Inequality Gap 2024](https://infrequently.org/2024/01/performance-inequality-gap-2024/) (primary docs). P75 budgets of about 150 KiB markup/CSS plus 300-350 KiB JS; 2026 update names the Galaxy A24-class baseline.
+- [WebKit Bugzilla 252465](https://bugs.webkit.org/show_bug.cgi?id=252465) (primary docs). getUserMedia black/frozen streams in iOS standalone PWAs through 18.4.1; why file-input is the universal capture primary.
+- [WebAssembly design issue 1397](https://github.com/WebAssembly/design/issues/1397) (primary docs). Allocations beyond about 300 MB unreliable on Android Chrome and iOS Safari; why perspective correction defaults server-side.
+- [caniuse, Background Sync API](https://caniuse.com/background-sync) (primary docs). Chromium-only with zero Safari support; why the offline outbox replays on app-open for iOS.
+- [IMARC, India Smartphone Market](https://www.imarcgroup.com/india-smartphone-market) (analyst). 4-8 GB RAM segment at 42.3% (2025); the low-end budget mandate.

@@ -1,0 +1,414 @@
+# V2 AGGREGATED SOURCES (by topic)
+
+
+## [pain-points-software]
+- [Expensify/App GitHub issue #45904 — blurry receipt scan shows random amount (Jul 2024)](https://github.com/Expensify/App/issues/45904)  — Primary source; fetched directly
+- [Expensify/App GitHub issue #71911 — forwarded failure notification creates broken expense (Oct 2025)](https://github.com/Expensify/App/issues/71911)  — Primary source; fetched directly
+- [Apple Support Communities — Blurry pics of expense receipts on SAP Concur (iPhone 15 Pro, Oct 2023 + May 2024 follow-up)](https://discussions.apple.com/thread/255243765)  — Primary source; fetched directly
+- [Zoho Expense KB — When does auto scanning fail?](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/)  — Primary vendor source; fetched directly; language list and failure conditions verbatim
+- [GBTA — How Much Do Expense Reports Really Cost a Company?](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/)  — $58/report, 19% errors, $52+18min
+- [Rho — 2024 State of Expense Management Report (top 5 pain points)](https://www.rho.co/blog/top-5-expense-management-pain-points)  — Fetched directly; ~500-employee survey
+- [Otto the Agent — Expense report rejection reasons & fixes (GBTA stats relay)](https://www.ottotheagent.com/blog/expense-report-rejection-reasons-fixes)  — Fetched directly
+- [SaaSPricePulse — Expensify true cost: SmartScan limits & fees](https://www.saaspricepulse.com/tools/expensify)  — Fetched directly; 25 scans free, $0.20 overage, tier prices
+- [Volopay — Manage employee reimbursements under GST rule (India)](https://www.volopay.com/in/expense-management/manage-employee-reimbursements-under-gst-rule/)  — Fetched directly; 3 ITC conditions
+- [Trustpilot — Expensify reviews (billing/cancellation complaints)](https://www.trustpilot.com/review/www.expensify.com)  — Via search snippets; 403 on direct fetch
+- [JustUseApp — SAP Concur app reviews/NLP scores](https://justuseapp.com/en/app/335023774/sap-concur/reviews)  — Via search snippets; 403 on direct fetch
+- [JustUseApp — Expensify app reviews/NLP scores](https://justuseapp.com/en/app/471713959/expensify-receipts-expenses/reviews)  — Via search snippets
+- [SAP Concur Community — 'This hotel itemization is a royal pain in ????'](https://community.concur.com/t5/Concur-Expense-Forum/This-hotel-itemization-is-a-royal-pain-in/m-p/37320)  — Via search snippets; 403 on direct fetch
+- [SAP Concur Community — Blurry receipt images (iPhone 15 acknowledgment)](https://community.concur.com/t5/Concur-Expense-Forum/Blurry-receipt-images/m-p/39082)  — Via search snippets
+- [SAP Concur Community — rejected reports invisible to AP](https://community.concur.com/t5/Concur-Expense-Forum/where-we-can-see-the-rejected-expense-reports-as-an-concur-admin/m-p/75883)  — Via search snippets
+- [Fyle blog — Are you stuck in expense approval bottlenecks?](https://www.fylehq.com/blog/expense-approval-bottlenecks)  — Practitioner source on manager-inbox black hole
+- [G2 — Fyle/Sage Expense Management pros & cons](https://www.g2.com/products/fyle/reviews?qs=pros-and-cons)  — Via search snippets
+- [G2 — Zoho Expense pros & cons](https://www.g2.com/products/zoho-expense/reviews?qs=pros-and-cons)  — Via search snippets
+- [G2 — Happay reviews](https://www.g2.com/products/happay/reviews)  — Via search snippets; OTP delays, MIS gaps, unexplained rejections
+- [G2 — SAP Concur reviews](https://www.g2.com/products/sap-concur/reviews)  — Via search snippets; clunky/dated UX theme
+- [Capterra — Rydoo (Xpenditure) reviews](https://www.capterra.com/p/128370/Xpenditure-Expenses/reviews/)  — Via search snippets; OCR misreads, matching failures
+- [Capterra — Zoho Expense reviews](https://www.capterra.com/p/142384/Zoho-Expense/reviews/)  — Via search snippets; slow autoscan, upload hangs
+- [Google Play — Happay Expense listing (review complaints surfaced via search)](https://play.google.com/store/apps/details?id=com.happay.android.v2&hl=en_IN)  — Page JS-rendered; review text via search snippets
+- [Expensify Community FAQ — Why is SmartScan taking a long time?](https://community.expensify.com/discussion/4715/faq-why-is-smartscan-taking-a-long-time)  — Official 'minutes to hours' statement; forum frozen Jul 2024, page 403s — archive before citing
+- [Expensify Community — Smartscan wrong amount](https://community.expensify.com/discussion/2000/smartscan-wrong-amount)  — Via search snippets
+- [Expensent — How to email receipts to Expensify (silent-drop and Proofpoint failure modes)](https://www.expensent.com/guides/email-receipts-to-expensify)  — Setup-guide documentation of forwarding fragility
+- [Spendbase — SAP Concur pricing insights (~$8-9/report)](https://www.spendbase.co/vendors/sap-concur/)  — Via search snippets
+- [Navan — Is SAP Concur worth it? (implementation timelines)](https://navan.com/blog/sap-concur-honest-review)  — Competitor-authored; cross-check
+- [Corpay — Employee expense reimbursement guide (Webexpenses 43% stat)](https://www.corpay.com/resources/blog/employee-expense-reimbursement)  — Secondary relay of 2024 Webexpenses survey
+- [Spendesk — Employee expense reports: how to fix this broken system](https://www.spendesk.com/blog/employee-expense-reports/)  — Status-visibility-as-differentiator evidence
+- [hrsoftwarehyderabad.com — Expense management software (60% ITC loss claim)](https://hrsoftwarehyderabad.com/expense-management-software/)  — Vendor marketing; directional only
+- [FieldAssist — Expense management software India (8+ days vs 48h)](https://www.fieldassist.com/blog/what-is-expense-management-software-top-systems-india)  — Vendor marketing; directional only
+- [Emburse — One app for receipt capture (smart border cropping)](https://www.emburse.com/blog/one-app-for-everything-receipt-capture-expense-reports-and-approvals)  — Capture-tech benchmark
+- [Payhawk — AI Camera invoice capture](https://payhawk.com/blog/automated-invoice-processing-with-our-ai-camera)  — Capture-tech benchmark
+- [proXpense — Expense management software India (Tally/GSTIN positioning)](https://proxpense.com/expense-management-software-india/)  — India challenger positioning evidence
+- [Apple App Store — Smart Receipts (lost-data review)](https://apps.apple.com/us/app/smart-receipts-expenses-tax/id905698613)  — Via search snippets; offline data-loss anecdote
+
+## [mobile-capture-tech]
+- [caniuse: ImageCapture API](https://caniuse.com/imagecapture)  — Support matrix incl. Safari 26.5 absence; 77.07% global
+- [Chrome Developers: Take photos and control camera settings (ImageCapture)](https://developer.chrome.com/blog/imagecapture)  — takePhoto full-res vs grabFrame stream-res; torch/zoom via constraints
+- [MDN: Taking still photos with getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Taking_still_photos)  — Canonical undistorted canvas capture pattern
+- [Dynamsoft codepool: Camera focus control on the web](https://www.dynamsoft.com/codepool/camera-focus-control-on-web.html)  — focusMode/focusDistance Chrome-Android-only; no tap-to-focus
+- [Dynamsoft codepool: Capture high-resolution photos in the browser](https://www.dynamsoft.com/codepool/take-high-resolution-photo-in-the-browser.html)  — Tiered capture strategy; silent constraint substitution
+- [WebKit Features in Safari 17.0](https://webkit.org/blog/14445/webkit-features-in-safari-17-0/)  — zoom in MediaTrackCapabilities; macOS web apps
+- [WebKit Features in Safari 17.4](https://webkit.org/blog/15063/webkit-features-in-safari-17-4/)  — whiteBalanceMode added
+- [WebKit Features in Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)  — Fix for stale torch/whiteBalanceMode getSettings
+- [WebKit bug 243075: torch track constraint ignored on iOS](https://bugs.webkit.org/show_bug.cgi?id=243075)  — Primary evidence torch unreliable on iOS
+- [WebKit bug 185448: getUserMedia not working in home-screen standalone apps](https://bugs.webkit.org/show_bug.cgi?id=185448)  — Fixed iOS 13.4; 2-year breakage history
+- [WebKit bug 215884: recurring permission prompts in standalone on hash change](https://bugs.webkit.org/show_bug.cgi?id=215884)  — Open standalone-PWA permission quirk
+- [WebKit bug 179363: second getUserMedia kills first stream on iOS](https://bugs.webkit.org/show_bug.cgi?id=179363)  — One-active-stream constraint for multi-page flows
+- [WebKit bug 179994: cannot control framerate & resolution via getUserMedia](https://bugs.webkit.org/show_bug.cgi?id=179994)  — Historical iOS resolution control
+- [WebKit bug 208667: getUserMedia in WKWebView-based browsers](https://bugs.webkit.org/show_bug.cgi?id=208667)  — In-app browser gap pre-14.5
+- [firt.dev: iOS 14.5 brings Safari 14.1 to PWAs and the Web Platform](https://firt.dev/ios-14.5/)  — getUserMedia in WebViews from iOS 14.5
+- [Apple Developer docs: WKUIDelegate requestMediaCapturePermissionFor](https://developer.apple.com/documentation/webkit/wkuidelegate/webview(_:requestmediacapturepermissionfor:initiatedbyframe:type:decisionhandler:))  — Eliminating per-call WKWebView camera prompts (iOS 15)
+- [Apple Community: Repeated camera permission prompts in web apps](https://discussions.apple.com/thread/256081579)  — 2024-2025 user reports of standalone re-prompts
+- [Apple Developer Forums thread 113532: getUserMedia resolution on iOS](https://forums.developer.apple.com/thread/113532)  — Historical 720p cap + canvas-only stills
+- [webrtcHacks: Guide to WebRTC with Safari in the Wild](https://webrtchacks.com/guide-to-safari-webrtc/)  — iOS 13 resolution fix; Safari stream lifecycle quirks
+- [12 Days of Web: Capturing user media streams](https://12daysofweb.dev/2021/capturing-user-media-streams/)  — Portrait-stream aspect mismatch and CSS-stretch explanation
+- [Damir's Corner: Render captured video to full page canvas](https://www.damirscorner.com/blog/posts/20170317-RenderCapturedVideoToFullPageCanvas.html)  — Aspect-preserving canvas render math
+- [object-fit:cover polyfill on video using canvas (gist)](https://gist.github.com/dmail/dda5adf57c8d66b73dd6)  — Cover-crop source-rect math
+- [Mozilla bug 1290917: 1:1 aspectRatio constraints](https://bugzilla.mozilla.org/show_bug.cgi?id=1290917)  — aspectRatio constraint gaps
+- [csswg-drafts issue 4666: image-orientation and canvas drawImage](https://github.com/w3c/csswg-drafts/issues/4666)  — Chrome 81 from-image default; WebKit always honors EXIF in canvas
+- [Mozilla bug 1616169: honor intrinsic orientation in drawImage](https://bugzilla.mozilla.org/show_bug.cgi?id=1616169)  — Firefox EXIF drawImage fix
+- [shkspr.mobi: Coping with HEIC in the browser](https://shkspr.mobi/blog/2020/12/coping-with-heic-in-the-browser/)  — accept='image/*' triggers iOS HEIC->JPEG conversion; Files-app leak
+- [Apple Developer Forums 743049: Safari 17+ HEIC conversion oddity](https://developer.apple.com/forums/thread/743049)  — Edge case
+- [PQINA: Canvas area exceeds the maximum limit](https://pqina.nl/blog/canvas-area-exceeds-the-maximum-limit/)  — iOS 16.78 MP cap; Chrome Android 10,836^2
+- [lionpuro: Canvas is finally usable on Safari](https://lionpuro.com/posts/canvas-is-finally-usable-on-safari/)  — iOS 18 raises to 8192x8192 / 67.1 MP
+- [jscanify GitHub (puffinsoft)](https://github.com/puffinsoft/jscanify)  — MIT; API; solid-background requirement; v1.4.x
+- [Scanbot techblog: JS camera document scanner with jscanify](https://scanbot.io/techblog/js-camera-document-scanner-tutorial/)  — ~10 fps loop; OSS-vs-commercial positioning
+- [OpenCV.org: Live webcam filters with OpenCV.js](https://opencv.org/opencv-js-real-time-webcam-filters/)  — ~8 MB WASM; seconds to compile; 50-60 FPS light filters
+- [opencv/opencv issue 24986: threads build memory on refresh](https://github.com/opencv/opencv/issues/24986)  — 3 GB-RAM device crashes; single-thread safe
+- [OpenCV docs: Build OpenCV.js](https://docs.opencv.org/4.x/d4/da1/tutorial_js_setup.html)  — Custom slim builds via opencv_js.config.py; SIMD/threads flags
+- [Dynamsoft document-scanner-javascript GitHub](https://github.com/Dynamsoft/document-scanner-javascript)  — Smart Capture/Auto-Crop/DocumentCorrectionView; trial terms
+- [ComponentSource: Dynamsoft prices](https://www.componentsource.com/product/dynamic-web-twain/prices)  — DDN from $1,249/yr
+- [Scanbot SDK docs: Pricing and licensing model](https://docs.scanbot.io/faq/pricing-and-licensing-model/)  — Flat annual per-domain; unlimited scans; trial
+- [Scanbot Web Document Scanner SDK docs: Introduction](https://docs.scanbot.io/web/document-scanner-sdk/introduction/)  — WASM; iOS 14.5+; filters/binarization; DQA
+- [Scanbot docs: Document Quality Analyzer](https://docs.scanbot.io/web/document-scanner-sdk/document-quality-analyzer/introduction/)  — 5-grade sharpness scoring; cropping blind spot
+- [npm registry: scanbot-web-sdk@8.1.1](https://registry.npmjs.org/scanbot-web-sdk/latest)  — 106.63 MB unpacked; Commercial license
+- [npm registry: jscanify (v1.4.2)](https://registry.npmjs.org/jscanify/latest)  — MIT; 29 MB unpacked; no bundled OpenCV
+- [npm registry: browser-image-compression@2.0.2](https://registry.npmjs.org/browser-image-compression/latest)  — MIT; ~843 KB unpacked
+- [MediaPipe Solutions guide](https://developers.google.com/edge/mediapipe/solutions/guide)  — Task catalog — no document detection
+- [Google Cloud Vision: Supported files & size limits](https://docs.cloud.google.com/vision/docs/supported-files)  — 20 MB / 75 MP / 1024x768 OCR recommendation / WebP
+- [Tesseract tessdoc: Improving the quality of the output](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html)  — 300 DPI; deskew; Otsu/Sauvola; borders; noise
+- [Nitor Infotech: Improve OCR accuracy using advanced preprocessing](https://www.nitorinfotech.com/blog/improve-ocr-accuracy-using-advanced-preprocessing-techniques/)  — 15-30%/10%/5-15% claimed gains (unbenchmarked)
+- [caniuse: Background Sync API](https://caniuse.com/background-sync)  — Chromium-only; 77.95%
+- [Chrome Developers: workbox-background-sync](https://developer.chrome.com/docs/workbox/modules/workbox-background-sync)  — IndexedDB queue; SW-startup replay fallback; exception-only queueing
+- [WebKit blog: Updates to Storage Policy (Safari 17)](https://webkit.org/blog/14403/updates-to-storage-policy/)  — 60%-of-disk origin quota; home-screen apps same quota; 7-day eviction rule
+- [caniuse: WebAssembly SIMD](https://caniuse.com/wasm-simd)  — Chrome 91+/Safari 16.4+; 93.32%
+- [IMARC: India smartphone market](https://www.imarcgroup.com/india-smartphone-market)  — RAM segment shares; low-end share; 163.7M units 2025
+- [Statista: Mobile OS share India](https://www.statista.com/statistics/262157/market-share-held-by-mobile-operating-systems-in-india/)  — Android 95.26% (2023)
+- [Expensify: How to upload a receipt](https://use.expensify.com/blog/how-to-upload-receipt)  — Native-app scanning; web = upload/email
+- [Wave: Scan and upload your receipts](https://support.waveapps.com/hc/en-us/articles/360059848112-Scan-and-upload-your-receipts)  — Competitor capture pattern
+- [addpipe: getUserMedia video constraints](https://blog.addpipe.com/getusermedia-video-constraints/)  — ideal/exact semantics; OverconstrainedError
+- [GoogleChromeLabs imagecapture-polyfill](https://github.com/GoogleChromeLabs/imagecapture-polyfill)  — Unified takePhoto API with canvas fallback
+
+## [ocr-itemization-ux]
+- [Expensify Community FAQ: Why is SmartScan taking a long time?](https://community.expensify.com/discussion/4715/faq-why-is-smartscan-taking-a-long-time)  — Minutes-to-hours duration, accuracy-over-speed, background processing (via search snippet; page 403s)
+- [Expensify Community FAQ: Why did Concierge reach out about my SmartScan?](https://community.expensify.com/discussion/5120/faq-why-did-concierge-reach-out-about-my-smartscan)  — 3 mandatory fields, human follow-up
+- [Expensify Help: Add an expense](https://help.expensify.com/articles/expensify-classic/expenses/Add-an-expense)  — 'Fill out details myself', receipts@expensify.com
+- [Expensify Help: Duplicate Detection (New Expensify)](https://help.expensify.com/articles/new-expensify/expenses-and-payments/Duplicate-detection)  — date+amount+currency rule, hold, Keep all/Keep this one
+- [Expensify receipt scanning app (marketing)](https://use.expensify.com/receipt-scanning-app)  — text 47777, 150+ currencies, 'almost instantly' claim
+- [SaaSPricePulse: Expensify True Cost](https://www.saaspricepulse.com/tools/expensify)  — 25 free SmartScans/month, $0.20 overage (third-party)
+- [Ramp blog: Introducing Ramp receipt automation](https://ramp.com/blog/ramp-receipt-automation)  — 90%+ match accuracy, channels, 1M hours saved
+- [Ramp receipt automation product page](https://ramp.com/receipt-automation)  — seconds to match, 95% same-day
+- [Brex Support: Receipts for expenses](https://www.brex.com/support/receipts-for-expenses)  — 2-of-3 match, <2 months, 500 bulk, typo-tolerant address, itemized auto-receipts 1-3 days
+- [Zoho Expense: Autoscan user guide](https://www.zoho.com/us/expense/help/expenses/autoscan-receipts/)  — fields, states, languages, 5x7MB limits
+- [Zoho Expense FAQ: What is Autoscan?](https://www.zoho.com/us/expense/kb/home/autoscan/)  — line-item level extraction, 14 languages, channels
+- [Zoho Expense FAQ: When does auto scanning fail?](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/)  — failure reasons, Scan Failed bucket, Retry Autoscan
+- [Zoho Expense FAQ (iOS): Filter plan-limit-exceeded receipts and re-upload for Autoscan](https://www.zoho.com/us/expense/kb/ios/filter-scanned-receipts/)  — soft-paywall precedent: re-scan after credits return
+- [Zoho Expense FAQ: Receipt forwarding email address](https://www.zoho.com/us/expense/kb/my-settings/receipt-forwarding-address/)  — unique prefix@expense.zoho.com
+- [Zoho Expense FAQ: Itemize expense with different tax rates](https://www.zoho.com/de-de/expense/kb/expenses/itemize-expense/)  — Itemize button, per-line category+tax, auto total
+- [Zoho Expense pricing](https://www.zoho.com/us/expense/pricing/)  — 20 free autoscans; 20/user/month Standard; itemized autoscan Premium
+- [Veryfi Lens mobile document scanner](https://www.veryfi.com/lens/mobile-document-scanner/)  — blur/warp checks, <30ms light analysis, stitching, 4 docs, offline, headless
+- [Veryfi Receipts OCR API](https://www.veryfi.com/receipt-ocr-api/)  — 150+ fields, 20+ line-item fields, 38 languages, 91 currencies
+- [Klippa: AI-powered Receipt OCR](https://www.klippa.com/en/ocr/financial-documents/receipts/)  — 0.5-4s processing claim
+- [Klippa: Receipt line item extraction](https://www.klippa.com/en/ocr/data-fields/receipt-line-items/)  — per-line qty/description/unit price/total/VAT
+- [Klippa: Camera scanner SDK incl. OCR](https://www.klippa.com/en/blog/information/camera-scanner-sdk-including-ocr/)  — real-time feedback: too far, low light
+- [Fyle receipt scanner app](https://www.fylehq.com/receipt-scanner-app)  — instant extraction claims, channels
+- [Fyle Help: How Fyle automatically matches and merges card expenses](https://www.fylehq.com/help/en/articles/12135470-how-fyle-automatically-matches-and-merges-your-card-expenses)  — 0.0002 amount / 5-day tolerances
+- [Fyle Help: Merging duplicate expenses](https://www.fylehq.com/help/en/articles/12135513-merging-duplicate-expenses)  — duplicate icon, merge restrictions
+- [Microsoft: Retirement of Microsoft Lens](https://support.microsoft.com/en-us/lens/retirement-of-microsoft-lens)  — Sep-Dec 2025 phased retirement
+- [TechCrunch: RIP Microsoft Lens](https://techcrunch.com/2025/08/08/rip-microsoft-lens-a-simple-little-app-thats-getting-replaced-by-ai/)  — Copilot replacement, dropped features
+- [9to5Google: Drive document scanner redesign rolling out](https://9to5google.com/2026/05/29/google-drive-document-scanner-wide/)  — Smart Batch, Auto-Best Frame, Duplicate Detection, 8GB RAM
+- [9to5Google: Drive scanner automatic Enhance](https://9to5google.com/2024/12/15/google-drive-scanner-enhance/)  — AI enhance: white balance, shadow removal
+- [Google Workspace Updates: Drive scanner updates Android & iOS](https://workspaceupdates.googleblog.com/2023/11/updates-to-google-drive-scanner-on-android-and-ios.html)  — auto-capture, viewfinder redesign, title suggestions
+- [CamScanner Android user manual](http://s.intsig.net/r/manual/CamScanner_Android3.0_en-us.html)  — auto border detection, five enhancement modes, Magic Color default
+- [Splitwise Pro](https://www.splitwise.com/pro)  — official: detect items, assign to friends, $40/yr
+- [splitty: Splitwise receipt scanning vs splitty](https://splittyapp.com/learn/splitwise-receipt-scanning-vs-splitty/)  — competitor teardown — item assignment + proportional tax/tip (biased)
+- [Rossum KB: Interactive Bounding Boxes](https://knowledge-base.rossum.ai/docs/interactive-bounding-boxes-in-rossum)  — blue/green validation semantics, drag-to-reextract
+- [Rossum KB: Keyboard Shortcuts](https://knowledge-base.rossum.ai/docs/keyboard-shortcuts)  — Tab to fields needing attention, ALT reveals suggestions
+- [Microsoft Learn: Document Intelligence accuracy and confidence scores](https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/concept/accuracy-confidence?view=doc-intel-4.0.0)  — 0.80 STP convention, 0.95=19/20
+- [Microsoft Learn: Azure OCR overview](https://learn.microsoft.com/en-us/azure/ai-services/computer-vision/overview-ocr)  — Hindi/Devanagari support
+- [Nanonets OCR-3 research](https://nanonets.com/research/nanonets-ocr-3)  — bounding-box grounding for UI, confidence routing
+- [Google Cloud Vision: OCR language support](https://docs.cloud.google.com/vision/docs/languages)  — 9 GA Indic languages
+- [ClearTax: Rounding off tax under GST (Section 170)](https://cleartax.in/s/rounding-off-tax-section-170-gst)  — normal rounding, per-component, per-invoice
+- [TaxTMI: Section 170 CGST Act manual](https://www.taxtmi.com/manuals?id=7753)  — statutory text commentary
+- [Zoho Books Academy: Invoicing under GST FAQs](https://www.zoho.com/in/books/academy/taxes-and-compliance/invoicing.html)  — mandatory GST invoice fields incl. HSN per line, tax breakup
+- [Zoho Books KB: Item rate exclusive of tax](https://www.zoho.com/in/books/kb/items/item-rate-exclusive-of-tax.html)  — inclusive/exclusive toggle + round-off preference
+- [Happay blog: What is an expense receipt](https://happay.com/blog/expense-receipt/)  — WhatsApp filing, 92% OCR accuracy claim, GST extraction
+- [Volopay: OCR-powered Magic Scan](https://www.volopay.com/in/product/ocr-powered-magic-scan/)  — vendor info, invoice number, due date, line items
+- [NN/g: Response Times - 3 Important Limits](https://www.nngroup.com/articles/response-times-3-important-limits/)  — 0.1s/1s/10s thresholds, progress guidance
+- [AFB AccessWorld: Voice Dream Scanner review](https://afb.org/aw/20/5/16444)  — tone-guided edge detection, auto-capture, swipe flow for blind users
+- [Capterra: Expensify reviews](https://www.capterra.com/p/97594/Expensify/reviews/)  — OCR 'pauses your workflow' complaint; accuracy issues on faded/foreign receipts
+
+## [usage-pricing]
+- [DocuSign eSignature Plans & Pricing](https://ecom.docusign.com/plans-and-pricing/esignature)  — Envelope allowances per plan; Personal/Standard/Business Pro prices
+- [DocuSign FAQ — overage charges (Pay-As-You-Go envelopes)](https://support.docusign.com/s/articles/FAQ-Docusign-overage-charges?language=en_US)  — Overage mechanism; page is JS-rendered, verified via search excerpt
+- [DocuSign Community — multiple documents in one envelope](https://community.docusign.com/esignature-111/can-i-send-in-one-envelope-multiple-documents-that-need-to-be-signed-by-the-same-person-but-need-to-be-saved-as-separate-documents-3850)  — Batching loophole evidence
+- [Fin pricing: Outcomes (fin.ai help)](https://fin.ai/help/en/articles/13975800-fin-pricing-outcomes)  — Fetched: $0.99/outcome, $49 base, 50 included, hard limits
+- [How Fin pricing works (Intercom help)](https://www.intercom.com/help/en/articles/7837512-how-fin-pricing-works)  — Resolution definition; no charge on failure/human handoff
+- [Zapier — How pay-per-task billing works](https://help.zapier.com/hc/en-us/articles/15279018245901-How-pay-per-task-billing-works-in-Zapier)  — 1.25x overage rate
+- [Zapier — How to troubleshoot held Zap or step runs](https://help.zapier.com/hc/en-us/articles/37454233721869-How-to-troubleshoot-held-Zap-or-step-runs)  — Held-not-lost, replay mechanics
+- [Zapier blog — held tasks 'safety net' launch post](https://zapier.com/blog/updates/1478/new-dont-lose-any-data-new-held-tasks)  — Queue-not-block framing
+- [Zapier Plans & Pricing](https://zapier.com/pricing)  — Free 100 tasks; tier slider
+- [Orb — Zapier pricing explained](https://www.withorb.com/blog/zapier-pricing)  — Tier economics, sticker-shock zone
+- [Clay — Compare plans & pricing](https://www.clay.com/pricing)  — Credit plans
+- [Salesmotion — Clay pricing breakdown 2026](https://salesmotion.io/blog/clay-pricing)  — $75→$16 per 1k decline; rollover details
+- [HubSpot — Understand HubSpot Credits and billing](https://knowledge.hubspot.com/account-management/understand-hubspot-credits-and-billing)  — Monthly expiry, no rollover
+- [HubSpot IR — Expanding access with HubSpot Credits](https://ir.hubspot.com/news-releases/news-release-details/hubspot-credits)  — June 2, 2025 rollout; included allocations
+- [Postmark Pricing](https://postmarkapp.com/pricing)  — Email blocks + overage rates
+- [Twilio US SMS Pricing](https://www.twilio.com/en-us/sms/pricing/us)  — PAYG rate
+- [Twilio — How Volume Pricing works](https://help.twilio.com/articles/223183328)  — $1,500+/mo discount threshold
+- [OpenAI — How can I set up prepaid billing?](https://help.openai.com/en/articles/8264644-how-can-i-set-up-prepaid-billing)  — $5 min, 12-month expiry, auto-recharge
+- [Claude Help — How do I pay for my Claude API usage?](https://support.claude.com/en/articles/8977456-how-do-i-pay-for-my-claude-api-usage)  — Prepaid credits, auto-reload, 1-year expiry
+- [OpenAI community — expired credits and auto-recharge](https://community.openai.com/t/expired-credits-and-auto-recharge/1332368)  — Auto-recharge surprise-charge failure mode
+- [OpenView — Why is Usage-Based Pricing on the Rise?](https://openviewpartners.com/blog/usage-based-pricing-trends/)  — Fetched: 45% adoption, up from 34%
+- [Chargebee — Usage-based pricing for growth](https://www.chargebee.com/blog/usage-based-pricing-for-growth-in-a-changing-landscape/)  — OpenView 46% offering/testing; hybrid model definition
+- [Chargebee — Hybrid pricing guide (included usage + overage)](https://www.chargebee.com/resources/guides/hybrid-pricing-usage-based-subscription-billing-guide/)  — Most common hybrid structure
+- [Culta — Usage-based pricing in SaaS: 38% adoption (2026)](https://culta.ai/blog/usage-based-pricing-saas)  — Secondary synthesis of OpenView numbers + NRR 120% vs 110%
+- [Bessemer — State of the Cloud 2023](https://www.bvp.com/atlas/state-of-the-cloud-2023)  — NRR benchmark bands
+- [Alguna — Bill shock in usage-based pricing](https://blog.alguna.com/bill-shock/)  — Recurly 73%/90-day churn stat; alert thresholds
+- [Stigg — Usage-Based Pricing: 6 models](https://www.stigg.io/blog-posts/usage-based-pricing)  — Soft caps/hard stops, alerting patterns
+- [m3ter — Guide to credit pricing in SaaS](https://www.m3ter.com/guides/saas-credit-pricing)  — Rollover norms, drawdown design
+- [Metronome — Prepaid credits: the enterprise billing trap](https://metronome.com/blog/prepaid-credits-the-enterprise-billing-trap-no-one-talks-about)  — Operational/accounting pitfalls
+- [Slack — Feature limitations on the free version](https://slack.com/help/articles/27204752526611-Feature-limitations-on-the-free-version-of-Slack)  — 90-day hidden history; upgrade reveals
+- [Neowin — Slack takes away free lifetime message history](https://www.neowin.net/news/slack-takes-away-free-lifetime-message-history-from-non-paying-users/)  — Sept 2022 10k-message → 90-day change
+- [Figma — Approve or decline seat upgrade requests](https://help.figma.com/hc/en-us/articles/1500003870721-Approve-or-decline-seat-upgrade-requests)  — Member request + 3-day provisional access
+- [Figma — Set approval settings for new seats](https://help.figma.com/hc/en-us/articles/4414038570007-Set-approval-settings-for-new-seats)  — Manual/auto-approve options
+- [Notion — Change your plan](https://www.notion.com/help/upgrade-or-downgrade-your-plan)  — Member 'Request' → owner notification
+- [Miro — Free Restricted license](https://help.miro.com/hc/en-us/articles/360011746739-Free-Restricted-license)  — License requests to Company Admins
+- [Atlassian — Update on collaborator limit for free Trello workspaces](https://www.atlassian.com/blog/trello/new-collaborator-limits)  — View-only over-limit policy (2024)
+- [SwitchLabs — Understanding 'Over Limits' in Airtable](https://www.switchlabs.dev/resources/understanding-over-limits-in-airtable-navigating-record-and-field-constraints)  — Read-only over-limit behavior
+- [Zoho Expense India — Pricing](https://www.zoho.com/in/expense/pricing/)  — Fetched: Rs 99/79 Standard, Rs 199/149 Premium, autoscan caps
+- [Markit Solutions — TallyPrime price in India](https://www.markitsolutions.in/product/tally-prime)  — Silver Rs 22,500 / Gold Rs 67,500 + GST
+- [Markit Solutions — Tally TSS renewal charges](https://www.markitsolutions.in/services/tally-renewal)  — TSS Rs 4,500 / Rs 13,500 per year
+- [TallyAtCloud — Tally subscription, AMC and TSS renewal guide 2025](https://www.tallyatcloud.com/article/tally-prime-subscription-charges-amc-and-tss-renewal-cost-updated-2025-guide/542/0/1)  — Works-without-TSS confirmation
+- [Meta — WhatsApp Business Platform pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing)  — Per-message model, July 1 2025 transition
+- [Go4WhatsUp — Meta WhatsApp pricing (India INR rates)](https://www.go4whatsup.com/guides/meta-whatsapp-pricing/)  — Utility Rs 0.145; marketing Rs 0.7846→0.8631 Jan 2026
+- [AiSensy — WhatsApp Business API pricing India](https://aisensy.com/pricing)  — BSP INR per-message rates; SMB prepaid familiarity
+- [PIB — Indian Telecom Services Yearly Performance Indicators](https://www.pib.gov.in/PressReleasePage.aspx?PRID=2143158)  — Prepaid ARPU Rs 173.84 FY2024-25
+- [Statista — Prepaid mobile subscribers by telecom circle, India](https://www.statista.com/statistics/639922/prepaid-mobile-subscribers-by-telecom-circles-india/)  — >90-95% prepaid share in B/C circles
+- [Google Cloud — Document AI pricing](https://cloud.google.com/document-ai/pricing)  — Fetched: Expense Parser $0.10/10 pages; OCR $1.50/1k
+- [Playto — How to price your SaaS for Indian vs international customers (2026)](https://www.playto.so/blogs/how-to-price-your-saas-for-indian-vs-international-customers-in-2026)  — 3-5x India discount norms; UPI annual-prepay behavior
+- [Aimdoc — What counts as a resolution in Intercom (criticism)](https://aimdoc.ai/blog/intercom-resolution-pricing-explained)  — Unit-definition distrust failure mode
+
+## [onboarding-config]
+- [Zoho Expense FAQ — Can I set up multiple levels of approval?](https://www.zoho.com/us/expense/kb/admin/approvals/multi-stage-approvals/)  — 10 levels, different approvers per level
+- [Zoho Expense — Configuring Approvals (User Guide)](https://www.zoho.com/us/expense/help/configuring-approvals/)  — Approval types, criteria, approver selection options, priority
+- [Zoho Expense FAQ — Hierarchical approval flow (Submits To)](https://www.zoho.com/us/expense/kb/admin/approvals/hierarchical-approval-flow/)  — Org-graph pointers per user
+- [Zoho Expense FAQ — Approval criteria error on submission](https://www.zoho.com/us/expense/kb/reports/approval-criteria-error/)  — Orphan-claim hard block, exact error text
+- [Zoho Expense — Predefined user roles / custom roles](https://www.zoho.com/us/expense/kb/admin/approvals/user-roles/)  — Submitter/Approver/Admin; custom roles paid-only
+- [Zoho Expense — Adding users (bulk invite)](https://www.zoho.com/us/expense/help/managing-users/add-users/)  — Multiple Users grid >3 invitees; Submits To at invite time
+- [Zoho Expense — Taxes (India GST)](https://www.zoho.com/in/expense/help/setting-up-organization/taxes/)  — GSTIN, composition scheme, per-expense GST fields
+- [Zoho Expense — Branches](https://www.zoho.com/us/expense/help/setting-up-organization/branches/)  — 200 branches, GSTIN per branch, branch admin
+- [Zoho Expense — Categories](https://www.zoho.com/us/expense/help/configuring-preferences/categories/)  — Default categories, import/export, policy-level overrides
+- [Zoho Expense — Manage Organization / quick setup](https://www.zoho.com/us/expense/help/setting-up-organization/manage-organization/)  — Org profile wizard fields
+- [Zoho Expense — Jumpstart & free setup assistance](https://www.zoho.com/us/expense/jumpstart/)  — White-glove onboarding scope; free 2-hour training at /free-setup-assistance/
+- [Zoho Expense FAQ — Delegate vs Out-of-office Approver](https://www.zoho.com/us/expense/kb/my-settings/difference-delegates-out-of-office-approver/)  — Two-tier delegation model
+- [Fyle Help — Approval workflows on Fyle](https://www.fylehq.com/help/en/articles/11129811-approval-workflows-on-fyle)  — Rule stack, immovable default rule, reorder, 2–5 min propagation
+- [Fyle Help — Adding new employees](https://help.fylehq.com/en/articles/1205143-add-employees-and-send-invite-emails)  — Bulk Excel template, auto invite, 24h links, Pending, resend
+- [Fyle — Expense approvals product page](https://www.fylehq.com/product/approvals)  — Chain visibility, primary/secondary approvers, department approvers
+- [SAP Concur Community — No Approvers defined in workflow](https://community.concur.com/t5/Concur-Expense/No-Approvers-defined-in-workflow/m-p/22769)  — Stuck-report failure mode (also threads 18830, 24804)
+- [SAP Learning — Managing a Limit-Based Approval (Concur Standard admins)](https://learning.sap.com/learning-journeys/getting-started-with-concur-expense-standard-for-administrators/managing-a-limit-based-approval)  — Limit-based vs level-based DoA; companion page managing-a-level-based-approval
+- [Concur Expense: Workflow — Authorized Approvers Setup Guide (PDF)](https://community.concur.com/marav43842/attachments/marav43842/ConcurExpense/32457/1/EXP_SG_Workflow_AuthAppr.pdf)  — Approver limit = currency + amount per approver
+- [SAP KB 1944022 — Default approver determination when self-approval not allowed](https://userapps.support.sap.com/sap/support/knowledge/en/1944022)  — Self-approval deadlock; alternative approver; backend routing options
+- [G2 — SAP Concur pros and cons](https://www.g2.com/products/sap-concur/reviews?qs=pros-and-cons)  — Config needs trained admins/consultants (AI summary; page blocks fetch)
+- [Capterra — SAP Concur (Concur Expense) reviews](https://www.capterra.com/p/380/Concur-Expense/reviews/)  — Verbatim 'clunky back end', '3+ hours' quotes via snippets
+- [Navan — Is SAP Concur Worth It? An Honest Review](https://navan.com/blog/sap-concur-honest-review)  — Aggregate ratings; multi-month service-intensive implementations (competitor source)
+- [Ramp Support — Setting up spend request approvals](https://support.ramp.com/hc/en-us/articles/20843280013459-Setting-up-spend-request-approvals)  — Role-abstracted builder; Require all/any; Separation of Duties; snapshot-at-submission
+- [ApprovalMax Help Centre — Workflows & Approvals (incl. restart for not-yet-approved; version history; copy across orgs)](https://support.approvalmax.com/en/collections/1028070-workflows-approvals)  — Copy article: /en/articles/414708
+- [Expensify Help — Delegate When Out of Office](https://help.expensify.com/articles/expensify-classic/copilots-and-delegates/Delegate-when-out-of-office)  — Vacation Delegate mechanics, audit trail
+- [Expensify/App GitHub — Issue #36425 Prevent Self-Approval bypass](https://github.com/Expensify/App/issues/36425)  — $500 bounty; also #55845
+- [Expensify Community — Roles: who sees which reports (Auditor)](https://community.expensify.com/discussion/3475/what-role-should-employees-have-so-they-dont-see-all-reports)  — Auditor = view/comment only, CSV export only
+- [Keka Help — Configuring approval chain at expense category level](https://help.keka.com/migration/admin/configuring-approval-chain-at-expense-category-level)  — Policy vs category chains; Payout Approver role
+- [Keka Help — Create Expense & Travel policies and categories](https://help.keka.com/admin/admin-help/how-to-create-expense-travel-policies-and-categories)  — Policy/category prerequisites (partially login-gated)
+- [Darwinbox — Travel & Expense product](https://darwinbox.com/en-us/products/travel-and-expense)  — Multi-level workflows, escalation, no-code dropdown config (marketing)
+- [Oracle Fusion HCM — How You Simulate Approval Rules](https://docs.oracle.com/en/cloud/saas/human-resources/faucf/how-you-simulate-approval-rules.html)  — Test Rules > Simulate precedent; expenses rules at docs.oracle.com faiex how-you-configure-approval-rules
+- [WorkOS Docs — Domain verification & JIT provisioning](https://workos.com/docs/authkit/users-organizations/users/domain-verification)  — Domain capture/auto-join pattern; also /docs/sso/domains and organizations blog
+- [OneSchema — 5 Best Practices for Building a CSV Uploader](https://www.oneschema.co/blog/building-a-csv-uploader)  — Import pipeline, error-resolution lift, build-cost survey
+- [Flatfile — Building a seamless CSV import experience](https://flatfile.com/blog/optimizing-csv-import-experiences-flatfile-portal/)  — Import UX patterns
+- [Userpilot — Time to Value benchmark report 2024](https://userpilot.com/blog/time-to-value-benchmark-report-2024/)  — Median TTV 1d12h23m (547 cos)
+- [Userpilot — User Activation Rate benchmark 2024](https://userpilot.com/blog/user-activation-rate-benchmark-report-2024/)  — Median activation 37%
+- [Userpilot — Onboarding Checklist Completion benchmarks](https://userpilot.com/blog/onboarding-checklist-completion-rate-benchmarks/)  — 19.2% avg / 10.1% median; segment splits
+- [Appcues — SaaS onboarding examples (demo data patterns)](https://www.appcues.com/blog/saas-user-onboarding)  — Stripe test mode, Notion templates, Monday demo boards
+- [G2 — Compare SAP Concur vs Zoho Expense](https://www.g2.com/compare/sap-concur-vs-zoho-expense)  — Segment-relative ease-of-setup; Concur vendor claim at concur.com G2-leader blog
+
+## [approval-ux]
+- [AppZen — Manager approval process for T&E: Useless or useful?](https://www.appzen.com/blog/manager-approval-process-for-expense-reports-useless-or-useful)  — Rubber-stamping evidence: 15-sec reviews, 60% sample-review (PayStream), >50% multi-perpetrator fraud
+- [GBTA — How Much Do Expense Reports Really Cost a Company?](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/)  — $58/20min per report; 19% error rate; $52/18min correction
+- [Expensify May 2025 product update — AI receipt detection, bulk approvals](https://use.expensify.com/blog/may-2025-expensify-product-update-ai-receipt-detection-bulk-approvals-amp-pdf-downloads)  — Bulk approvals restricted to low-risk compliant reports; AI-generated receipt flagging
+- [Expensify Community — Random spot checks for auto-approved reports](https://community.expensify.com/discussion/8167/introducing-peace-of-mind-with-random-spot-checks-for-auto-approved-reports)  — Default 5% random audit of Concierge auto-approvals
+- [Expensify Community — How-to: Use Guided Review to approve reports](https://community.expensify.com/discussion/4709/how-to-use-guided-review-to-approve-reports)  — Violations-only guided review with Reject/Edit/skip
+- [Ramp Support — Use Policy Agent for approvals](https://support.ramp.com/hc/en-us/articles/47618318137875-Use-Policy-Agent-for-approvals)  — AI approval agent: review-only default, approve/review/reject outputs, conservative on ambiguity
+- [Ramp — How to automate your expense approval process](https://ramp.com/blog/how-to-automate-your-expense-approval-process)  — Auto-approve <$1,000 pattern; threshold-based routing
+- [Zoho Expense Help — Approving Reports](https://www.zoho.com/us/expense/help/reports/approving-reports/)  — Bulk approve/reject, forward, selective line rejection, approver edit with rationale
+- [Zoho Expense FAQ — Delegate vs Out-of-office Approver](https://www.zoho.com/us/expense/kb/delegation/difference-delegates-out-of-office-approver/)  — Two delegation primitives: account-access delegate vs time-bound auto-forward
+- [SAP Concur Community — Mass or Bulk approval in Concur](https://community.concur.com/t5/Concur-Expense-Forum/Mass-or-Bulk-approval-in-Concur/m-p/58530)  — Bulk approval requires Processor role — manager-level gap
+- [SAP Concur Community — Approvers on extended leave](https://community.concur.com/t5/Concur-Expense-Forum/Approvers-on-extended-leave/m-p/50)  — Admin-assigned delegates only on Professional edition; Standard gap
+- [Texas State — SAP Concur: Assign a Delegate Approver (PDF)](https://gato-docs.its.txst.edu/jcr:ca2989da-2146-4a29-b7c5-7662a7d545ba/6%20SAP%20Concur%20Expense%20Assign%20a%20Delegate%20Approver.pdf)  — Can Approve / Can Approve Temporary / Receives Approval Emails permissions
+- [U-Michigan — Approve a Concur Expense Report](https://mylinccontent.dsc.umich.edu/mais/html/PR_TE_Approve_ExpenseReport.html)  — Send Back to Employee requires explanatory comment
+- [Google — Gmail one-click actions reference](https://developers.google.com/workspace/gmail/markup/reference/one-click-action)  — ConfirmAction: single interaction, HTTPS POST from Google
+- [MailerSend — How to enable Google Email Actions & Highlights](https://www.mailersend.com/help/enable-google-email-actions)  — Whitelisting bar: 100+ emails/day for weeks, no promo content, sample submission
+- [Google Workspace Admin — Email sender guidelines](https://support.google.com/a/answer/81126?hl=en)  — Spam rate 0.1% target / 0.3% limit; SPF/DKIM/DMARC requirements
+- [Google — AMP for Gmail (dynamic email)](https://developers.google.com/workspace/gmail/ampemail)  — Sender registration required; HTML fallback
+- [Mailneo — AMP for email: the complete 2026 guide](https://www.mailneo.co/amp-email)  — Client support matrix: Gmail/Yahoo/Mail.ru; no Outlook/Apple Mail
+- [Microsoft Learn — Actionable Messages FAQ](https://learn.microsoft.com/en-us/outlook/actionable-messages/actionable-messages-faq)  — Registration scopes, single-user mailboxes only, 10-open limit, 1-month action window, Mimecast breakage, 2024 onboarding pause
+- [Microsoft Learn — What are actionable messages in Office 365?](https://learn.microsoft.com/en-us/outlook/actionable-messages/)  — Platform overview; legacy token phase-out by June 8, 2026
+- [4sysops — Actionable Messages Adaptive Cards brings Approve|Reject to all Outlook clients](https://4sysops.com/archives/actionable-messages-adaptive-cards-brings-approve-reject-button-to-all-outlook-clients/)  — Exchange moderation migration; voting buttons retired July 31, 2026
+- [Fyle — Reconcile, track and approve from the Fyle app for Slack](https://www.fylehq.com/blog/reconcile-card-transactions-track-expenses-and-approve-reports-from-the-new-fyle-app-for-slack)  — Slack decision card contents: amount, date, purpose, receipt flag
+- [Fyle — Automated employee reminders](https://www.fylehq.com/blog/automated-reminders-how-fyle-simplifies-one-of-finances-most-time-consuming-tasks)  — Six reminder types incl. approver reminders; weekly/monthly cadence with custom message
+- [Fyle — Are you stuck in expense approval bottlenecks?](https://www.fylehq.com/blog/expense-approval-bottlenecks)  — Traveling-manager chokepoint; email-buried approvals
+- [Laura Kokkarinen — The Ultimate Guide to Microsoft Teams based approvals](https://laurakokkarinen.com/the-ultimate-guide-to-microsoft-teams-based-approvals/)  — Adaptive Card approve/reject with comment-on-decision
+- [AlphaVima — Power Automate: Send Adaptive Card Approvals in Teams](https://alphavima.com/blog/power-automate-teams-adaptive-card-approval/)  — In-place card refresh to Approved banner; prevents double action
+- [Whautomate — WhatsApp Business API Pricing India](https://whautomate.com/whatsapp-business-api-pricing-india)  — INR per-message rates: utility ~Rs 0.115, marketing Rs 0.8631 (Jan 2026), 18% GST, free utility in CSW
+- [Interakt — WhatsApp Business API Pricing Structure](https://www.interakt.shop/resource-center/whatsapp-business-api-pricing-structure/)  — Rs 0.145 utility figure; July 1, 2025 per-message billing
+- [YCloud — WhatsApp API Message Template Update: 1st July 2025](https://www.ycloud.com/blog/whatsapp-api-message-template-category-guidelines-update)  — Utility criteria; April 16, 2025 no-notice recategorization; 60-day appeal
+- [CleverTap — WhatsApp Message Templates docs](https://docs.clevertap.com/docs/whatsapp-message-templates)  — Up to 10 quick reply buttons; button/category constraints
+- [Meta for Developers — Template categorization](https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-categorization)  — Primary source for category rules (JS-rendered; verified via secondary docs)
+- [Cflow — How Automated Escalation Rules Reduce Approval Bottlenecks](https://www.cflowapps.com/how-automated-escalation-rules-reduce-approval-bottlenecks/)  — 48h/24h escalation windows; reminder 24h before escalation
+- [ExpiryEdge — Workflow automation triggers, alerts and escalations](https://expiryedge.com/blogs/workflow-automation-tools-common-triggers-alerts-and-escalations/)  — Two-nudge-then-escalate pattern; primary/backup/manager ladder
+- [ExpensePoint — Best Practices for Expense Report Approvals](https://www.expensepoint.com/blog/best-practices-for-expense-report-approvals/)  — 5-business-day review deadline; automated reminders; mobile approvals
+- [OCD Tech — How to make your approval flows comply with SOX audit checkpoints](https://ocd-tech.com/sox/how-to-make-your-approval-flows-comply-with-sox-audit-checkpoints)  — Submitter != approver; authority-at-decision-time evidence
+- [OneUptime — How to Build SOX-Compliant Audit Trails](https://oneuptime.com/blog/post/2026-02-06-sox-compliant-audit-trails-opentelemetry/view)  — Tamper-evident, timestamped, attributable logs; ~7-year retention
+- [Kissflow — Workflow Audit Trail: SOX, HIPAA & GDPR Guide](https://kissflow.com/workflow/workflow-audit-trail/)  — Audit log field requirements (who/when/what/before-after)
+- [Vena — Month-End Close Process Checklist](https://www.venasolutions.com/blog/month-end-close-process-checklist)  — Pre-close reminders to department heads for pending approvals
+- [Spendesk — The month-end close checklist for finance teams](https://www.spendesk.com/blog/month-end-close-checklist/)  — Real-time dashboard of who is holding up the close
+- [Capterra — SAP Concur Reviews](https://www.capterra.com/p/380/Concur-Expense/reviews/)  — Approver complaints: clunky, long page refreshes, buggy
+- [Trustpilot — SAP Concur reviews](https://www.trustpilot.com/review/www.concur.com)  — 'The worst user experience for approvers and staff'
+- [G2 — Zoho Expense Reviews](https://www.g2.com/products/zoho-expense/reviews)  — Workflow rigidity and setup complexity cons
+- [Medius — 6 Signs Your Employee Expense Management Isn't Working](https://www.medius.com/blog/six-signs-your-employee-expense-management-process-isnt-working/)  — ~9-day average claim processing
+- [Teampay — 7 Things Employees Hate About Your Expense Reimbursement Process](https://www.teampay.co/blog/employees-hate-expense-reimbursement)  — Employee-side frustration with approval-driven reimbursement delays
+- [Emburse — Top 8 Expense Management Mobile Apps for 2025](https://www.emburse.com/resources/top-8-expense-management-mobile-apps-for-2025)  — ~70% mobile submission preference (PmarketResearch 2024, vendor-cited)
+- [Workplace from Meta — Managing Your Notifications](https://www.workplace.com/resources/ways-to-work/work-smarter/managing-notifications)  — Quiet-hours guidance: non-urgent messages in working hours only; silenceable nudges
+- [Payhawk — How to approve expenses when out of office](https://payhawk.com/en-us/blog/approve-expenses-when-out-office)  — OOO auto-approval/reassignment patterns
+- [Zoho Expense — Slack integration](https://www.zoho.com/us/expense/slack-integration/)  — Approval-event notifications into Slack
+
+## [pwa-india]
+- [web.dev — What does it take to be installable?](https://web.dev/articles/install-criteria)  — Chrome installability criteria: manifest fields, 192/512 icons, engagement heuristics
+- [Chrome Developers — Revisiting Chrome's installability criteria](https://developer.chrome.com/blog/update-install-criteria)  — SW fetch handler not required since Chrome 108 mobile / 112 desktop; default offline page
+- [web.dev — WebAPKs on Android](https://web.dev/articles/webapks)  — WebAPK minting, app drawer/settings presence, URL intent filters
+- [web.dev — Installation (Learn PWA)](https://web.dev/learn/pwa/installation)  — WebAPK requires Chrome+GMS; Samsung Internet mints only on Samsung devices
+- [Chrome Developers — Receiving shared data with the Web Share Target API](https://developer.chrome.com/docs/capabilities/web-apis/web-share-target)  — Chrome 76+ Android / 89+ desktop; install required; file sharing via multipart POST
+- [MDN — share_target manifest member](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target)  — Compat: Chromium-only; Firefox no plans
+- [WebKit Bugzilla 194593 — Add support for Web Share Target API](https://bugs.webkit.org/show_bug.cgi?id=194593)  — Open WebKit feature request since 2019; no Safari share-target
+- [WebKit blog — Web Push for Web Apps on iOS and iPadOS](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/)  — iOS 16.4 push: Home Screen apps only, user-gesture, Badging API, manifest display requirement
+- [WebKit blog — WebKit Features in Safari 16.4](https://webkit.org/blog/13966/webkit-features-in-safari-16-4/)  — Third-party browsers can offer Add to Home Screen; web push debut
+- [WebKit blog — WebKit Features in Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)  — ImageCapture API ships in Safari 18.4 (2025-03-31); Declarative Web Push; Screen Wake Lock in Home Screen apps
+- [web.dev — Storage for the web](https://web.dev/articles/storage-for-the-web)  — Chrome 60%/origin, Firefox 2GB/eTLD+1, Safari ~1GB + 7-day cap with installed-PWA exemption, LRU eviction, persist()
+- [WebKit blog — Updates to Storage Policy (Safari 17)](https://webkit.org/blog/14403/updates-to-storage-policy/)  — Safari 17 quotas: 60% origin / 80% overall (browser apps); Home Screen apps same as browser; persist() heuristics
+- [Search Engine Land — What Safari's 7-day cap on script-writeable storage means for PWA developers](https://searchengineland.com/what-safaris-7-day-cap-on-script-writeable-storage-means-for-pwa-developers-332519)  — ITP 7-day purge mechanics and home-screen exemption coverage
+- [WebKit Bugzilla 185448 — getUserMedia not working in standalone home-screen apps](https://bugs.webkit.org/show_bug.cgi?id=185448)  — Historical standalone camera block; fixed iOS 13.4 (March 2020)
+- [WebKit Bugzilla 252465 — PWA HTML video element unable to play getUserMedia stream](https://bugs.webkit.org/show_bug.cgi?id=252465)  — Standalone camera black/frozen bug persisting to iOS 18.4.1+ (June 2025 comments)
+- [firt.dev — iOS PWA Compatibility (Maximiliano Firtman)](https://firt.dev/notes/pwa-ios/)  — iOS capability matrix: no install prompt, no background sync/fetch, no link capturing
+- [firt.dev — Safari on iOS 14 for PWA developers](https://firt.dev/ios-14/)  — Storage isolation between Safari and installed PWA; shared SW registration/CacheStorage
+- [Netguru — How to share session/cookie between PWA standalone and Safari on iOS](https://www.netguru.com/blog/how-to-share-session-cookie-or-state-between-pwa-in-standalone-mode-and-safari-on-ios)  — Re-login problem and CacheStorage workaround
+- [MacRumors — Apple confirms iOS 17.4 disables Home Screen web apps in the EU](https://www.macrumors.com/2024/02/15/ios-17-4-web-apps-removed-apple/)  — Feb 15, 2024 confirmation, DMA rationale
+- [TechCrunch — Apple reverses decision about blocking web apps in the EU](https://techcrunch.com/2024/03/01/apple-reverses-decision-about-blocking-web-apps-on-iphones-in-the-eu/)  — Mar 1, 2024 reversal; 500+ complaints to EC
+- [Chrome Developers blog — Take photos and control camera settings (ImageCapture)](https://developer.chrome.com/blog/imagecapture)  — takePhoto() = full still-image resolution vs canvas frame grab; Chrome 59
+- [caniuse — ImageCapture.takePhoto](https://caniuse.com/mdn-api_imagecapture_takephoto)  — 90.09% global; Safari 18.4+; Firefox disabled
+- [caniuse — Background Sync API](https://caniuse.com/background-sync)  — 77.95% global; Chromium-only; zero Safari support through 26.x
+- [Chrome Developers — workbox-background-sync](https://developer.chrome.com/docs/workbox/modules/workbox-background-sync)  — Queue in IndexedDB; exponential-backoff replay; SW-startup fallback for Safari; no 4xx/5xx retry
+- [Dynamsoft — Take high-resolution photos in the browser](https://www.dynamsoft.com/codepool/take-high-resolution-photo-in-the-browser.html)  — getUserMedia constraint behavior, ImageCapture Chromium-only note, HTML Media Capture recommendation
+- [web.dev — Capturing an image from the user](https://web.dev/media-capturing-images/)  — The three capture approaches: file input, getUserMedia+canvas, ImageCapture
+- [MDN — HTMLInputElement.capture](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/capture)  — capture=user/environment semantics, mobile support
+- [Apple Developer Forums thread 743049 — Safari 17+ converts images to HEIC](https://developer.apple.com/forums/thread/743049)  — accept=image/heic triggers HEIC conversion; removal restores original format
+- [PQINA — Canvas area exceeds the maximum limit](https://pqina.nl/blog/canvas-area-exceeds-the-maximum-limit/)  — iOS 16,777,216-pixel canvas area cap
+- [PQINA — Total canvas memory use exceeds the maximum limit](https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/)  — ~384MB total canvas memory on iOS 15
+- [WebAssembly/design issue 1397 — Wasm needs a better memory management story](https://github.com/WebAssembly/design/issues/1397)  — >~300MB WASM allocation unreliable on Android Chrome and iOS Safari
+- [Godot issue 70621 — WASM 2GB maximum causes OOM on iOS Safari 16.2](https://github.com/godotengine/godot/issues/70621)  — iOS WASM Memory init ceiling evidence
+- [Infrequently Noted (Alex Russell) — The Performance Inequality Gap, 2024](https://infrequently.org/2024/01/performance-inequality-gap-2024/)  — P75 budgets: ~150KiB markup/CSS + 300-350KiB JS gz; JS 3x per-byte cost
+- [Infrequently Noted — The Performance Inequality Gap, 2026](https://infrequently.org/2025/11/performance-inequality-gap-2026/)  — 2026 baseline device: Samsung Galaxy A24 4G
+- [StatCounter — Mobile OS market share India](https://gs.statcounter.com/os-market-share/mobile/india)  — Android 93.22% / iOS 6.68% (May 2026)
+- [StatCounter — Android version market share India](https://gs.statcounter.com/android-version-market-share/mobile/india)  — Android 15 25.09%, 16 18.69%, 13 14.08% etc. (May 2026)
+- [IBTimes India — India ranks lowest in global mobile data cost (cable.co.uk)](https://www.ibtimes.co.in/india-ranks-lowest-global-mobile-data-cost-thats-great-news-heres-how-839072)  — $0.09/GB India figure
+- [Business Standard — India's average monthly data usage per user hits 31 GB in 2025 (Nokia MBiT)](https://www.business-standard.com/industry/news/india-s-average-monthly-data-usage-per-user-hits-31-gb-in-2025-nokia-126033100536_1.html)  — 27.5GB (2024) -> 31GB (2025)
+- [Opensignal — India Mobile Network Experience Report, October 2024](https://insights.opensignal.com/reports/2024/10/india/mobile-network-experience)  — Jio Consistent Quality 66.5%; image-upload threshold metric
+- [BestMediaInfo — Rural India makes up 55% of 886 million internet users (IAMAI-Kantar 2024)](https://bestmediainfo.com/insights/rural-india-makes-up-55-of-the-886-million-internet-users-in-2024-report-8628510)  — 886M users, 488M rural, 98% Indic-language content
+- [IAMAI-Kantar — Internet in India 2024 (report PDF)](https://www.iamai.in/sites/default/files/research/Kantar_%20IAMAI%20report_2024_.pdf)  — Primary source for vernacular/rural stats
+- [IMARC — India Smartphone Market](https://www.imarcgroup.com/india-smartphone-market)  — 4-8GB RAM segment 42.3% (2025)
+- [Asia Tech Lens / Counterpoint coverage — RAM costs and India smartphone market](https://www.asiatechlens.com/p/why-smartphone-prices-could-rise)  — 4GB DDR4X $7 -> $30+ in 2025; entry-tier pressure
+- [Google Developers showcase — Flipkart triples time-on-site with PWA](https://developers.google.com/web/showcase/2016/flipkart)  — 70% conversion lift, 60% home-screen launches, 63% on 2G (2016)
+- [Google Developers showcase — Ola drives mobility with PWA](https://developers.google.com/web/showcase/2017/ola)  — 200KB install, 10KB repeat, tier-2/3 +68% (2017)
+- [kaios.dev — What's Next for the JioPhone?](https://kaios.dev/2023/08/whats-next-for-the-jiophone/)  — 100M+ JioPhones; JioBharat/JioPhone Next lineup vs 250M 2G users
+- [Chromium Blog — Changes to quality criteria for PWAs using Trusted Web Activity](https://blog.chromium.org/2020/06/changes-to-quality-criteria-for-pwas.html)  — Chrome 86 TWA quality criteria: asset links, offline 200, 404/5xx handling
+- [Google Codelab — Adding your PWA to Google Play (PWA in Play)](https://developers.google.com/codelabs/pwa-in-play)  — Official endorsement of TWA path via Bubblewrap
+- [Google Play Console Help — Policy announcement July 17, 2024](https://support.google.com/googleplay/android-developer/answer/14993590?hl=en)  — Spam & Minimum Functionality policy uplift
+- [Google Play — Spam policy: webview spam](https://play.google.com/about/spam-min-functionality/spam/made-for-ads/)  — Apps whose primary purpose is webview of a website are removed
+- [MobiLoud — Can you publish a PWA to the App Store and Google Play (2026)](https://www.mobiloud.com/blog/publishing-pwa-app-store)  — $25 Play fee; current TWA/store-policy practitioner view
+- [Capacitor docs — Camera plugin](https://capacitorjs.com/docs/apis/camera)  — Native camera UI, quality/resize options, Android 11+ Photo Picker, Info.plist strings, web fallback
+- [Capacitor docs — Building Progressive Web Apps](https://capacitorjs.com/docs/web/progressive-web-apps)  — Single codebase as PWA + native containers
+- [Scanbot — Web Document Scanner SDK docs](https://docs.scanbot.io/web/document-scanner-sdk/introduction/)  — WASM in-browser scanning: offline, auto-crop, perspective correction, low-power toggles
+- [9to5Mac — iOS 16.4 adds new capabilities for web apps](https://9to5mac.com/2023/02/16/iphone-web-app-new-features-ios-16-4/)  — Third-party browser A2HS + push coverage
+- [MapmyIndia — WorkMate field force platform](https://www.mapmyindia.com/workmate/)  — Indian field-force vendor: native app with offline sync incl. expense claims (native-first market evidence)
+
+
+# V2 VERIFICATION SOURCES
+
+
+## [v-camera]
+- [MDN: Capabilities, constraints, and settings (Media Capture and Streams API)](https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Constraints)
+- [MDN: Taking still photos with getUserMedia (canonical canvas capture pattern)](https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Taking_still_photos)
+- [MDN: CSS object-fit](https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit)
+- [MDN: HTMLVideoElement.videoWidth](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/videoWidth)
+- [MDN: CanvasRenderingContext2D.drawImage](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage)
+- [W3C MediaStream Image Capture (Working Draft, Apr 23 2025)](https://www.w3.org/TR/image-capture/)
+- [Chrome Developers: Take photos and control camera settings (Image Capture API)](https://developer.chrome.com/blog/imagecapture)
+- [caniuse: ImageCapture API](https://caniuse.com/imagecapture)
+- [MDN browser-compat-data (api/ImageCapture.json, main branch, fetched 2026-06-10)](https://raw.githubusercontent.com/mdn/browser-compat-data/main/api/ImageCapture.json)
+- [WebKit Features in Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)
+- [WebKit Features in Safari 26.0](https://webkit.org/blog/17333/webkit-features-in-safari-26-0/)
+- [WebKit bug 185448: getUserMedia not working in apps added to home screen (standalone)](https://bugs.webkit.org/show_bug.cgi?id=185448)
+- [WebKit Features in Safari 17.0](https://webkit.org/blog/14445/webkit-features-in-safari-17-0/)
+- [Apple Safari 17 Release Notes (data endpoint)](https://developer.apple.com/documentation/safari-release-notes/safari-17-release-notes)
+- [WebKit Features in Safari 17.4](https://webkit.org/blog/15063/webkit-features-in-safari-17-4/)
+- [WebKit bug 243075: torch track constraint ignored on iOS](https://bugs.webkit.org/show_bug.cgi?id=243075)
+- [Release Notes for Safari Technology Preview 211](https://webkit.org/blog/16435/release-notes-for-safari-technology-preview-211/)
+- [Release Notes for Safari Technology Preview 244](https://webkit.org/blog/17962/release-notes-for-safari-technology-preview-244/)
+- [Dynamsoft: How to Control Camera Focus with JavaScript](https://www.dynamsoft.com/codepool/camera-focus-control-on-web.html)
+
+## [v-scan-libs]
+- [jscanify GitHub repository (puffinsoft/jscanify)](https://github.com/puffinsoft/jscanify)
+- [npm registry metadata for jscanify (registry.npmjs.org + api.npmjs.org)](https://registry.npmjs.org/jscanify)
+- [OpenCV official docs: Build OpenCV.js](https://docs.opencv.org/4.x/d4/da1/tutorial_js_setup.html)
+- [Lambda IT: OpenCV.js custom build](https://lambda-it.ch/blog/build-opencv-js)
+- [OpenCV Q&A: opencv_js.wasm is too large](https://answers.opencv.org/question/229032/opencv_jswasm-is-too-large/)
+- [Dynamsoft Document Normalizer - Ask for Quote (vendor pricing page)](https://www.dynamsoft.com/document-normalizer/ask-for-quote/)
+- [Dynamic Web TWAIN pricing page (vendor)](https://www.dynamsoft.com/store/dynamic-web-twain/)
+- [Scanbot SDK docs: Pricing and licensing model](https://docs.scanbot.io/faq/pricing-and-licensing-model/)
+- [SaaSworthy: Scanbot Document Scanner SDK pricing](https://www.saasworthy.com/product/scanbot-document-scanner-sdk/pricing)
+- [Tesseract official docs: Improving the quality of the output](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html)
+- [PreP-OCR: A Complete Pipeline for Document Image Restoration and Enhanced OCR Accuracy (arXiv:2505.20429, May 2025)](https://arxiv.org/abs/2505.20429)
+- [DKDS: A Benchmark Dataset of Degraded Kuzushiji Documents (arXiv:2511.09117)](https://arxiv.org/pdf/2511.09117)
+- [Bieniecki, Grabowski, Rozenberg: Image Preprocessing for Improving OCR Accuracy (IEEE MEMSTECH 2007)](https://ieeexplore.ieee.org/document/4283429/)
+- [MediaPipe issue #5776: Document scanner platform support](https://github.com/google-ai-edge/mediapipe/issues/5776)
+- [DocsaidLab/DocAligner (ONNX document corner detection)](https://github.com/DocsaidLab/DocAligner)
+- [ONNX Runtime Web: Using the WebGPU execution provider](https://onnxruntime.ai/docs/tutorials/web/ep-webgpu.html)
+- [Transformers.js v3: WebGPU support (Hugging Face blog, Oct 2024)](https://huggingface.co/blog/transformersjs-v3)
+- [caniuse: WebGPU](https://caniuse.com/webgpu)
+- [Dynamsoft blog: Build a browser document scanner with OpenCV.js](https://www.dynamsoft.com/codepool/web-document-scanner-with-opencvjs.html)
+- [Medium (Jinkawin): How to custom build OpenCV for JavaScript and slim it down](https://medium.com/@jinkawin.p/how-to-custom-build-opencv-for-javascript-and-slim-it-down-c9f832c1dcd5)
+
+## [v-pricing]
+- [Fin AI Agent Pricing (Intercom)](https://fin.ai/pricing)
+- [Intercom Pricing](https://www.intercom.com/pricing)
+- [Zapier Plans & Pricing](https://zapier.com/pricing)
+- [How pay-per-task billing works in Zapier](https://help.zapier.com/hc/en-us/articles/15279018245901-How-pay-per-task-billing-works-in-Zapier)
+- [DocuSign eSignature Plans & Pricing](https://ecom.docusign.com/plans-and-pricing/esignature)
+- [Slack: Feature limitations on the free version](https://slack.com/help/articles/27204752526611-Feature-limitations-on-the-free-version-of-Slack)
+- [Slack: Pricing changes for the Pro plan and updates to the free plan](https://slack.com/help/articles/7050776459923-Pricing-changes-for-the-Pro-plan-and-updates-to-the-free-plan)
+- [OpenView: The State of Usage-Based Pricing, 2nd Edition (Feb 2023)](https://openviewpartners.com/blog/state-of-usage-based-pricing/)
+- [OpenView: Why is Usage-Based Pricing on the Rise?](https://openviewpartners.com/blog/usage-based-pricing-trends/)
+- [Chargebee 2025 State of Recurring Revenue & Monetization (PDF)](https://go.chargebee.com/rs/463-NSB-124/images/2025_chargebee_state_of_recurring_revenue_and_monetization_report.pdf)
+- [Bessemer: State of the Cloud 2024](https://www.bvp.com/atlas/state-of-the-cloud-2024)
+- [Meta for Developers: Pricing on the WhatsApp Business Platform](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing)
+- [Twilio: Notice — Changes to WhatsApp's Pricing (July 2025)](https://help.twilio.com/articles/30304057900699-Notice-Changes-to-WhatsApp-s-Pricing-July-2025)
+- [Twilio WhatsApp Pricing](https://www.twilio.com/en-us/whatsapp/pricing)
+- [Authkey: WhatsApp Pricing Update effective January 2026](https://authkey.io/blogs/whatsapp-pricing-update-2026/)
+- [A2ZSMS: WhatsApp Pricing Change in India from January 1, 2026](https://www.a2zsms.in/blogs/whatsapp-pricing-change-india-2026/)
+- [AiSensy: WhatsApp Per Message Pricing Update (Jan 1, 2026)](https://m.aisensy.com/blog/whatsapp-per-message-pricing-update-effective-january-1-2026/)
+- [Chati: WhatsApp Business API Pricing Update for 2026](https://chati.ai/blog/whatsapp-business-api-pricing-update-for-2026)

@@ -1,0 +1,82 @@
+---
+title: Glossary
+description: Plain-language definitions of every acronym and term used across the dossier, in Indian context.
+---
+
+Every term below is defined as it is used in this dossier, in Indian context, not in the abstract. Where a definition carries a number, that number is the canonical figure from the [thesis](/overview/executive-summary/) and is provenance-tagged. The two terms that decide whether this product is legal and whether it sells are: the RBI Payment Aggregator trigger (money must never touch an account the SaaS controls) and the GST Section 17(5) blocked-ITC list. Read those rows twice.
+
+:::danger[The one row that defines the whole product]
+Funds must never touch an account the SaaS owns or controls. The moment they do, you are a Payment Aggregator (net worth ₹15 cr at application, ₹25 cr by year 3, mandatory escrow) or a PPI. See the full architecture at [/compliance/money-movement/](/compliance/money-movement/).
+:::
+
+## Terms A to Z
+
+| Term | Definition |
+| --- | --- |
+| ACV | Annual Contract Value, the yearly revenue from one customer. Our bottoms-up India TAM uses ~USD 1.3k to 2.5k ACV per company (our derivation, low-medium confidence). |
+| Aadhaar | 12-digit UIDAI identity number. Private SaaS entities cannot freely run live Aadhaar authentication or e-KYC; use DigiLocker or offline XML and keep PAN as the primary identity key. Governed by the Aadhaar Act/UIDAI, not by the DPDP Act. |
+| AP automation | Accounts Payable automation: digitizing vendor-invoice intake, approval, and payment. The larger, GST-mandate-driven adjacency this product can expand into beyond employee reimbursement. |
+| BBPOU | Bharat Bill Payment Operating Unit, an RBI-authorised participant in the Bharat Bill Payment System. EnKash holds a BBPOU licence (alongside PA and PPI); cited as context for what a fully licensed incumbent carries. |
+| CAC | Customer Acquisition Cost. An outbound SDR motion runs ~₹2 to 4 lakh CAC, unaffordable at India SMB ACVs, which is why we recommend content, channel, and founder-led sales instead. |
+| CGST / SGST / IGST | The three GST components: Central, State, and Integrated GST. Intra-state supplies split into CGST + SGST; inter-state supplies attract IGST. The blocked-credit rules live in the CGST Act (Sec 17(5)). |
+| Delegation of Authority (DoA) | The rupee-tiered approval matrix mapping claim amount to who must approve. With maker-checker, it is the single most India-specific buying requirement and a first-class feature, not a setting. See [/product/maker-checker/](/product/maker-checker/). |
+| DPDP Act | Digital Personal Data Protection Act 2023. The SaaS is typically a Data Processor (Data Fiduciary for its own staff data). Penalty ceiling ₹250 cr for failed security safeguards. Rules notified 14 Nov 2025; full obligations phase to ~May 2027. No GDPR-style sensitive-data tier. |
+| e-invoice / IRN | GST e-invoice with an Invoice Reference Number and signed QR code issued by the Invoice Registration Portal. Validating the QR/IRN is a deterministic fraud check layered before any auto-approval. |
+| EPFO | Employees' Provident Fund Organisation. Its ~6.9 crore formal salaried members (govt, high) are a demand denominator, but most are not the paying market. |
+| escrow | A bank-held account a regulated Payment Aggregator must maintain with a scheduled commercial bank for collected funds. We avoid escrow entirely by never holding funds; the regulated partner holds them if any party does. |
+| FBP | Flexible Benefits Plan, the salary-structuring mechanism (LTA, fuel, telephone, meal components) employees claim against bills. Relevant because reimbursements overlap FBP taxability rules. |
+| FEMA | Foreign Exchange Management Act, the law governing cross-border payments. Relevant only if the product touches foreign-currency reimbursement or PA-CB cross-border flows (per-transaction cap ~₹25 lakh under RBI PA-CB rules, verify by financial year); out of MVP scope. |
+| GST | Goods and Services Tax, India's unified indirect tax. ~1.53 crore active taxpayers (Jun 2025, govt, high). GST ITC capture is a core wedge: it turns soft ROI into a hard rupee number for the CFO. |
+| GSTIN | 15-character GST Identification Number. Validated at vendor and bill capture (Luhn-mod-36 checksum plus a live status check), since a GSTIN can be suspended or cancelled after onboarding. |
+| GSTR-2B | The static, auto-drafted monthly ITC statement reconciled against captured bills to confirm a credit is actually claimable. Part of the GST ITC capture wedge. |
+| HSN / SAC | Harmonised System of Nomenclature (goods) and Services Accounting Code (services), the GST classification codes on an invoice. Used to map a line item to its GST rate and ITC eligibility. |
+| IMPS | Immediate Payment Service, an instant 24x7 retail rail. Maximum ₹5 lakh per transaction. Default for small, urgent reimbursements; payout cost sits in the single indicative band ~₹1.75 to 5 per transaction (vendor pricing, medium), not a rail-specific figure. |
+| ISD | Input Service Distributor, the GST mechanism for allocating common input credit across a company's registrations. Multi-entity ISD/cross-charge complexity is explicitly deferred out of MVP. |
+| ITC | Input Tax Credit, the GST a business can offset against its output liability. Sec 17(5) blocks ITC on many T&E categories; wrongful claims attract 24% per annum interest. Capturing eligible ITC is the wedge. |
+| KYC / KYB | Know Your Customer / Know Your Business: verifying an employee's or vendor's identity and bank details before whitelisting a payout account. Built from PAN, bank penny-drop, and (for vendors) GSTIN + Udyam checks. See [/product/onboarding-kyc/](/product/onboarding-kyc/). |
+| LTA | Leave Travel Allowance (Sec 10(5)/Rule 2B): domestic travel fare only, 2 journeys per 4-year block, old regime only. GST ITC on LTA-type vacation travel is blocked under Sec 17(5)(b); ordinary business travel is not. |
+| maker-checker | The four-eyes control where one person submits (maker) and a different person approves (checker). With a rupee-tiered DoA, it is the single most India-specific buying requirement and a credibility signal to Finance and auditors. |
+| MCA | Ministry of Corporate Affairs. Its ~2.8M registered / ~1.8M active companies (govt, high) are a demand denominator that overstates the addressable paying base. |
+| MCC | Merchant Category Code, the code identifying a merchant's business type on card networks. Relevant to card-issuing economics (interchange), a business we explicitly do not build. |
+| MSME / Udyam | Micro, Small and Medium Enterprise, registered on the Udyam portal. ~7.83 crore Udyam MSMEs (govt, high) but ~97% are micro/non-paying. The MSME 45-day payment clock (Sec 43B(h)) is a vendor-reimbursement differentiator. |
+| NEFT | National Electronic Funds Transfer, a 24x7 batch rail with no minimum and no maximum. Cheapest payout option (~₹1.75 to 3 per transaction, indicative); default for non-urgent batch reimbursements. |
+| NPCI | National Payments Corporation of India, the body operating UPI, IMPS, and the NEFT/RTGS beneficiary name look-up (free, effective ~Apr 2025 per RBI circular, verify against the live circular). |
+| OCR | Optical Character Recognition, extracting structured fields from a bill image. Table-stakes, not a moat. LLM-vision OCR costs ~USD 0.0005 to 0.003 per doc (vendor pricing, medium); accuracy is 94 to 99% on clean print (vendor-stated, optimistic) but falls into the low-to-mid 80s on faded thermal, crumpled, or Devanagari bills. |
+| Payment Aggregator (PA) | An RBI-regulated entity that collects customer-to-merchant payments and settles collected funds. Triggers ₹15 cr net worth at application, ₹25 cr by year 3, and mandatory escrow. Pure outbound payout/disbursement is outside this definition, which is exactly why the file-handoff/partner model stays unlicensed. |
+| Payment Gateway (PG) | Technology infrastructure that routes and processes payment transactions without handling funds. The PG-vs-PA distinction (funds vs no funds) is the line we stay on the safe side of. |
+| PAN | Permanent Account Number, the 10-character tax identity. The primary identity key for both employees and vendors; verification runs ~₹1 to 3 via aggregators (Protean OPV is ~₹12,000/yr + GST for eligible entities). |
+| penny-drop | Verifying a bank account by crediting a tiny amount and reading back the registered name. ~₹3 per successful verification (Setu/Cashfree, vendor pricing, high). Used to whitelist a payout account before any disbursement. |
+| reverse-penny-drop | The preferred UPI variant where the user pays Re 1 (auto-refunded, typically within ~48h, vendor-stated, low), no account number is keyed, and success runs ~95 to 97% (vendor-stated, low). Better self-registration UX than classic penny-drop. |
+| PEPM | Per Employee Per Month, a pricing unit. We price per active submitter (~₹79 to 149/user/mo on annual, vendor-anchored to Zoho), approvers/admins free, not PEPM across the whole headcount. |
+| PPI | Prepaid Payment Instrument (wallets, prepaid cards). Non-bank PPI net worth requirement is ₹5 cr rising to ₹15 cr. Issuing a PPI or corporate card is explicitly deferred; we monetise software seats, not card float. |
+| RBI | Reserve Bank of India, the regulator for money movement, PA/PG, and PPI. The product stays a technology provider so no RBI authorisation is required. Get a written legal opinion before go-live. See [/compliance/regulatory-map/](/compliance/regulatory-map/). |
+| RCM | Reverse Charge Mechanism, where the recipient (the company) pays GST instead of the supplier. Applies to rent-a-cab (where the supplier opts), GTA, legal services, and unregistered-supplier purchases; flagged on vendor reimbursements. |
+| RTGS | Real-Time Gross Settlement, a 24x7 rail with a ₹2 lakh minimum and no maximum. Online RTGS carries no RBI charge; banks may add a small service fee. Default for large vendor payouts. |
+| SDF | Significant Data Fiduciary, a DPDP classification carrying extra duties (India-based DPO, DPIA, audits). Build for the stricter SDF interpretation to avoid rework given the ₹250 cr penalty exposure. |
+| Section 17(5) | The CGST Act clause listing blocked ITC. Key nuance: clause (b) "travel benefits" means vacation/LTC, not ordinary business travel; business-travel ITC (air/rail for work) is generally available. The core of the GST rule engine. See [/compliance/regulatory-map/](/compliance/regulatory-map/). |
+| Section 37 | Income Tax Act Sec 37(1), the "wholly and exclusively for business" deduction test. Disallows personal, capital, illegal, penalty, CSR, and freebie-to-professionals spend. The company-deductibility overlay, separate from GST ITC. |
+| SOC 2 / ISO 27001 | Security attestations buyers expect. Get ISO 27001 first (~₹5 L); add SOC 2 Type II plus VAPT later. SOC 2 is explicitly deferred until a paying deal funds it. See [/compliance/data-protection/](/compliance/data-protection/). |
+| TAM / SAM / SOM | Total / Serviceable / Serviceable-Obtainable Market. India TAM ~USD 150 to 300M, SAM ~USD 80 to 150M, indie SOM (3 yr) ~USD 0.5 to 2M ARR (our derivation, low-medium). "Fast-growing" yes; "large" overstated. |
+| TDS | Tax Deducted at Source on vendor payments: 194C (1%/2% contractors), 194J (10% professional / 2% technical), 194H (2% commission, from 1 Oct 2024). Version-date every rate by financial year. |
+| Tally | The desktop accounting software used by ~70 to 80% of Indian SMBs (vendor-claimed, not independently audited). Two-way Tally-native sync (XML over HTTP, port 9000) is the single biggest deal-maker/breaker and the primary moat. See [/business/integrations/](/business/integrations/). |
+| T&E | Travel and Expense, the category of employee spend this product captures. India T&E (business travel) spend 2024 was ~USD 38.3B, the world's 8th largest, ~15% growth 2025 (GBTA/Visa, analyst, medium). |
+| UPI | Unified Payments Interface, India's instant account-to-account rail. Standard cap ₹1 lakh per transaction (up to ₹5 lakh for specific categories); P2M daily cap raised to ₹10 lakh in 2025. Indicative payout fee ~₹2 to 5. |
+| UTR | Unique Transaction Reference, the identifier a bank returns for a completed transfer. UTR-based reconciliation (matching payouts back to the originating claim) is a first-class operational feature. See [/product/payouts/](/product/payouts/). |
+| VAPT | Vulnerability Assessment and Penetration Testing, the security audit buyers expect alongside SOC 2 Type II. Deferred until a paying deal funds it. |
+
+<p class="source-note">Numbers above are the canonical figures from the dossier thesis; provenance and confidence are tagged inline. See [/reference/sources/](/reference/sources/) for the full bibliography.</p>
+
+:::note[How to read provenance tags]
+"govt, high" means a primary government denominator (real, but usually not the paying market). "vendor-stated/vendor pricing" means a marketing or rate-card claim, treated as medium confidence. "our derivation" means a dossier estimate, low-to-medium confidence. Do not relaunder a soft number into a hard fact.
+:::
+
+## Sources
+
+- [Section 17(5) of CGST Act, blocked credit](https://cleartax.in/s/section-175-of-cgst-act) (primary-corroborating): the 13-seat threshold, food/beverage, rent-a-cab, LTC, and the exceptions.
+- [Section 37 of Income Tax Act](https://cleartax.in/s/section-37-of-income-tax) (primary-corroborating): the wholly-and-exclusively test and personal/penalty/CSR disallowance.
+- [TDS Rate Chart](https://cleartax.in/s/tds-rate-chart) (vendor): 194C/194J/194H rates and thresholds, no-PAN 20%.
+- [RBI (Regulation of Payment Aggregators) Directions, 2025](https://www.fidcindia.org.in/wp-content/uploads/2025/09/RBI-PAYMENT-AGGREGATORS-DIRECTIONS-15-09-25.pdf) (govt): the PA definition, escrow, and ₹15 cr / ₹25 cr net-worth thresholds.
+- [Differences between NEFT, RTGS and IMPS](https://cleartax.in/s/differences-between-neft-rtgs-imps) (vendor): rail limits and 24x7 timings.
+- [NPCI Circular UPI-OC-185A](https://www.npci.org.in/PDF/npci/upi/circular/2024/UPI-OC-No-185A-FY-24-25-Implementation-of-Rs-5-Lakh-limit-per-transaction-for-specific-categories-in-UPI.pdf) (govt): enhanced UPI per-transaction limits.
+- [Setu Bank Account Verification](https://setu.co/data/kyc/bank-account-verification/) (vendor): the ~₹3 penny-drop price anchor.
+- [MeitY, Digital Personal Data Protection Act 2023](https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf) (govt): the law text and ₹250 crore penalty ceiling.

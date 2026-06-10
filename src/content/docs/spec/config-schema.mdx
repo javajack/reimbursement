@@ -1,0 +1,597 @@
+---
+title: Configuration Schema
+description: "The company configuration document: JSON Schema, defaults, validation, and a full worked example."
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Every tenant decision in Phase 1 lives in one versioned JSON document per company: eight domains under one schema, validated atomically on save, snapshotted into every Claim. [The configuration model](/phase-1/onboarding/configuration-model/) explains how the model behaves: defaults, binding moments, mid-flight semantics. This page is its normative companion: the exact schema an implementing agent codes against, every default and its reason, the save-time error codes, and a complete worked example.
+
+## Envelope and access
+
+The document is identified by the constant `kharcha.config/v1`. The Console reads and writes it through the standard API conventions: `GET /api/v1/company-config` returns the current document; `PUT /api/v1/company-config` replaces it whole (the Console edits one domain at a time but always submits the full document); `POST /api/v1/company-config/validate` dry-runs the full validation gate without saving; `POST /api/v1/company-config/simulate-claim` renders the chain a hypothetical claim (employee, amount, category) would take, plus which rule fired, the simulate-before-activate tester; `GET /api/v1/company-config/versions` lists the version history described under [versioning](#versioning-and-migration). This surface is the binding config API; the [API page](/spec/api/) catalogs the same five endpoints. Writes carry the client's last-seen `version`; a mismatch returns `409` with code `CFG_VERSION_STALE`. Exports add an `exported_at` timestamp; imports run the identical validation plus a diff preview before activation.
+
+One deliberate absence: people. The model page lists nine domains; the ninth (Users, Memberships, manager edges, Departments, CostCenters, Grades) is directory data mastered in its own tables in the [data model](/spec/data-model/). Config references the directory by stable code or id and never embeds it; referential checks below enforce that those references resolve.
+
+## The schema
+
+The published schema file sets `additionalProperties: false` on every object and embeds the defaults from the table below; repeated occurrences are elided here for readability. Every domain object carries a server-maintained `version` integer, bumped whenever that subtree changes and ignored on import.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kharcha.config/v1",
+  "title": "CompanyConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "company_id", "domains"],
+  "properties": {
+    "schema": { "const": "kharcha.config/v1" },
+    "company_id": { "type": "string", "pattern": "^co_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "exported_at": { "type": "string", "format": "date-time" },
+    "domains": {
+      "type": "object",
+      "required": ["org", "categories", "approval", "credits", "notifications", "locale"],
+      "properties": {
+        "org": { "$ref": "#/$defs/Org" },
+        "categories": { "$ref": "#/$defs/Categories" },
+        "policy_tables": { "$ref": "#/$defs/PolicyTables" },
+        "approval": { "$ref": "#/$defs/Approval" },
+        "credits": { "$ref": "#/$defs/Credits" },
+        "payouts": { "$ref": "#/$defs/Payouts" },
+        "notifications": { "$ref": "#/$defs/Notifications" },
+        "locale": { "$ref": "#/$defs/Locale" }
+      }
+    }
+  },
+  "$defs": {
+    "Version": { "type": "integer", "minimum": 1 },
+    "Gstin": { "type": "string", "pattern": "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$" },
+    "DateOrNull": { "anyOf": [{ "type": "null" }, { "type": "string", "format": "date" }] },
+    "Org": {
+      "type": "object",
+      "required": ["legal_name", "fiscal_year_start", "currency"],
+      "properties": {
+        "version": { "$ref": "#/$defs/Version" },
+        "legal_name": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "fiscal_year_start": { "type": "string", "pattern": "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$" },
+        "currency": { "const": "INR" },
+        "gstin": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/Gstin" }] },
+        "branches": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "state_code"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^br_[0-9A-HJKMNP-TV-Z]{26}$" },
+              "name": { "type": "string", "maxLength": 80 },
+              "state_code": { "type": "string", "pattern": "^[0-9]{2}$" },
+              "gstin": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/Gstin" }] },
+              "active": { "type": "boolean" },
+              "overrides": {
+                "type": "object",
+                "properties": {
+                  "approval": { "$ref": "#/$defs/Approval" },
+                  "payouts": {
+                    "type": "object",
+                    "properties": {
+                      "default_bank_account_id": { "type": "string", "pattern": "^ba_[0-9A-HJKMNP-TV-Z]{26}$" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Categories": {
+      "type": "object",
+      "required": ["items"],
+      "properties": {
+        "version": { "$ref": "#/$defs/Version" },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "active"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,39}$" },
+              "label": { "type": "string", "maxLength": 60 },
+              "icon": { "type": "string" },
+              "active": { "type": "boolean" },
+              "gst_hint": { "enum": ["itc_eligible", "itc_blocked_17_5", "itc_review"] },
+              "non_reimbursable": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "PolicyTables": {
+      "type": "object",
+      "properties": {
+        "version": { "$ref": "#/$defs/Version" },
+        "per_diem_matrix": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["effective_from", "rows"],
+            "properties": {
+              "effective_from": { "type": "string", "format": "date" },
+              "effective_to": { "$ref": "#/$defs/DateOrNull" },
+              "rows": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["city_tier", "grade_code", "amount_paise"],
+                  "properties": {
+                    "city_tier": { "enum": ["tier_1", "tier_2", "tier_3"] },
+                    "grade_code": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,39}$" },
+                    "amount_paise": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mileage_rates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["effective_from", "rates"],
+            "properties": {
+              "effective_from": { "type": "string", "format": "date" },
+              "effective_to": { "$ref": "#/$defs/DateOrNull" },
+              "rates": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["vehicle_type", "rate_paise_per_km"],
+                  "properties": {
+                    "vehicle_type": { "enum": ["two_wheeler", "four_wheeler"] },
+                    "rate_paise_per_km": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Approval": {
+      "type": "object",
+      "required": ["template", "rules"],
+      "properties": {
+        "version": { "$ref": "#/$defs/Version" },
+        "template": { "enum": ["under_50", "50_250", "250_plus", "custom"] },
+        "self_approval": { "enum": ["skip_up", "fallback_approver"] },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "kharcha.rule/v1#/$defs/Rule" }
+        },
+        "doa_grid": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["approver_role", "limit_paise"],
+            "properties": {
+              "approver_role": {
+                "type": "string",
+                "pattern": "^(manager|managers_manager|department_head|finance|admin|user:usr_[0-9A-HJKMNP-TV-Z]{26})$"
+              },
+              "limit_paise": { "type": "integer", "minimum": 1 },
+              "effective_from": { "type": "string", "format": "date" },
+              "effective_to": { "$ref": "#/$defs/DateOrNull" }
+            }
+          }
+        }
+      }
+    },
+    "Credits": {
+      "type": "object",
+      "properties": {
+        "version": { "$ref": "#/$defs/Version" },
+        "alert_thresholds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 100 }
+        },
+        "auto_topup": {
+          "type": "object",
+          "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "pack": { "enum": ["topup", "starter", "growth", "scale", "enterprise"] },
+            "threshold": { "type": "integer", "minimum": 0 },
+            "monthly_cap_paise": { "anyOf": [{ "type": "null" }, { "type": "integer", "minimum": 1 }] }
+          }
+        }
+      }
+    },
+    "Payouts": {
+      "type": "object",
+      "properties": {
+        "version": { "$ref": "#/$defs/Version" },
+        "bank_accounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "ifsc", "account_last4", "file_format"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^ba_[0-9A-HJKMNP-TV-Z]{26}$" },
+              "label": { "type": "string", "maxLength": 60 },
+              "ifsc": { "type": "string", "pattern": "^[A-Z]{4}0[A-Z0-9]{6}$" },
+              "account_last4": { "type": "string", "pattern": "^[0-9]{4}$" },
+              "file_format": { "type": "string" }
+            }
+          }
+        },
+        "default_bank_account_id": { "anyOf": [{ "type": "null" }, { "type": "string", "pattern": "^ba_[0-9A-HJKMNP-TV-Z]{26}$" }] },
+        "default_rail": { "enum": ["neft", "imps", "rtgs", "upi"] },
+        "payout_calendar": {
+          "type": "object",
+          "required": ["frequency"],
+          "properties": {
+            "frequency": { "enum": ["manual", "weekly", "fortnightly", "monthly"] },
+            "weekday": { "enum": ["monday", "tuesday", "wednesday", "thursday", "friday"] },
+            "day_of_month": { "type": "integer", "minimum": 1, "maximum": 28 }
+          }
+        }
+      }
+    },
+    "Notifications": {
+      "type": "object",
+      "required": ["events"],
+      "properties": {
+        "version": { "$ref": "#/$defs/Version" },
+        "events": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["claim_submitted", "approval_requested", "approval_reminder", "claim_sent_back", "claim_decided", "payout_paid", "credits_alert", "awaiting_credits"]
+          },
+          "additionalProperties": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["email", "push", "whatsapp"] }
+          }
+        },
+        "quiet_hours": {
+          "type": "object",
+          "properties": {
+            "start": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+            "end": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+            "timezone": { "const": "Asia/Kolkata" }
+          }
+        }
+      }
+    },
+    "Locale": {
+      "type": "object",
+      "required": ["languages", "default"],
+      "properties": {
+        "version": { "$ref": "#/$defs/Version" },
+        "languages": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["en-IN", "hi-IN", "mr-IN", "gu-IN", "ta-IN", "te-IN", "kn-IN", "bn-IN"] }
+        },
+        "default": { "type": "string" }
+      }
+    }
+  }
+}
+```
+
+Normative notes an agent must honor:
+
+- Unknown keys fail validation (`CFG_SCHEMA_INVALID`); they are never silently dropped. Forward compatibility is handled by migrations, not lax parsing.
+- All money is integer `amount_paise` (or `_paise` suffixed); effective windows are ISO 8601 date-only; ids are prefixed ULIDs per the API conventions, with `br_` (branch) and `cfgv_` (config version) derived here.
+- `approval.rules` items are full Rule objects per the [rule schema](/spec/rule-schema/), constrained to `action: route` and `scope: claim`. Claim-scope conditions see aggregates: `amount_paise` is the claimed total, `line_categories` is the set of category ids across line items. Lowest `priority` number fires first; the first matching rule builds the chain. The `params.chain` and `params.add_steps` arrays carry `"maxItems": 5`; a longer chain fails the save with `CFG_CHAIN_TOO_LONG`. Embedded rules also run the rule schema's own validation in the same gate, and violations reject with that page's codes rather than being coerced (for example, `action: block` with soft hardness fails with `RULE_BLOCK_NOT_HARD`).
+- `doa_grid` overlays the resolved chain: the chain must end at a slot whose `limit_paise` covers `claimed_amount_paise`; when it tops out, the engine appends the next sufficient slot. Mechanics live in the [approval engine](/phase-1/web/approval-engine/).
+- `file_format` values are keys into the bank-file registry in [bank files](/reference/bank-files/), shipped and versioned by us.
+- `grade_code` references the Grade directory entity's stable snake_case code, not a display label.
+- An event absent from `notifications.events` resolves to `["email"]`; an empty array means silenced for that event.
+
+:::caution[No secrets in the document]
+Full bank account numbers never enter the config document. They are captured in the Console, stored encrypted in the `bank_accounts` table, and surface here only as `account_last4`. Exports are therefore safe to attach to support tickets; imports can update account metadata but can never mint a usable account without re-entry of the number in the Console.
+:::
+
+## Resolution order
+
+Exactly one rule, evaluated at snapshot time: branch value if explicitly set, else company value, else system default. The claim snapshot records each resolved value and its source layer. Branch overrides are a closed allowlist, not a general mechanism:
+
+| Config path | Branch override | Mechanism |
+| --- | --- | --- |
+| `domains.approval` | Yes | Whole-object swap via `branches[].overrides.approval` |
+| `domains.payouts.default_bank_account_id` | Yes | `branches[].overrides.payouts`; enables per-branch payout files |
+| Branch `gstin` | Not an override | Branch-owned; GST registration is per state |
+| `categories`, `policy_tables`, `locale`, `notifications` | No | Company-wide; vary by branch through rule conditions instead |
+| `credits` | Never | The meter is submissions per Company; branches share one balance |
+
+## Validation on save
+
+The gate runs four passes. Schema validation short-circuits (a malformed document cannot be analyzed); the semantic passes (referential, graph, temporal) all run and return the complete error list, because admins fix configuration in batches. Errors return `422` as RFC 7807 `application/problem+json` with an `errors[]` array; warnings save successfully and return in a `warnings[]` array. Graph checks also run on user saves (a manager-pointer edit can break a chain without touching config).
+
+| Code | Catches | Severity |
+| --- | --- | --- |
+| `CFG_VERSION_STALE` | Write carries a `version` older than the server's (returns `409`) | error |
+| `CFG_SCHEMA_INVALID` | Type, enum, pattern, bounds, or unknown-key violation anywhere | error |
+| `AP_FALLBACK_MISSING` | `approval.rules` has no `rule_fallback` entry | error |
+| `AP_FALLBACK_IMMUTABLE` | `rule_fallback` condition, priority, or enabled flag modified | error |
+| `AP_CYCLE` | Resolved approver graph contains a cycle | error |
+| `AP_ORPHAN_SLOT` | A chain slot resolves to no active user | error |
+| `AP_PRIORITY_DUPLICATE` | Two enabled routing rules share a priority number | error |
+| `AP_SELF_APPROVAL_PATH` | A manager pointer makes a user their own approver | error |
+| `CFG_CHAIN_TOO_LONG` | A rule's `chain` or `add_steps` array exceeds 5 slots | error |
+| `REF_UNKNOWN_GRADE` | `per_diem_matrix` row references a grade code not in the directory | error |
+| `REF_DEACTIVATED_USER` | A rule, DoA row, or override references an unknown or deactivated user | error |
+| `REF_UNKNOWN_CATEGORY` | A rule condition references a category id not in `categories.items` | error |
+| `REF_UNKNOWN_BANK_ACCOUNT` | A `default_bank_account_id` not present in `payouts.bank_accounts` | error |
+| `PT_DATE_OVERLAP` | Two versions of one policy table have overlapping effective windows | error |
+| `PT_GAP` | No policy-table version covers today, or windows leave a gap | warning |
+| `CAT_NONE_ACTIVE` | Zero active categories (violates the three hard requirements) | error |
+| `CAT_DUPLICATE_ID` | Two categories share an id | error |
+| `PO_CALENDAR_INCOMPLETE` | `weekly`/`fortnightly` without `weekday`, or `monthly` without `day_of_month` | error |
+| `CR_CAP_TOO_LOW` | Auto-top-up enabled with `monthly_cap_paise` below one configured pack's ex-GST price | error |
+| `LC_DEFAULT_NOT_LISTED` | `locale.default` missing from `locale.languages` | error |
+
+```json
+{
+  "type": "https://errors.kharcha.in/config-validation",
+  "title": "Configuration failed validation",
+  "status": 422,
+  "errors": [
+    {
+      "code": "AP_ORPHAN_SLOT",
+      "path": "/domains/approval/rules/2/params/chain/0",
+      "message": "department_head resolves to no active user for the Sales department."
+    },
+    {
+      "code": "PT_DATE_OVERLAP",
+      "path": "/domains/policy_tables/per_diem_matrix/1",
+      "message": "Window starting 2026-04-01 overlaps the version effective 2026-01-01 to 2026-06-30."
+    }
+  ]
+}
+```
+
+:::note[The fallback rule is a constant]
+`rule_fallback` is the one rule id that is not a ULID. It is system-seeded, always-matching (condition `all: []`), pinned at maximum priority, undeletable, and never disabled; only its route target may be retargeted. It fires when no rule matches, routing the claim to the submitter's manager (the seeded chain is `["manager"]`). When even that resolves to nobody (no manager on record), the resolver floor, not the rule's params, parks the claim in the admin queue flagged `rule_gap`; the [approval engine](/phase-1/web/approval-engine/) owns that floor. This is why a Claim is never blocked at submission for routing reasons, the invariant the model page sets against Zoho's hard block.
+:::
+
+## Defaults
+
+Every key ships working. The wizard writes a handful; everything else is a system default an admin may never touch.
+
+| Key | Default | Why |
+| --- | --- | --- |
+| `org.fiscal_year_start` | `"04-01"` | India's statutory Apr-Mar FY; anchors reporting periods and rate versioning |
+| `org.currency` | `"INR"` | Phase 1 is India-only; a constant, not a choice |
+| `org.gstin` | `null` | Skippable at signup; improves ITC tagging, never gates a claim |
+| `org.branches` | `[]` | Implicit head office; branches enter at multi-GSTIN reality, capped at 200 |
+| `categories.items` | 10-category India set, all active | First claim must need zero category setup |
+| `categories.items[].gst_hint` | Statutory mapping (Meals `itc_blocked_17_5`, Travel `itc_eligible`) | Sec 17(5) informational tagging for finance; admins override the hint, not the law |
+| `categories.items[].non_reimbursable` | `false` | Recording-only categories are an explicit opt-in |
+| `policy_tables.per_diem_matrix` | `[]` | No statutory per-diem amounts exist; PER_DIEM_CAP stays inert until a table exists |
+| `policy_tables.mileage_rates` | `[]` | India has no statutory per-km rate; rates are a company decision |
+| `approval.template` | Wizard pick; `under_50` if created via API | Manager-only is the safest seed |
+| `approval.rules` | Template rules plus `rule_fallback` | Claims must always route |
+| `approval.self_approval` | `"skip_up"` | There is no allow mode; only the substitution strategy is configurable |
+| `approval.doa_grid` | `[]` | The Concur-style grid is an option for DoA-minded finance teams, not a requirement |
+| `credits.alert_thresholds` | `[50, 80, 95, 100]` | THESIS canon: an alert fires once per cycle at each threshold, plus the burn-rate forecast |
+| `credits.auto_topup.enabled` | `false` | Spending money is always an explicit opt-in |
+| `credits.auto_topup.threshold` | `10` | Early enough to drain the queue before exhaustion (our derivation) |
+| `credits.auto_topup.monthly_cap_paise` | `null`, required when enabled | A hard cap is the difference between auto-top-up and bill shock |
+| `payouts.bank_accounts` | `[]` | Required before the first payout run, never the first claim |
+| `payouts.default_rail` | `"neft"` | Uncapped and batch-native; IMPS/UPI per-transaction caps make them per-instruction choices |
+| `payouts.payout_calendar.frequency` | `"manual"` | No calendar should fire before a bank account exists |
+| `notifications.events.*` | `["email"]` for all eight events | Email is the only universal day-one channel; push after PWA install; WhatsApp later via BSP |
+| `notifications.quiet_hours` | `21:00` to `08:00`, `Asia/Kolkata` | Approver nudges respect IST nights (approver-UX canon) |
+| `locale.languages` | `["en-IN", "hi-IN"]` | Hindi plus English from day one is the vernacular stance |
+| `locale.default` | `"en-IN"` | Tenants flip the default in one edit; the worked example does |
+
+<p class="source-note">Defaults are our derivation over THESIS-V2 contracts and the onboarding canon; none are vendor claims.</p>
+
+## Worked example: a 120-person field-sales company
+
+Saral Krishi Equipments sells farm implements through 120 field staff across Maharashtra and Madhya Pradesh: two GST registrations (Pune head office, Indore), three grades, the 50-250 wizard template customized with a fuel-specific rule, payout files cut every Tuesday, Hindi as the default display language. At 4 submissions per employee per month (THESIS planning estimate, unbenchmarked; validate with design partners) <span class="pill pill--med">Medium</span> the company burns about 480 credits monthly, so a Growth pack of 1,000 credits lasts roughly two months and the auto-top-up cap of ₹13,998 (two Growth packs, ex-GST) bounds worst-case spend. Keys omitted below take the defaults above.
+
+```json
+{
+  "schema": "kharcha.config/v1",
+  "company_id": "co_01JXAY7Q2M3N4P5R6S7T8V9W0X",
+  "version": 9,
+  "domains": {
+    "org": {
+      "version": 3,
+      "legal_name": "Saral Krishi Equipments Pvt Ltd",
+      "fiscal_year_start": "04-01",
+      "currency": "INR",
+      "gstin": null,
+      "branches": [
+        { "id": "br_01JXAYV5H8K2M4N6P8Q0R2S4T6", "name": "Pune (HO)", "state_code": "27",
+          "gstin": "27AAFCS8914K1ZL", "active": true },
+        { "id": "br_01JXAYWGN3D5F7G9H1J3K5M7N9", "name": "Indore", "state_code": "23",
+          "gstin": "23AAFCS8914K2ZQ", "active": true,
+          "overrides": { "payouts": { "default_bank_account_id": "ba_01JXAYYBQ9W7V5T3S1R9P7N5M3" } } }
+      ]
+    },
+    "categories": {
+      "version": 2,
+      "items": [
+        { "id": "local_conveyance", "label": "Local Conveyance", "icon": "auto", "active": true, "gst_hint": "itc_review" },
+        { "id": "travel_air_rail", "label": "Travel (Air/Rail)", "icon": "train", "active": true, "gst_hint": "itc_eligible" },
+        { "id": "lodging", "label": "Lodging", "icon": "hotel", "active": true, "gst_hint": "itc_eligible" },
+        { "id": "meals", "label": "Meals", "icon": "meal", "active": true, "gst_hint": "itc_blocked_17_5" },
+        { "id": "fuel_mileage", "label": "Fuel / Mileage", "icon": "fuel", "active": true, "gst_hint": "itc_review" },
+        { "id": "telecom", "label": "Telecom", "icon": "sim", "active": true, "gst_hint": "itc_eligible" },
+        { "id": "office_supplies", "label": "Office Supplies", "icon": "stationery", "active": true, "gst_hint": "itc_eligible" },
+        { "id": "software", "label": "Software", "icon": "app", "active": false, "gst_hint": "itc_eligible" },
+        { "id": "medical", "label": "Medical", "icon": "medkit", "active": true, "gst_hint": "itc_review" },
+        { "id": "misc", "label": "Miscellaneous", "icon": "receipt", "active": true, "gst_hint": "itc_review" },
+        { "id": "client_entertainment", "label": "Client Entertainment", "icon": "gift", "active": true, "gst_hint": "itc_blocked_17_5" },
+        { "id": "personal", "label": "Personal (recorded, not reimbursed)", "icon": "person", "active": true,
+          "gst_hint": "itc_review", "non_reimbursable": true }
+      ]
+    },
+    "policy_tables": {
+      "version": 2,
+      "per_diem_matrix": [
+        {
+          "effective_from": "2026-04-01",
+          "effective_to": null,
+          "rows": [
+            { "city_tier": "tier_1", "grade_code": "field_executive", "amount_paise": 150000 },
+            { "city_tier": "tier_2", "grade_code": "field_executive", "amount_paise": 120000 },
+            { "city_tier": "tier_3", "grade_code": "field_executive", "amount_paise": 90000 },
+            { "city_tier": "tier_1", "grade_code": "area_manager", "amount_paise": 220000 },
+            { "city_tier": "tier_2", "grade_code": "area_manager", "amount_paise": 180000 },
+            { "city_tier": "tier_3", "grade_code": "area_manager", "amount_paise": 140000 },
+            { "city_tier": "tier_1", "grade_code": "regional_head", "amount_paise": 350000 },
+            { "city_tier": "tier_2", "grade_code": "regional_head", "amount_paise": 300000 },
+            { "city_tier": "tier_3", "grade_code": "regional_head", "amount_paise": 250000 }
+          ]
+        }
+      ],
+      "mileage_rates": [
+        {
+          "effective_from": "2026-04-01",
+          "effective_to": null,
+          "rates": [
+            { "vehicle_type": "two_wheeler", "rate_paise_per_km": 450 },
+            { "vehicle_type": "four_wheeler", "rate_paise_per_km": 1000 }
+          ]
+        }
+      ]
+    },
+    "approval": {
+      "version": 4,
+      "template": "50_250",
+      "self_approval": "skip_up",
+      "rules": [
+        { "id": "rule_01JXAYZAB2C3D4E5F6G7H8J9K0", "name": "Fuel above ₹10,000 adds finance",
+          "scope": "claim", "enabled": true, "priority": 10,
+          "condition": { "all": [
+            { "field": "line_categories", "operator": "contains", "value": "fuel_mileage" },
+            { "field": "amount_paise", "operator": "gt", "value": 1000000 } ] },
+          "action": "route", "params": { "chain": ["manager", "finance"] } },
+        { "id": "rule_01JXAYZCD4E5F6G7H8J9K0M1N2", "name": "Above ₹25,000: manager then finance",
+          "scope": "claim", "enabled": true, "priority": 20,
+          "condition": { "all": [ { "field": "amount_paise", "operator": "gt", "value": 2500000 } ] },
+          "action": "route", "params": { "chain": ["manager", "finance"] } },
+        { "id": "rule_01JXAYZEF6G7H8J9K0M1N2P3Q4", "name": "Everything else: manager",
+          "scope": "claim", "enabled": true, "priority": 30,
+          "condition": { "all": [] },
+          "action": "route", "params": { "chain": ["manager"] } },
+        { "id": "rule_fallback", "name": "Fallback: manager",
+          "scope": "claim", "enabled": true, "priority": 2147483647,
+          "condition": { "all": [] },
+          "action": "route", "params": { "chain": ["manager"] } }
+      ],
+      "doa_grid": [
+        { "approver_role": "manager", "limit_paise": 2500000, "effective_from": "2026-04-01", "effective_to": null },
+        { "approver_role": "finance", "limit_paise": 50000000, "effective_from": "2026-04-01", "effective_to": null }
+      ]
+    },
+    "credits": {
+      "version": 2,
+      "alert_thresholds": [50, 80, 95, 100],
+      "auto_topup": { "enabled": true, "pack": "growth", "threshold": 25, "monthly_cap_paise": 1399800 }
+    },
+    "payouts": {
+      "version": 3,
+      "bank_accounts": [
+        { "id": "ba_01JXAYXTZ2B4C6D8E0F2G4H6J8", "label": "HDFC current (Pune HO)",
+          "ifsc": "HDFC0001234", "account_last4": "4417", "file_format": "hdfc_corporate_csv" },
+        { "id": "ba_01JXAYYBQ9W7V5T3S1R9P7N5M3", "label": "ICICI current (Indore)",
+          "ifsc": "ICIC0004521", "account_last4": "9032", "file_format": "icici_cib_csv" }
+      ],
+      "default_bank_account_id": "ba_01JXAYXTZ2B4C6D8E0F2G4H6J8",
+      "default_rail": "neft",
+      "payout_calendar": { "frequency": "weekly", "weekday": "tuesday" }
+    },
+    "notifications": {
+      "version": 1,
+      "events": {
+        "claim_submitted": ["email"],
+        "approval_requested": ["email", "push"],
+        "approval_reminder": ["email"],
+        "claim_sent_back": ["email", "push"],
+        "claim_decided": ["email", "push"],
+        "payout_paid": ["email", "push"],
+        "credits_alert": ["email"],
+        "awaiting_credits": ["email", "push"]
+      },
+      "quiet_hours": { "start": "21:00", "end": "08:00", "timezone": "Asia/Kolkata" }
+    },
+    "locale": {
+      "version": 2,
+      "languages": ["hi-IN", "en-IN"],
+      "default": "hi-IN"
+    }
+  }
+}
+```
+
+Reading the customization: rule priority 10 is the company's own (fuel claims above ₹10,000 add finance because fuel is their fraud surface); priority 20 is the stock 50-250 template rule; priority 30 routes everything else to the manager; `rule_fallback` backstops no-match with its seeded manager chain, and the resolver floor parks chain-resolves-to-nobody claims in the admin queue flagged `rule_gap`. Per-diem and mileage amounts are illustrative company policy, not statutory figures. The Indore branch override means its [payout](/phase-1/payouts/) batches draw on the ICICI account and export in that bank's file format, while Pune uses HDFC; the credit balance stays company-wide per [credits and metering](/phase-1/credits-and-metering/).
+
+## Versioning and migration
+
+Every successful save appends a row to `config_versions`; nothing updates in place. The row stores the full post-save document plus an RFC 6902 diff against the previous version, which is what the Console renders as who-changed-what history.
+
+```sql
+CREATE TABLE config_versions (
+  id                   text PRIMARY KEY,          -- cfgv_ ULID
+  company_id           text NOT NULL REFERENCES companies(id),
+  version              integer NOT NULL,          -- monotonic per company
+  schema               text NOT NULL DEFAULT 'kharcha.config/v1',
+  document             jsonb NOT NULL,            -- full document, post-save
+  diff                 jsonb NOT NULL,            -- RFC 6902 patch vs previous version
+  domains_touched      text[] NOT NULL,
+  actor_membership_id  text REFERENCES memberships(id),  -- NULL for system migrations
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (company_id, version)
+);
+```
+
+Three semantics bind this table to the rest of the system:
+
+1. **In-flight snapshot reference.** At submission, a Claim freezes its resolved configuration (chain, rates, category metadata, source layers) into its snapshot and records the company `version` plus the per-domain version vector as provenance. Later saves never touch it; the explicit re-route action on the model page is the only path, and it writes AuditEvents linking both matrix versions.
+2. **Who-changed-what.** Every save also emits an AuditEvent (actor, role at the time, before and after); `config_versions.diff` is the canonical payload the audit UI and support tooling read. `domains_touched` makes "show me every approval change this quarter" an index scan.
+3. **Schema migration.** A move to `kharcha.config/v2` ships as a forward-only deploy-time migration that rewrites every tenant document and appends a version row with `actor_membership_id NULL`. History rows are never edited; old rows keep their original `schema` value and remain renderable.
+
+:::danger[Snapshots embed values, not pointers]
+Claim snapshots store resolved values, never references into `config_versions`. A schema migration, a branch deletion, or a policy rewrite must never change what an already-submitted Claim means. The version numbers in the snapshot are provenance for auditors, not a dependency for evaluation. Tables and constraints live in the [data model](/spec/data-model/).
+:::
+
+## What is not configuration
+
+The document's edges matter as much as its contents. Four things deliberately live outside it:
+
+| Lives elsewhere | Examples | Why not config |
+| --- | --- | --- |
+| Statutory tables, shipped by us, FY-versioned | GSTIN format and checksum, state-code list, Sec 17(5) blocked-ITC mapping behind `gst_hint` defaults and ITC_ELIGIBLE | Tenants opt in and out of rules; they never edit the law. We ship updates with releases, versioned by fiscal year |
+| System limits | 200 branches; 5 receipt images per claim then +1 credit per extra 5; pre-submission OCR fair-use of `max(20, 3 × remaining credits)` scans/month; pagination limit 100; 20 Free submissions/month | Guardrails and fair-use are product economics, not tenant preferences |
+| Plans and packs | The `Free`, `Starter`, `Growth`, `Scale` plans; the Top-up through Enterprise prepaid packs, their prices and validity | Pricing is ours; the config only records auto-top-up intent. Numbers live in the pricing ladder |
+| Directory and ledger data | Users, Memberships, Grades, Departments; the CreditEntry ledger; BeneficiaryAccounts | Mastered in their own tables; config references them and validation keeps the references honest |
+
+## Done means
+
+- The published schema file validates the worked example above byte-for-byte, and rejects each error-code scenario in the validation table with that exact code and a JSON Pointer path.
+- A tenant created via API with an empty body beyond `org.legal_name` boots into the full defaults column and can run claim through approval without touching settings.
+- `PUT` with a stale `version` returns `409 CFG_VERSION_STALE`; concurrent admin edits can never silently overwrite each other.
+- Every save produces a `config_versions` row whose `diff` replays cleanly from the prior document, and an AuditEvent pointing at it.
+- Deleting `rule_fallback`, disabling it, or editing its condition is impossible through any API path, not just hidden in the UI.
+
+<CardGrid>
+  <LinkCard title="Rule schema" href="/spec/rule-schema/" description="The Rule object embedded in approval.rules: conditions, the six actions, versioning." />
+  <LinkCard title="State machines" href="/spec/state-machines/" description="Where awaiting_credits, payout calendars, and the rest of the lifecycle bind." />
+</CardGrid>

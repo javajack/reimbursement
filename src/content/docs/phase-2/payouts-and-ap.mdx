@@ -1,0 +1,128 @@
+---
+title: Vendor Payouts and the AP Adjacency
+description: "Vendor payout batches on the same rails, the MSME clock, and the road toward AP automation."
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Vendor payouts add almost no new payment machinery: a vendor payout is a PayoutBatch like any other, rendered into the same bank files, executed in the customer's own net banking, reconciled by the same UTRs. The real deltas are tax and time: TDS-netted instructions, and a statutory 45-day clock on every micro and small supplier invoice. The strategic payoff comes second: vendor rails are the bridge to AP automation, the larger, mandate-driven market next door.
+
+:::caution[Directional strategy, thin spec]
+
+Phase 2 starts only after Phase 1 carries paying customers, per the gate in the [Phase 2 overview](/phase-2/overview/). This page is the shape of the build, not the order of it: the contracts are real, several figures are directional, and the TDS and interest arithmetic needs CA signoff before numbers render in-product.
+
+:::
+
+## Same batches, same files, same UTRs
+
+Everything specified in [Phase 1 payouts](/phase-1/payouts/) carries over unchanged: the batch builder, the file path (`building` to `exported` to `executed` to `reconciled`), the API path with partner webhooks, source-account routing, and UTR reconciliation. The rails were designed for this: ICICI CIB and HDFC ENet ship vendor-payment file templates alongside salary ones (bank docs, high), RazorpayX advertises vendor and employee payouts on one API (vendor, high), and source-account routing by type is exactly how vendor payments debit a different current account than travel.
+
+Metering is unchanged too. A vendor invoice enters as a Claim with vendor scope: one submission credit, `awaiting_credits` at zero balance, free resubmission after `sent_back` (say, a missing GSTIN). One meter, both phases. What flips it: multi-page invoices may push extraction COGS above the Phase 1 baseline of ₹1.0-2.5 per submission (our derivation), so pack sizing gets revisited on burn data.
+
+:::danger[The invariant travels unchanged]
+
+Vendor money never touches our accounts either. The customer's bank debits the customer's account; TDS withheld is the customer's liability to deposit with the government and never routes through us. We compute, render, and reconcile. The RBI Payment Aggregator definition covers customer-to-merchant collections, not payouts, but the exemption is by exclusion: the written legal opinion in [money movement](/compliance/money-movement/) must cover vendor flows explicitly.
+
+:::
+
+| Surface | Phase 1 (employees) | Phase 2 delta (vendors) |
+| --- | --- | --- |
+| Batch lifecycle | `building`, `exported`, `executed`, `reconciled` (file); `executing`, `completed`, `partially_failed` (API) | Identical on both paths |
+| Instruction amount | `amount_paise` equals the approved claim total | TDS-netted: `amount_paise` (the net) plus `tds_paise` equals `gross_amount_paise` |
+| Beneficiary gate | Penny-drop verified BeneficiaryAccount, about ₹3 per check (Setu, high) | Identical gate on vendor accounts; PAN, GSTIN, Udyam KYC upstream in [vendor onboarding](/phase-2/vendor-onboarding/) |
+| Timing | Finance batches when ready | Payment terms per vendor, plus the statutory MSME clock |
+| Rails mix | NEFT default, RTGS rare | RTGS routine (invoices at ₹2 lakh and above); UPI's ₹1 lakh standard cap rarely fits |
+| Outbound comms | Employee sees the expected date in the tracker | Remittance advice to an external party |
+| Exports | Payout register, accounting exports | Plus a TDS register per quarter |
+
+<p class="source-note">Bank file layouts stay versioned and portal-gated; per-bank field maps live in <a href="/reference/bank-files/">bank files</a>. Rail limits and partner costs are unchanged from Phase 1.</p>
+
+## TDS netting and the TDS register
+
+The [vendor tax engine](/phase-2/vendor-tax-engine/) owns section, rate, and base per financial year (194C at 1% or 2% and 194J at 10% or 2% are the workhorses; version-dated, govt, high). The payout layer never recomputes tax: it consumes the engine's output and enforces one invariant at batch lock: `amount_paise + tds_paise == gross_amount_paise` on every instruction, or the lock fails.
+
+```json
+{
+  "payout_instruction": {
+    "id": "pin_01JXGB2QK8ZD5M2T7VWB9NRCEH",
+    "batch_id": "pob_01JXGB1Z6WQ4H8SD3KM5R7TBVP",
+    "claim_id": "clm_01JXGA9V4B7DGK2P5RSW8ZQ3MJ",
+    "vendor_id": "ven_01JXG9XT2C6FHJ4N7QSV9WZB3E",
+    "beneficiary_id": "bene_01JXG9YT3D7GJK5P8RTW2XZC4F",
+    "gross_amount_paise": 11800000,
+    "tds_paise": 1000000,
+    "amount_paise": 10800000,
+    "tds_section": "194J",
+    "currency": "INR",
+    "rail": "neft",
+    "status": "dispatched",
+    "utr": null
+  }
+}
+```
+
+Illustrative figures (₹1,18,000 invoice, ₹10,000 TDS, ₹1,08,000 paid); the engine decides the base. The TDS register export gives finance one row per deduction for quarterly TDS return preparation:
+
+```text
+vendor_pan,vendor_name,tds_section,rate_percent,base_paise,tds_paise,utr,paid_on
+ABCDE1234F,Sharma Logistics,194C,1.0,10000000,100000,ICICN26121512345,2026-12-15
+```
+
+## Payment terms and the MSME 45-day dashboard
+
+Section 43B(h) (effective 1 April 2024) is the forcing function: pay micro and small suppliers within 45 days (15 without a written agreement) or the expense deduction defers to the year of actual payment, and delay accrues compound interest at three times the RBI rate (ClearTax summary, high; CA signoff before we compute rupee interest in-product). The scale is real: roughly ₹7.34 lakh crore sits in unpaid MSME invoices, delays often beyond 90 days <span class="pill pill--med">Medium</span> (industry press, directional); TReDS discounting crossed ₹1.9 lakh crore by FY2025 at 5-8% p.a. <span class="pill pill--med">Medium</span>; and MSME Samadhaan gives every supplier a government portal to report you (govt).
+
+The product answer is a clock, not a workflow. Each Vendor record carries `msme_category` (micro, small, or medium; absent when there is no Udyam registration), plus payment terms; every approved vendor claim gets a due date at min(contractual terms, statutory window). The dashboard runs aging buckets keyed to that clock:
+
+| Bucket | Days on the statutory clock | Console treatment |
+| --- | --- | --- |
+| Current | 0 to 30 | Normal queue |
+| Watch | 31 to 40 | Amber chip, "due this week" panel |
+| Critical | 41 to 45 | Red chip, pinned, daily finance digest |
+| Breached | Past day 45 | Interest estimate, deduction-deferral warning, exposure report |
+
+<p class="source-note">Bucket edges compress to 5/10/15 when the 15-day no-agreement clock applies. Thresholds are our design choice; the statute defines only the deadline (govt via ClearTax, high).</p>
+
+Two features ride the buckets. The interest-exposure calculator totals estimated accrual on breached invoices (labelled estimate until CA-validated) so the CFO sees a rupee number, not a list. Vendor-level holds freeze a vendor in dispute: held claims stay `approved` but never enter a batch, every hold carries a reason code and an AuditEvent, and for MSME vendors the panel shows days to breach, so a hold is a visibly priced decision.
+
+:::tip[The day-one wedge of Phase 2]
+
+Sell the MSME dashboard, not "AP automation". It converts a statutory anxiety every CFO acquired in April 2024 into a rupee number on one screen, using nothing the Phase 1 rails do not already provide.
+
+:::
+
+## Remittance advice
+
+Unanswered "where is my payment" calls land on your customer's finance team. After a batch reconciles, each vendor gets a remittance advice: invoice numbers and dates from the claim's LineItems, gross amount, TDS section and amount withheld, net paid, UTR, and payment date. Email is the default; WhatsApp utility templates are the India-native option at ₹0.115 to 0.145 plus 18% GST per send, strictly transactional copy (Meta/BSP pricing, medium, re-verify). Advice is outbound-only: no vendor portal in Phase 2, deliberately.
+
+## What AP-lite adds, and the line we will not cross
+
+The adjacency argument carries from v1 intact. AP automation is roughly an order of magnitude larger than India's entire expense-software market: about USD 6.17B globally in 2025, growing ~12.4% CAGR (Mordor, analyst, medium), against India expense software at a USD 150-250M point estimate (our synthesis, medium). It is mandate-driven: GST e-invoicing reaches businesses above ₹5 crore turnover (secondary on a govt mandate, medium; the notified threshold has been lowered repeatedly, so the [vendor tax engine](/phase-2/vendor-tax-engine/) ships it as FY-versioned configuration), the 2024 Invoice Management System made GSTR-2B action manual, and Section 43B(h) put a tax penalty on slow payables. A new India-native entrant (Mysa, 2025) validates the wedge (medium). None of it needs new licensing: Phase 2 reuses the capture, rules, and ledger plumbing.
+
+| Tier | Scope | Commitment |
+| --- | --- | --- |
+| Phase 2, specified | Vendor master and KYC, vendor-invoice claims with TDS and RCM rule scopes, payout batches, MSME dashboard, remittance advice, TDS register | This dossier section |
+| Later, funding-gated | Three-way matching (invoice against PO against GRN), GSTR-2B/IMS-linked AP reconciliation, vendor portal | Only with dedicated funding and design partners |
+| Not ours to build | PO issuance and procurement workflows, GRN capture, TReDS capital or any financing, holding funds | Never inside this company as scoped |
+
+PO/GRN matching is explicitly out of Phase 2 scope: we do not generate procurement data and will not pretend to. Three-way matching is the conventional next rung and the exact moment a reimbursement product becomes a true AP suite; we will not cross that line without dedicated funding, because it demands ERP-grade integrations we cannot staff and a different buyer. The most we ship near term is an informational TReDS-eligibility flag on breached invoices; we never touch the financing.
+
+## The exit option
+
+This is also expansion insurance. What an accounting-suite or spend-platform acquirer values here is the rails plus the data: working payout generation across five bank formats with UTR reconciliation and live customers, and clean GST-tagged, TDS-tagged spend records that drop into the ledgers their users already keep (Tally's vendor-claimed 70-80% SMB share is why the export shape matters). A reimbursement product alone reads as a feature; one with vendor rails and tax registers reads as an AP-lite asset (our derivation, directional). Phase 2 keeps that option open without betting the company on it.
+
+<CardGrid>
+  <LinkCard title="Regulatory map" href="/compliance/regulatory-map/" description="Where every Phase 2 obligation (TDS, MSME, GST, DPDP) lands and who owns it." />
+  <LinkCard title="The verdict" href="/strategy/verdict/" description="How the AP adjacency weighs in the conditional-build decision." />
+</CardGrid>
+
+## Sources
+
+- [ClearTax: MSME 45-day rule under Section 43B(h)](https://cleartax.in/s/msme-act-new-gst-returns) (advisory): deadline mechanics, deduction deferral, interest.
+- [India's 45-day MSME payment rule (Webnewswire)](https://www.webnewswire.com/2026/05/22/indias-45-day-msme-payment-rule-exposes-structural-gap-in-industrial-supply-chain-finance/) (press, directional): ₹7.34 lakh crore trapped, TReDS volumes.
+- [MSME Samadhaan](https://samadhaan.msme.gov.in/) (govt): delayed-payment redressal portal.
+- [AP Automation Market (Mordor Intelligence)](https://www.mordorintelligence.com/industry-reports/ap-automation-market) (analyst): ~USD 6.17B, ~12.4% CAGR.
+- [RazorpayX Payouts](https://razorpay.com/x/payouts/) (vendor): vendor and employee payouts on one API.
+- [ICICI Bank: File Format for Bulk Upload in CIB v3.3](https://www.icici.bank.in/managed-assets/docs/form-center/File_Format_Bulk_%20Transfers_3.3.pdf) (primary bank doc): vendor-payment file templates.
+- [RBI (Regulation of Payment Aggregators) Directions, 2025](https://www.fidcindia.org.in/wp-content/uploads/2025/09/RBI-PAYMENT-AGGREGATORS-DIRECTIONS-15-09-25.pdf) (govt primary): collections-only PA definition behind the funds invariant.
+- [GST e-invoicing above ₹5 crore (ClearTax)](https://cleartax.in/s/e-invoicing-businesses-above-rs-5-crore-turnover) (advisory): the digitisation mandate behind the AP wedge.

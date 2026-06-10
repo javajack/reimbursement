@@ -1,0 +1,232 @@
+---
+title: Security and Compliance Engineering
+description: "AuthN/Z, tenant isolation, encryption, DPDP mapping, immutable audit, backups, and the certification path."
+---
+
+import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
+
+Security is the deal gate, not a feature. The buyer's IT reviewer, the statutory auditor, and the DPDP questionnaire all interrogate the same handful of controls, and every one of them is cheap to build now and ruinous to retrofit. The legal reasoning lives in [data protection](/compliance/data-protection/) and [audit and retention](/compliance/audit-and-retention/); this page is what an implementing agent builds.
+
+## Authentication
+
+Passwordless by default. Email OTP and magic links are the primary credentials for the PWA and the Console; passwords are not stored in Phase 1, which deletes an entire attack class (stuffing, reuse, reset flows) for a workforce product where email is already the identity anchor.
+
+| Credential | Properties | Lifetime | Revocation |
+| --- | --- | --- | --- |
+| Email OTP | 6 digits, single-use, constant-time compare, max 5 sends per address per hour | 10 minutes | Consumed on use |
+| Login magic link | Signed, single-use, bound to email + device hint | 15 minutes | Consumed on use |
+| Invite magic link | Single-use, creates Membership on accept | 7 days (24h is too aggressive; Fyle precedent) | Admin resend invalidates prior |
+| Session JWT | Carries `usr_`, active `co_`, `roles[]`; verified statelessly | 15 minutes | Expiry; refresh revocation |
+| Refresh token | Rotating, device-bound, reuse detection revokes the whole family | 30 days | Device list, admin force-logout |
+| ApiKey | Scoped (read, write, webhooks), secret shown once, SHA-256 hash at rest | Until revoked | Owner/admin revoke, instant |
+| One-tap approval token | Single-use, amount-bounded, channel-tagged | 72 hours or until the step is decided | Consumed on use; step decision voids siblings |
+
+All lifetimes are our design targets, tunable per deployment. Every authenticated user gets a device list (browser, OS, last seen, IP) with per-device revoke; the PWA install boundary on iOS shares no cookies with Safari, so first standalone launch re-authenticates via OTP or magic link (the carried PWA stance).
+
+### One-tap approval tokens
+
+The email and WhatsApp approve buttons from the [approver experience](/phase-1/web/approver-experience/) are bearer credentials and must be engineered as such. Each token is minted per ApprovalStep, per decision verb, and carries:
+
+```json
+{
+  "apr_id": "apr_01J9ZK3WQ8R7M2T4V6X8B0C1D2",
+  "decision": "approve",
+  "max_amount_paise": 2500000,
+  "channel": "email_link",
+  "exp": "2026-06-13T09:30:00Z",
+  "jti": "tok_01J9ZK4XP2Q5N8R1T3V6Y9B2D4"
+}
+```
+
+Enforcement rules, all server-side:
+
+- **Single-use:** the `jti` is consumed atomically on first redemption; replays render an "already decided" page, never a second decision.
+- **Amount-bounded:** if the claim's `approved_amount_paise` would exceed `max_amount_paise` (claim edited after mint, or amount above the company's one-tap threshold), the link degrades to a web login step-up instead of acting.
+- **Expiring:** tokens outlive neither the 48-hour approval SLA window plus grace nor a decided step.
+- **Channel-tagged:** `channel` (web, `email_link`, `whatsapp`, api) is written into the AuditEvent for the decision. An auditor can see that a ₹25,000 claim was approved from a WhatsApp deep link at 11pm.
+
+## Authorization: the RBAC matrix
+
+Roles live on Membership (`owner`, `admin`, `finance`, `approver`, `employee`, `auditor`; a user can hold several). Authorization is evaluated per company context from the session JWT, then re-checked by row-level security underneath (defense in depth, next section).
+
+| Resource and action | owner | admin | finance | approver | employee | auditor |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claim: create, edit own drafts, cancel own | yes | yes | yes | yes | yes | no |
+| Claim: read all company claims | yes | yes | yes | queue only | own only | read all |
+| ApprovalStep: approve, send back (`sent_back`), line-level decide | no* | no* | no* | routed steps | no | no |
+| Policy and Rule: create, edit, version | yes | yes | propose | no | no | read |
+| PayoutBatch: build, export, mark executed, reconcile | no | no | yes | no | no | read |
+| BeneficiaryAccount: edit own | yes | yes | yes | yes | yes | no |
+| BeneficiaryAccount: verify, approve changes | no | yes | yes | no | no | read |
+| CreditEntry: purchase packs, `adjustment` entries | yes | yes | read | no | no | read |
+| Membership: invite, assign roles | yes | yes | no | no | no | no |
+| Grant `finance` or `owner` roles | yes | no | no | no | no | no |
+| ApiKey, WebhookEndpoint: manage | yes | yes | no | no | no | no |
+| AuditEvent: read, export | yes | yes | yes | no | own only | read + export |
+
+*Owners and admins approve only when they also hold `approver` and are in the routed chain; configuration power never implies decision power.
+
+The two deliberate asymmetries: **payout power is finance-only** (an owner can configure the bank account but cannot build or export a PayoutBatch without the `finance` role), and **auditor is read-everything, write-nothing**, with one-click export of the trail and document bundle for a chosen period.
+
+### Maker-checker enforcement points
+
+These are server-enforced invariants, not UI conventions:
+
+1. Submitter is never an approver on their own Claim; prevent-self-approval is on by default with skip-up routing (the SAP deadlock is the cautionary tale; routing detail lives with the approval engine).
+2. The finance user who exports the payout file is recorded distinctly from the approvers who sanctioned the claims in it.
+3. BeneficiaryAccount changes re-trigger verification (penny-drop, about ₹3 per check, Setu, high confidence) and require an admin or finance approval before the account can receive a payout; mechanics in [payouts](/phase-1/payouts/).
+4. Credit ledger `adjustment` entries require owner or admin and always write an AuditEvent with a reason.
+5. Rule edits create a new version; every firing records `rule_id` plus version and the input snapshot, so a 2026 decision is explainable in 2034 against the rule as it stood.
+
+## Tenant isolation
+
+One PostgreSQL 16 cluster, every tenant-owned table carries `company_id`, and row-level security is the floor under every application bug. The application role cannot bypass it.
+
+```sql
+-- Pattern applied to every tenant-owned table (claims shown).
+ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
+ALTER TABLE claims FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON claims
+  USING (company_id = current_setting('app.company_id', true));
+
+-- App role app_rw: not the table owner, no BYPASSRLS.
+-- Migrations run as a separate privileged role.
+-- Per request, inside the transaction (never per pooled connection):
+BEGIN;
+SET LOCAL app.company_id = 'co_01J9ZK3WQ8R7M2T4V6X8B0C1D2';
+-- ... all queries for this request ...
+COMMIT;
+```
+
+:::caution[The GUC and the pool]
+With PgBouncer-style pooling, `SET` leaks across requests. Always `SET LOCAL` inside the transaction so the `app.company_id` GUC dies with the commit. The `users` table is the one global exception (a User spans companies via Membership); everything else is tenant-scoped and RLS-policied.
+:::
+
+The same boundary extends beyond Postgres:
+
+- **Object storage:** receipts live under a per-tenant prefix, `receipts/{company_id}/{receipt_id}/page-{n}.jpg`, in an ap-south-1 bucket with no public access. All reads go through short-lived signed URLs (5 minutes GET, 15 minutes PUT for the upload path); the prefix is derived server-side from the session, never from client input.
+- **Queues:** job payloads carry IDs plus `company_id`, never PII blobs. Workers open a transaction, set the GUC from the payload, and inherit the same RLS guarantees as the API.
+- **Webhooks:** HMAC-SHA256 signed per WebhookEndpoint secret (`X-Kharcha-Signature`), per the API conventions.
+
+**Isolation is proven, not assumed.** CI runs a two-tenant suite: seed company A and company B, then for every table with `company_id`, assert that queries under A's GUC return zero B rows, that signed URLs minted for A 404 on B objects, and that a worker processing A's job cannot touch B. A schema lint fails the build if a new migration adds a table without `company_id` and an RLS policy (explicit allowlist for the global tables). Table inventory lives in the [data model](/spec/data-model/).
+
+## Encryption
+
+| Layer | Mechanism |
+| --- | --- |
+| In transit | TLS 1.2 minimum, 1.3 preferred, HSTS; internal service-to-service traffic also TLS |
+| At rest, blanket | AES-256 volume and bucket encryption (managed database storage, S3 SSE) |
+| Column-level | `beneficiary_accounts.account_number_enc` and optional `users.pan_enc` via envelope encryption: KMS-managed key encrypts per-row data keys; keys per environment, rotated |
+| Rendering | Masked to last 4 everywhere in the UI and API responses (`••••4821`); plaintext decrypt happens only inside the payout-file generation path, server-side, finance-initiated |
+| Keys and secrets | KMS plus a secrets manager; nothing in env files or the repo; access logged |
+
+PAN here means the Indian Permanent Account Number: optional in Phase 1, collected only where finance needs it for tax-facing exports, and encrypted identically to account numbers.
+
+:::danger[No payment-card data, ever]
+The product has no corporate cards, no stored card numbers, no card tokens (a Phase 1 and Phase 2 non-goal). PCI DSS is out of scope by design, and it must stay that way: any feature that would touch card-network data is rejected at design review, not mitigated.
+:::
+
+## DPDP: obligation to mechanism
+
+We are a Data Processor for customer employee data and a Data Fiduciary for our own staff; the Rules were notified 14 Nov 2025 with full obligations landing around May 2027 (govt notification, high; timeline estimate, medium). The penalty ceiling for failed safeguards is ₹250 crore under Sec 8(5): a statutory maximum, not a typical fine. The full legal analysis is in [data protection](/compliance/data-protection/); this table is what the codebase ships.
+
+| DPDP obligation | Engineering mechanism |
+| --- | --- |
+| Consent: free, specific, informed, affirmative | Versioned consent screen at first employee login; grant recorded as an AuditEvent with notice version and timestamp |
+| Itemized notice | Plain-language purpose notice at onboarding and in settings; content versioned alongside consent |
+| Purpose limitation | RBAC scoping above; PAN and account numbers reachable only through finance flows; no analytics or model training on personal fields |
+| Access (DSAR) | `GET /api/v1/users/{user_id}/data-export`: profile, memberships, claims, receipt bundle, and AuditEvents about the principal, as JSON plus documents |
+| Correction | Self-serve profile edits; bank-detail corrections re-enter the verify-and-approve gate |
+| Erasure | Anonymize, not delete, where the 8-financial-year retention binds: identity fields tombstoned, financial rows (Claim, LineItem, receipts) retained to statute, contact data deleted |
+| Breach notification | 72-hour runbook: Board report plus affected-individual notice without delay; drill and template live in [ops runbooks](/phase-1/ops-runbooks/) |
+| Processor duties | DPA template in the MSA: instruction-bound processing, published sub-processor list, deletion-on-termination subject to statutory retention |
+
+Residency is permissive today (negative-list model, no blanket localization for a non-SDF), but we host in the Mumbai region anyway for latency and questionnaire simplicity.
+
+## Immutable audit
+
+Append-only, hash-chained, total. A correction is a new event that supersedes; nothing is ever updated or deleted.
+
+```sql
+CREATE TABLE audit_events (
+  id           text PRIMARY KEY,          -- evt_ ULID
+  company_id   text NOT NULL,
+  seq          bigint NOT NULL,           -- per-company monotonic, gaps detectable
+  actor_id     text,                      -- null for system actions
+  actor_roles  text[] NOT NULL DEFAULT '{}',  -- roles AT decision time
+  action       text NOT NULL,             -- claim.approved, rule.fired, payout_batch.exported ...
+  entity_type  text NOT NULL,
+  entity_id    text NOT NULL,
+  channel      text,                      -- web | email_link | whatsapp | api | system
+  ip           inet,                      -- null for system actions
+  device       text,                      -- user agent / device fingerprint; null for system
+  before       jsonb,
+  after        jsonb,
+  occurred_at  timestamptz NOT NULL DEFAULT now(),
+  prev_hash    bytea NOT NULL,
+  hash         bytea NOT NULL,            -- sha256(prev_hash || canonical_json(event))
+  UNIQUE (company_id, seq)
+);
+REVOKE UPDATE, DELETE ON audit_events FROM app_rw;
+```
+
+Each event's `hash` chains from `prev_hash`, per company, over the canonical JSON of the full row (`ip` and `device` included in the hash input); a nightly job writes the latest chain head to object storage with object lock (WORM), so tampering with history breaks the chain against an anchor we cannot rewrite. What gets logged, with full fidelity: every Claim and ApprovalStep transition (including `awaiting_credits` entry and `sent_back` loops), every rule firing with its action verb (allow, flag, warn, cap, block, route), rule id plus version and input snapshot, every CreditEntry, PayoutBatch lifecycle, BeneficiaryAccount changes, auth events (logins, key creation, role grants), policy version changes, IP and device for every actor-initiated event, and the channel provenance for every one-tap decision.
+
+Clock discipline: event time is server time only, NTP-synced, from the database `now()`. Client-claimed times (EXIF capture timestamps, device clocks) are stored as metadata on the Receipt, never as audit chronology.
+
+## Backups and disaster recovery
+
+| Item | Target | Mechanism |
+| --- | --- | --- |
+| RPO | 15 minutes | Continuous WAL archiving, point-in-time recovery |
+| RTO | 4 hours | Snapshot restore plus WAL replay, rehearsed end to end |
+| Snapshots | Daily, 35-day retention | Managed automated snapshots |
+| Long-term | Monthly archive, object lock, 8 financial years | Matches the binding Companies Act window |
+| Object storage | Versioning on; backup copies in a second Indian region | Serving stays single-region per the architecture |
+| Restore drill | Quarterly, timed, documented | A backup never restored is a hope, not a backup |
+
+RPO and RTO are our committed targets (our derivation), stated in the security-questionnaire pack and tested by the drill, not just asserted.
+
+## Application security hygiene
+
+- **Dependencies:** lockfile audit plus automated weekly update PRs; container base images scanned on build.
+- **Rate limits:** per-IP and per-ApiKey across the API; strict on OTP issuance (5 per address per hour) and one-tap token redemption.
+- **Upload validation:** accept JPEG and PNG by magic bytes, never by extension or client MIME; size caps; server-side re-encode through the `crop_correct` pipeline strips EXIF and polyglot payloads; no SVG, ever.
+- **SSRF-safe fetchers:** email-in attachment processing and webhook delivery resolve DNS once, refuse private and link-local ranges, and follow no redirects across that check.
+- **Secrets:** in KMS and the secrets manager only, rotated; CSP, HttpOnly and SameSite cookies, CSRF tokens on Console forms.
+
+## Certification path
+
+Carried unchanged from v1: sequence the spend, lead with evidence.
+
+<Steps>
+
+1. **Security-questionnaire pack from day one.** Architecture diagram, the RLS policy, the encryption matrix, an audit-trail demo, DPDP DPA template, this page. Costs nothing, clears most SMB reviews.
+
+2. **ISO 27001 first.** Roughly ₹5 lakh in year one plus an indicative ₹60k annual surveillance audit, 12 to 16 weeks (analyst/vendor, medium confidence). The India-and-EU-preferred signal; get it before the first enterprise pitch. <span class="pill pill--build">Build</span>
+
+3. **Periodic VAPT.** Expected by Indian buyers, effectively required for regulated sectors, and direct evidence of Sec 8(5) "reasonable security safeguards".
+
+4. **SOC 2 Type II only when a deal funds it.** Roughly ₹6 to 14 lakh and 12-plus weeks (vendor, medium confidence). Defer until a US-headquartered buyer's questionnaire demands it; pre-spending here is the classic indie cash-burn mistake.
+
+</Steps>
+
+:::tip[The questionnaire is the real regulator]
+DPDP fines are ceilings and enforcement is nascent; the concrete near-term risk is a stalled deal at the IT/Security review. Everything on this page doubles as questionnaire ammunition, which is why the controls ship in Phase 1 rather than "when we get bigger".
+:::
+
+<CardGrid>
+  <LinkCard title="Non-functionals" href="/spec/non-functionals/" description="Performance budgets, availability targets, and observability that sit alongside these controls." />
+  <LinkCard title="Audit and retention policy" href="/compliance/audit-and-retention/" description="The statutory clocks (8 FY, GST 72 months) and litigation hold behind the retention engine." />
+</CardGrid>
+
+## Sources
+
+- [MeitY: Digital Personal Data Protection Act, 2023 (PDF)](https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf) (govt). Primary law text; ₹250 crore ceiling.
+- [PIB: DPDP Rules, 2025 notified (PDF)](https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/nov/doc20251117695301.pdf) (govt). Notification of 14 Nov 2025.
+- [EY: Transforming data privacy, DPDP Rules 2025](https://www.ey.com/en_in/insights/cybersecurity/transforming-data-privacy-digital-personal-data-protection-rules-2025) (analyst). The ~May 2027 full-obligation timeline.
+- [MediaNama: Data breach reporting timeline under DPDP Rules 2025](https://www.medianama.com/2025/11/223-data-breach-reporting-timeline-of-dpdp-rules-2025-explained/) (analyst). The 72-hour Board report plus without-delay individual notice.
+- [Codesecure: SOC 2 Type 2 compliance cost in India](https://codesecure.in/blogs/soc-2-type-2-compliance-cost-india) (vendor). SOC 2 cost and timeline.
+- [TCSA: SOC 2 vs ISO 27001 for Indian startups](https://www.tcsa.in/resources/soc-2-vs-iso-27001-indian-startups) (analyst). ISO-first sequencing at about ₹5 lakh; VAPT expectations.
+- [Setu: Bank account verification API](https://setu.co/data/kyc/bank-account-verification/) (vendor). The ~₹3 per successful penny-drop anchor behind the beneficiary gate.

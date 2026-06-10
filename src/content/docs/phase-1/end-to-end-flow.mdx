@@ -1,0 +1,153 @@
+---
+title: The End-to-End Flow
+description: "One connected walkthrough of a claim from camera to closed, naming every state, actor, and system along the way."
+---
+
+import { LinkCard, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+A claim crosses four human roles (employee, approver, finance, admin), five subsystems (capture, extraction, rules, workflow, payout), and one system we do not control (the customer's bank), without ever losing a byte of evidence. This page walks that pipe once, camera to closed, in canonical state names: every status string in code, UI, webhook, or export matches these names byte for byte. Each stop links to the page that owns it; the cast was introduced in [Personas and journeys](/phase-1/personas-and-journeys/).
+
+The shortest honest summary is the status trace of one real claim:
+
+```text
+draft → submitted       (CreditEntry: consumption, balance -1; chain snapshotted)
+      → in_review       (SLA timers armed)
+      → sent_back       ("attach page 2 of the dinner bill")
+      → submitted       (resubmit: free, same credit)
+      → in_review
+      → approved        (cab line approved, dinner line capped)
+      → in_payout       (PayoutBatch pob_…, PayoutInstruction pin_…)
+      → paid            (UTR written from return file or webhook)
+      → closed          (accounting export posted, retention clock starts)
+```
+
+## The walkthrough, camera to closed
+
+Running example: Asha, an account manager in Bengaluru, claims a ₹3,420 client dinner. Two receipt photos, GSTIN `29ABCDE1234F1Z5` on the bill, `claimed_amount_paise = 342000`.
+
+<Steps>
+
+1. **Intake, up the capture ladder.** Asha shoots both pages in the PWA. Rung one, the universal primary: the `file-input` native-camera path (full resolution, zero permission prompts, works in every in-app browser and in iOS standalone). Rung two, Android-first progressive enhancement: the live edge-detection viewfinder with auto-capture. Rung three: `ImageCapture.takePhoto()` where present. Client stages: `intake → frame_analysis → capture → quality_gate → crop_correct → review → compress → queue_upload → upload`; offline, pages wait in the IndexedDB outbox. Detail: [Camera](/phase-1/capture/camera/).
+
+2. **Extract.** Each Receipt (`rcp_`) runs `uploaded → processing → extracted`: merchant, date, GSTIN, line items, CGST/SGST/IGST split, total, field-level confidence. Extraction is asynchronous behind a visible Scanning chip; the form never blocks on OCR. An `extraction_failed` receipt branches into loop two, manual entry, image retained as evidence.
+
+3. **Review the fields (`review_items`).** Fields at or above 0.80 confidence auto-accept; doubtful fields are flagged; only merchant, date, and total need explicit confirmation. Tapping a field zooms the image to its source region; line items edit in a bottom row-sheet, never a dense grid.
+
+4. **Assemble the Claim.** Reviewed receipts attach to a draft Claim (`clm_`): here, dinner ₹2,500 plus cab ₹920. Up to 5 receipt images ride one credit, +1 credit per additional 5 (the anti-batching guard). Date-plus-amount collisions raise a dismissible duplicate warning with Keep-both or Keep-one.
+
+5. **Policy pre-check.** Rules run on the draft, `line_item` scope per line then `claim` scope, six verbs only: `allow`, `flag`, `warn`, `cap`, `block`, `route`. Asha sees GSTIN_FORMAT pass (<span class="pill pill--allow">allow</span>), DUPLICATE_SUSPECT raise a <span class="pill pill--flag">flag</span>, and PER_DIEM_CAP preview a cap on the dinner line, plus the resolved approver chain, before she commits. A hard `block` stops submission and says why.
+
+6. **Submit, through the credit gate.** Balance positive: one `consumption` CreditEntry (`cre_`) posts and the claim goes `submitted`. Balance zero: it parks in `awaiting_credits`, fully captured, with a one-tap "remind your admin" nudge; top-up drains the queue FIFO. Manual-entry claims meter identically: the credit buys the submission and its workflow, not the OCR. Owner: [Credits and metering](/phase-1/credits-and-metering/).
+
+7. **Chain resolution, snapshotted.** The approval matrix resolves role slots (manager, department head, finance) into ApprovalSteps (`apr_`) and snapshots the chain at submission; later policy edits never silently reroute it, re-routing is an explicit admin action. Routing never blocks a submission: no match lands the claim in the admin queue flagged `rule_gap`. Owner: [Approval engine](/phase-1/web/approval-engine/).
+
+8. **`in_review`.** The first ApprovalStep turns `active`. The approver gets the decision card (amount, merchant and date, purpose, receipt thumbnail, plain-language flags) on web, signed email magic-link buttons, or a WhatsApp nudge; exactly two primary actions, Approve and Send back with a required comment. SLA 48 hours (24 above the high-value threshold), one mid-SLA nudge, one pre-escalation warning, then escalation to backup, delegate, or admin; reminders IST-aware, two per item max. Statuses also cover `delegated`, `skipped`, `expired`, `escalated`.
+
+9. **Decision, line by line.** Every LineItem (`li_`) ends `approved`, `capped`, or `rejected`; one approved line carries the claim forward with `approved_amount_paise ≤ claimed_amount_paise`. Asha's dinner caps at her ₹2,000 grade limit: the claim proceeds at `approved_amount_paise = 292000`. Whole-claim `rejected` needs a stated reason and is terminal; `sent_back` is the loop, not the punishment.
+
+10. **Finance verification.** Approved claims enter the finance verification queue: receipt spot-checks, ITC-eligible versus blocked tags under GST Sec 17(5) (informational in Phase 1), and gate two: no verified BeneficiaryAccount (`bene_`), no batch. Owner: [Finance console](/phase-1/web/finance-console/).
+
+11. **Batch.** Finance builds a PayoutBatch (`pob_`, status `building`) with one PayoutInstruction (`pin_`) per claim, paying from a company BankAccount (`ba_`). While the batch is `building`, member claims remain `approved` (reserved; removal releases the reservation); each claim flips to `in_payout` when the batch is exported (file rail) or starts executing (API rail). Two rails out, compared below; full mechanics in [Payouts](/phase-1/payouts/).
+
+12. **UTR, then `paid`.** The bank's return file or the payout API's webhook writes a UTR onto each instruction; the claim goes `paid` and the employee timeline shows the bank reference and value date. "When do I get paid" is answered in-product, not in a corridor.
+
+13. **`closed`, on the books.** Finance posts the accounting export (Tally-shaped journal voucher or CSV in Phase 1; formats in the Integrations spec) and the claim locks. The append-only AuditEvent trail, images included, stays queryable for 8 financial years, the binding longest retention; see [Audit and retention](/compliance/audit-and-retention/).
+
+</Steps>
+
+## Two rails out
+
+The file is the default, the API per-customer opt-in; on both rails we generate instructions and the customer moves the money.
+
+<Tabs>
+
+<TabItem label="Bank bulk-payment file (default)">
+
+We generate the bulk-payment file in the customer's bank's format; an authorised signatory uploads and releases it from their own net-banking. Batch states: `building → exported → executed → reconciled`; `executed` is confirmed by the customer or the imported return file. Zero RBI surface, works with every bank, no integration project. The trade: payment status arrives only as fast as the return file does. Formats and worked samples: [Bank files](/reference/bank-files/).
+
+</TabItem>
+
+<TabItem label="Payout API (per-customer opt-in)">
+
+A Razorpay-style payout integration on the customer's own account gives one-click disbursement and webhook-driven status. Batch states: `building → executing → completed | partially_failed → reconciled`. UTRs and per-instruction failure reasons arrive in near real time. Worth wiring for weekly payout runs; overkill for a monthly cycle.
+
+</TabItem>
+
+</Tabs>
+
+:::danger[Invariant: funds never touch our accounts]
+Both rails keep money movement on the customer's side. That single design choice keeps the product outside PA/PPI licensing entirely; the regulatory reasoning lives in [Money movement](/compliance/money-movement/).
+:::
+
+## The master state table
+
+One row per `Claim.status`. The ApprovalStep, Receipt, and PayoutBatch sub-machines have their own guard-and-side-effect tables in [State machines](/spec/state-machines/).
+
+| State | Who acts | What they see | Exits to | Credit and audit side-effects |
+| --- | --- | --- | --- | --- |
+| `draft` | Employee | Claim builder: receipts, line items, live flags, chain preview | `submitted`, `awaiting_credits`, `cancelled` | No credit; AuditEvents on create and material edits |
+| `awaiting_credits` | Admin (employee waits) | Employee: queue position, "remind your admin" button. Admin: burn forecast, top-up paths | `submitted` on top-up (FIFO), `cancelled` | No credit consumed yet; nudges and 50/80/95/100% burn alerts logged |
+| `submitted` | System | Timeline entry: routing to the first approver | `in_review`, `cancelled` | One `consumption` CreditEntry on first submission only; chain snapshot recorded |
+| `in_review` | Active approver | Decision card with flags and SLA countdown | `approved`, `rejected`, `sent_back`, `cancelled` | Every step action an AuditEvent with actor, role, channel |
+| `sent_back` | Employee | The approver's required comment; editable claim | `submitted` (free resubmit), `cancelled` | No new credit; resubmission event links both passes |
+| `approved` | Finance | Line outcomes, `approved_amount_paise`, beneficiary status | `in_payout` when its batch is exported or starts executing; stays here (reserved) while a batch is `building` | Per-line and per-step decision events |
+| `rejected` | Nobody (terminal) | Stated reason, full history retained | terminal | Credit not auto-refunded; admin may post an `adjustment` |
+| `in_payout` | Finance and the customer's bank | Batch and instruction status (`pob_`, `pin_`) | `paid`; on instruction failure the claim holds here in the repair queue; back to `approved` only on explicit finance write-off | Batch and instruction transitions logged |
+| `paid` | System | UTR and value date on the employee timeline | `closed` | UTR persisted on the PayoutInstruction; reconciliation event |
+| `closed` | System | Locked claim with export reference | terminal | Export reference logged; 8 FY retention clock running |
+| `cancelled` | Employee (any pre-decision state) | Confirmation; history retained | terminal | Credit not auto-refunded; admin `adjustment` path exists |
+
+## Two gates, three loops
+
+### Gate one: credits, at submit
+
+The meter is the submission, not the seat, and the gate sits only on the `draft → submitted` edge. Capture, upload, drafting, and field review all work at zero balance; pre-submission OCR pauses entirely, with receipts holding in `queued`. The fair-use cap on pre-submission scans, `max(20, 3 × remaining credits)` a month, applies only while the balance is positive.
+
+:::danger[The meter never eats data]
+At balance zero, receipts still upload (`uploaded`, with processing held as `queued`), drafts still build, and submissions park visibly in `awaiting_credits`. Nothing is lost; capture never blocks. One loud caveat: an `awaiting_credits` claim is not in the approval flow, so month-end exhaustion must shout (admin alerts at 50/80/95/100% burn, a forecast in days) or it becomes a finance incident at close.
+:::
+
+### Gate two: a verified beneficiary, at batch
+
+A BeneficiaryAccount is verification-gated (penny-drop before first use) and required before a claim joins a PayoutBatch, never before the first claim: onboarding stays light, payday stays safe. An approved claim with an unverified beneficiary sits flagged in the finance queue, never silently dropped. We gate at batch-build, not at approval: approvers judge the spend, finance owns the rails.
+
+### The three loops
+
+| Loop | Trigger | Path back into the flow | Credit cost |
+| --- | --- | --- | --- |
+| Send-back | Approver needs a fix and must say why | `in_review → sent_back`; employee edits and resubmits to `submitted`; earlier approvals stand and the claim re-enters at the querying step unless `claimed_amount_paise` increased or category or cost center changed, in which case the chain re-resolves fresh; rules re-evaluate at the resubmission instant, both traces retained | Free, same credit |
+| Failed extraction to manual | Receipt hits `extraction_failed` (faded thermal, handwriting) | Manual line-item entry pre-filled with whatever was extracted; the image stays attached as evidence; identical downstream flow | No extra credit; failed OCR never bills |
+| Failed payout repair | Return-file rejection or API `partially_failed` (wrong IFSC, closed account) | Instruction marked `failed`; the claim holds at `in_payout` in the repair queue; beneficiary re-verified and a reissued instruction joins the next `building` batch while the original batch still reconciles; back to `approved` only on explicit finance write-off | None; repair is finance ops |
+
+These three loops, plus `cancelled`, are the only sanctioned ways backwards; anything else moving against the arrows is a bug the spec's transition guards reject.
+
+## Every stop has a page
+
+Each stop splits into a product page (UX and ops) and a spec page (contracts an agent builds from without asking questions).
+
+| Stop in the flow | Product page | Spec or reference page |
+| --- | --- | --- |
+| The whole machine at altitude | [Phase 1 overview](/phase-1/overview/) | [Architecture](/spec/architecture/) |
+| Capture, `intake` through `upload` | [Camera](/phase-1/capture/camera/) | [Capture pipeline](/spec/capture-pipeline/) |
+| `extract` and `review_items` | [OCR and itemisation](/phase-1/capture/ocr-itemisation/) | [Capture pipeline](/spec/capture-pipeline/) |
+| Manual fallback | [Manual entry](/phase-1/capture/manual-entry/) | [Data model](/spec/data-model/) |
+| Assembly, pre-check, submit, tracking | [Submit and track](/phase-1/capture/submit-and-track/) | [API](/spec/api/) |
+| Rules and the six verbs | [Policy and rules](/phase-1/onboarding/policy-and-rules/) | [Rule schema](/spec/rule-schema/) |
+| The credit gate and the ledger | [Credits and metering](/phase-1/credits-and-metering/) | [Data model](/spec/data-model/) |
+| Chain resolution and routing | [Approval engine](/phase-1/web/approval-engine/) | [Config schema](/spec/config-schema/) |
+| The approver's `in_review` | [Approver experience](/phase-1/web/approver-experience/) | [State machines](/spec/state-machines/) |
+| Web submission and "where is my money" | [Employee portal](/phase-1/web/employee-portal/) | [API](/spec/api/) |
+| Verification, batches, exports | [Finance console](/phase-1/web/finance-console/) | [State machines](/spec/state-machines/) |
+| Payout rails and reconciliation | [Payouts](/phase-1/payouts/) | [Bank files](/reference/bank-files/) |
+| Accounting hand-off at `closed` | [Finance console](/phase-1/web/finance-console/) | [Integrations](/spec/integrations/) |
+| The config everything reads | [Configuration model](/phase-1/onboarding/configuration-model/) | [Config schema](/spec/config-schema/) |
+| Day-zero setup | [Company onboarding](/phase-1/onboarding/company-onboarding/) | [Config schema](/spec/config-schema/) |
+| When it breaks anyway | [Edge cases](/phase-1/edge-cases/) | [Ops runbooks](/phase-1/ops-runbooks/) |
+
+## Done means
+
+- An engineer can trace any claim id end to end and meet only statuses spelled exactly as the master table spells them.
+- No screen, webhook, or export invents a state name beyond this page and the spec's sub-machines.
+- All three loops demo in a staging tenant in under five minutes; both gates fire visibly, never silently.
+
+<LinkCard title="Next: the camera" description="Stage by stage up the capture ladder, where the flow begins." href="/phase-1/capture/camera/" />

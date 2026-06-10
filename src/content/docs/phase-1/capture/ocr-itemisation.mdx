@@ -1,0 +1,222 @@
+---
+title: OCR and Itemisation
+description: "Scan to structured line items: async extraction UX, confidence-gated review, tap-to-fix, and GST-correct itemisation."
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Extraction is a draft the employee confirms, never a gate they wait behind. A scanned bill becomes a `Receipt` the moment capture commits; OCR runs asynchronously under a `Scanning` chip; only merchant, date, and total ever demand explicit confirmation. This page specifies the path from `upload` to reviewed line items on a `Claim`: async contract, payload, honesty rules, tap-to-fix, GST itemisation, duplicates, failure path. Image quality is won one page earlier, in [the camera flow](/phase-1/capture/camera/).
+
+## The async contract
+
+The instant `capture` commits, the `Receipt` exists: row written, image in the offline outbox, thumbnail on the claim draft, `Scanning` chip on top. The employee can navigate away, scan the next bill, type fields themselves, or come back tomorrow; on completion the chip flips and a notification fires (web push where granted on the Android PWA, in-app badge otherwise). Stage names live in the [capture pipeline spec](/spec/capture-pipeline/).
+
+Never block the form on OCR: the documented complaint we refuse to inherit. Capterra reviewers report Expensify "pauses your workflow while the OCR is reading it" (review aggregation, medium confidence), and Expensify's own community FAQ admitted SmartScan takes "a few minutes to a few hours" (vendor FAQ, high).
+
+Latency budgets follow Nielsen's three limits: 0.1 s feels instant, 1 s keeps flow of thought, 10 s is the attention ceiling (NN/g, high). Cloud extraction targets P50 under 5 seconds, our derivation from vendor claims (Klippa 0.5-4 s, Fyle "within seconds"). Past 10 seconds, the spinner becomes determinate progress plus "We'll notify you", and leaving is always allowed.
+
+While a page still sits in the local outbox (offline, or upload in flight), the chip is the camera flow's outbox chip (`queued` / `syncing`, specified on [the camera page](/phase-1/capture/camera/)). From server acknowledgement onward, the chip maps 1:1 to `Receipt.status`; the UI never invents a state:
+
+| `Receipt.status` | Chip and microcopy | Employee can |
+| --- | --- | --- |
+| `uploaded` | "Uploaded. In line for scanning." | Keep capturing; start typing fields |
+| `queued` | "In line for scanning" or "Processing paused: credits exhausted. Remind your admin?" | One-tap admin nudge; manual entry; nothing lost |
+| `processing` | "Scanning" | Navigate away; fill fields themselves; add pages |
+| `extracted` | "Scanned: review 3 fields" | Tap-to-fix; confirm the trio; itemise |
+| `extraction_failed` | "We couldn't read this bill" plus a reason | Retry; one-tap manual entry, pre-filled |
+
+:::caution[Vendor latency numbers are marketing]
+Every sub-5-second figure in this market (Klippa 0.5-4 s, Veryfi sub-5 s, Fyle "within seconds") is a vendor claim; no neutral benchmark exists, and Expensify's minutes-to-hours admission shows the real tail. Every surface stays fully usable while the chip spins; fast extraction is delight, not dependency.
+:::
+
+## The extraction payload
+
+One payload per `Receipt`; multi-page bills merge into a single document. Every scalar carries its own confidence and, where grounded, a bounding box in source-image pixels: the box is what makes tap-to-fix possible. Money is integer paise per the API conventions.
+
+```json
+{
+  "receipt_id": "rcp_01JXF8Q2M3NVZ7T4KW9YEHB6RD",
+  "claim_id": "clm_01JXF8PZ55AC4QGT0M2DKEY9XN",
+  "status": "extracted",
+  "engine": "llm_vision_v1",
+  "page_count": 1,
+  "extracted": {
+    "merchant": { "value": "Udupi Aatithya, Indiranagar", "confidence": 0.97, "bbox": [112, 64, 856, 132] },
+    "date": { "value": "2026-06-08", "confidence": 0.93, "bbox": [618, 188, 902, 230] },
+    "currency": { "value": "INR", "confidence": 0.99 },
+    "gstin_supplier": { "value": "29ABCDE1234F1Z5", "confidence": 0.88, "bbox": [96, 142, 564, 184] },
+    "tax_mode": "exclusive",
+    "line_items": [
+      {
+        "description": { "value": "Veg Thali", "confidence": 0.95 },
+        "qty": { "value": 2, "confidence": 0.91 },
+        "amount_paise": { "value": 56000, "confidence": 0.94 },
+        "gst_rate": { "value": 5.0, "confidence": 0.86 },
+        "cgst_paise": { "value": 1400, "confidence": 0.86 },
+        "sgst_paise": { "value": 1400, "confidence": 0.86 },
+        "igst_paise": { "value": 0, "confidence": 0.99 }
+      },
+      {
+        "description": { "value": "Filter Coffee", "confidence": 0.68 },
+        "qty": { "value": 2, "confidence": 0.88 },
+        "amount_paise": { "value": 4000, "confidence": 0.71 },
+        "gst_rate": { "value": 5.0, "confidence": 0.74 },
+        "cgst_paise": { "value": 100, "confidence": 0.74 },
+        "sgst_paise": { "value": 100, "confidence": 0.74 },
+        "igst_paise": { "value": 0, "confidence": 0.99 }
+      }
+    ],
+    "totals": {
+      "subtotal_paise": { "value": 60000, "confidence": 0.92 },
+      "cgst_total_paise": { "value": 1500, "confidence": 0.90 },
+      "sgst_total_paise": { "value": 1500, "confidence": 0.90 },
+      "igst_total_paise": { "value": 0, "confidence": 0.99 },
+      "grand_total_paise": { "value": 63000, "confidence": 0.96, "bbox": [612, 1384, 898, 1436] }
+    }
+  },
+  "validations": [
+    { "check": "gstin_luhn_mod_36", "result": "pass" },
+    { "check": "arithmetic_total", "result": "pass" },
+    { "check": "cgst_equals_sgst", "result": "pass" },
+    { "check": "date_sanity", "result": "pass" },
+    { "check": "rounding_section_170", "result": "pass" }
+  ]
+}
+```
+
+Reading notes: `line_items[]` becomes draft `LineItem` records once confirmed; the approval engine later decides each line individually (`approved | capped | rejected`), so one bad coffee never bounces a whole claim. The Filter Coffee line sits below the auto-accept threshold (0.68, 0.71): it renders as a suggestion, never a committed value. `tax_mode` is the reconciliation disambiguator. Up to 5 receipt images per claim ride one credit; beyond that, +1 credit per additional 5 (the anti-batching guard; see [credits and metering](/phase-1/credits-and-metering/)).
+
+## Confidence routing and the honesty rules
+
+Per-field confidence routes every value. The threshold is 0.80, Azure Document Intelligence's documented straight-through convention; the same docs note 0.95 is still wrong about 1 in 20, which is why the trio always gets human eyes (Microsoft docs, high).
+
+| Per-field confidence | Form behaviour | Rendering |
+| --- | --- | --- |
+| 0.80 or higher | Pre-filled as a machine value | Neutral ink; never green |
+| 0.50 to 0.79 | Tappable suggestion only; the form value stays empty | Dotted chip: "Suggested: Filter Coffee" |
+| Below 0.50, or missing | Empty field | Flag dot; image region linked if one was found |
+| Merchant, date, total (any confidence) | Explicit confirmation before submit unlocks | Green only on human touch |
+
+:::danger[The honesty rules]
+A field below the 0.80 threshold is NEVER auto-filled, even when it is probably right. The cautionary tale is Expensify's open bug #45904: blurry receipts produce a confidently wrong "random amount" with no warning flag (pain-point study, high). One invented number reaching a payout file costs more trust than a hundred empty fields. The employee, not the model, confirms merchant, date, and total before submission (the mandatory trio). A confident blank beats a confident lie.
+:::
+
+## Tap-to-fix review
+
+The review screen follows the Rossum validation pattern: every field links to its bounding box on the image; machine values render neutral; a field turns confirmed-green only after a human touches it; a jump control walks the doubtful fields in sequence (Tab on desktop, Next on mobile), skipping everything already confident.
+
+<Steps>
+
+1. The receipt opens in `review_items`: image on top, fields below, flagged count in the header ("2 fields need a look").
+
+2. Confirm the trio. Tapping merchant, date, or total zooms the image to its source region; one tap accepts, typing corrects (numeric keypad for amounts, date wheel for dates).
+
+3. Jump through the remaining flags with Next. Suggestions commit on tap, never silently; corrected values re-run the deterministic validators inline.
+
+4. Itemise if the claim needs line-level treatment (next section); a single-amount expense stays a single field.
+
+5. Attach to the `Claim` and continue to [submit and track](/phase-1/capture/submit-and-track/).
+
+</Steps>
+
+## Line items on a phone
+
+Itemisation is progressive disclosure (Zoho's "Itemize" button beside Amount is the precedent): collapsed by default, one tap expands extracted `line_items[]` into rows. Each row edits in a focused bottom row-sheet with numeric-keypad-first inputs, per-line category, and per-line GST treatment. Never a dense grid on a phone screen.
+
+A persistent reconciliation bar pins sum of lines plus tax against the printed total, delta in rupees. When they disagree, the first disambiguator is the `tax_mode` toggle (inclusive versus exclusive, the Zoho Books pattern); if the delta survives, the bar flags it and points at the most doubtful line. We never auto-adjust a line to force agreement.
+
+Forced itemisation is the most hated data-entry task in the category (Concur forums, via the pain study). Our stance: optional by default; a category-scoped `flag` or `route` rule requires it only where it pays, hotel folios and mixed bills, where line-level GST and per-diem caps need real lines.
+
+## GST-correct itemisation
+
+GST is modelled per line and validated deterministically. The validators flag; they never rewrite the evidence: a mismatch may be an OCR misread or a genuinely malformed bill, and silent correction destroys both. One mechanism, two checkpoints: the deterministic extraction validator `gstin_luhn_mod_36` (the payload's `validations[]` above) runs at extract time, and its result feeds the `GSTIN_FORMAT` rule-engine built-in when the claim is submitted.
+
+| Check | Fires when | Action | Never |
+| --- | --- | --- | --- |
+| `GSTIN_FORMAT` (Luhn-mod-36) | 15-character structure or checksum fails | <span class="pill pill--flag">flag</span> plus a re-read prompt | Block submission |
+| `cgst_equals_sgst` | Intrastate CGST and SGST are unequal | <span class="pill pill--flag">flag</span> the line; deep-link the tax region | Silently average or "fix" |
+| `rounding_section_170` | Recomputed tax component differs from printed | Recompute with normal rounding per component per invoice; flag residuals of ₹1 or more | Adjust the printed total |
+| `arithmetic_total` | Lines plus tax do not equal grand total | Reconciliation bar plus `tax_mode` toggle; flag unresolved delta | Auto-edit a line |
+| `itc_at_risk` | Employer GSTIN absent on a proper GST invoice | <span class="pill pill--info">info</span> tag for finance | Warn or block the employee |
+| `date_sanity` | Future date, or older than policy window | `warn` or `flag` per policy | Accept silently |
+
+Section 170 of the CGST Act mandates normal rounding to the nearest rupee per tax component per invoice: paise of 50 or more round up, below 50 drop (statutory, high). Worked example: ₹580 at 5% intrastate gives CGST ₹14.50 and SGST ₹14.50, each rounding to ₹15, so the printed total is ₹610, not ₹609. A validator that rounds the combined ₹29 once will flag every honest bill of this shape.
+
+`itc_at_risk` fires when a bill is a proper GST invoice but names no employer GSTIN as recipient, so the company likely cannot claim input credit. It surfaces in the [finance console](/phase-1/web/finance-console/) as information, never as employee friction; Phase 1 keeps `ITC_ELIGIBLE` (the Section 17(5) category tag) informational too. The oft-quoted 60% of T&E ITC lost is vendor marketing, directional only, but it is why finance wants these tags.
+
+:::note[Not every slip is a tax invoice]
+Thermal POS slips from unregistered merchants often carry no GSTIN and no tax split. CGST/SGST itemisation exists only on proper tax invoices, so every tax field is optional and absence is not failure: the line carries `gst_rate` null and the claim proceeds.
+:::
+
+## The engine: LLM-vision wrapped in determinism
+
+The primary extractor is LLM-vision behind a provider-agnostic interface (Gemini Flash family or Claude Haiku class, per the canonical stack). Economics decide it:
+
+| Path | Cost per 1,000 docs | Role |
+| --- | --- | --- |
+| LLM-vision (Flash or Haiku class) | ~USD 0.50-3.00 (USD 0.0005-0.003 per doc) | Primary extractor; emits the schema above |
+| Dedicated parsers (Textract AnalyzeExpense, Document AI Expense, Azure prebuilt) | ~USD 8-10 (about ₹670-840) | Benchmark and escalation tier |
+| Raw OCR (DetectDocumentText, Enterprise OCR) | ~USD 1.50 | Text-only cross-check; no field structuring |
+
+<p class="source-note">Source: vendor pricing pages, 2026 (medium confidence). LLM image-token billing varies with resolution and prompt size; validate with real token counts.</p>
+
+That spread holds COGS near ₹1.0-2.5 per submission and funds the margins behind the credit ladder. The catch is a different honesty problem: LLMs can transpose totals or invent GSTINs, so nothing the model emits reaches a form without schema validation plus the deterministic layer (GSTIN Luhn-mod-36 checksum, arithmetic totals, CGST equality, date sanity): near-zero cost, and it catches extraction errors and tampering alike. The e-invoice QR/IRN cross-check joins in Phase 2 with vendor invoices.
+
+Accuracy stays labelled: vendor-stated field accuracy on clean print runs 94-99%; faded thermal, crumpled bills, and Devanagari drop to low-to-mid 80s; vendor numbers typically overstate real-world results by 3-8 points (vendor and third-party, medium). The review UX is the budget for that gap, not an apology.
+
+:::tip[The vernacular wedge]
+Zoho's autoscan list (14-15 languages) contains zero Indic scripts; Google Cloud Vision ships 9 GA Indic languages (Hindi, Bengali, Gujarati, Kannada, Malayalam, Marathi, Tamil, Telugu, Punjabi). Routing extraction through engines with GA Indic coverage is cheap differentiation. Honest sizing: script support is not receipt-layout accuracy; most formal Indian receipts are English and numeric; Happay's 92% GST claim is vendor marketing. Opportunity, not proven demand. <span class="pill pill--med">Medium</span>
+:::
+
+## Duplicates: three layers, one published rule
+
+| Layer | When | Mechanic | Outcome |
+| --- | --- | --- | --- |
+| 1. Perceptual hash | At capture and upload | pHash against the company's recent receipt images | "Looks like you already scanned this"; keep or discard before any credit is at stake |
+| 2. `DUPLICATE_SUSPECT` | At submit | Same-company collision on date + amount + currency | Dismissible warning on BOTH claims, two verbs only: Keep both, Keep one (Expensify precedent) |
+| 3. Auto-merge | Continuous | Same bill via two intake paths (scan plus email-in): near-identical hash, amount delta within 0.0002, dates within 5 days (Fyle-derived) | Silent merge, audit-logged |
+
+Publish the contract the way Brex publishes its 2-of-3 match rule: exact thresholds on the help page, verbatim, so "where did my receipt go" never becomes a support ticket. Never over-trust layer 1: a screenshot re-embedded in a PDF strips metadata and shifts the hash; fraud-grade checks, including AI-generated-receipt detection (~0% to ~14% of fraudulent documents in ~12 months; AppZen, Sep 2025), live in the finance verification queue, not the employee flow.
+
+## When extraction fails
+
+`extraction_failed` is a queue, not a dead end: Zoho's "Scan Failed Receipts" bucket is the precedent, its "plan limit exceeded" filter the literal precedent for our soft paywall. Each failed receipt carries a reason, supports bulk retry, and offers a one-tap exit.
+
+| Reason code | Employee-facing copy | Recovery |
+| --- | --- | --- |
+| `image_unreadable` | "Too blurry or faded to read." | Retake, or enter manually with the image attached |
+| `multiple_receipts` | "This photo seems to have more than one bill." | Re-crop, or capture the bills separately |
+| `unsupported_format` | "We can read JPEG and PNG photos." | Re-capture via camera or photo library |
+| `no_extractable_fields` | "We could see the image but not the amounts." | Manual entry pre-filled with anything found |
+
+The one-tap exit is "Enter manually": it opens [manual entry](/phase-1/capture/manual-entry/) pre-filled with whatever was extracted, even partial (a merchant name alone still saves typing). The image stays attached as evidence and the downstream flow is identical.
+
+:::note[Credits and failed scans]
+Failed OCR never consumes a credit: the meter is the submission and its workflow, not the OCR. Pre-submission scans are free, fair-use capped at max(20, 3 × remaining credits) per month while the balance is positive. At balance 0, pre-submission OCR pauses entirely: receipts hold in `queued`, submissions in `awaiting_credits`; top-up drains both FIFO. Full mechanics in [credits and metering](/phase-1/credits-and-metering/).
+:::
+
+### Merchant memory
+
+Every confirmed receipt teaches the tenant. A per-company merchant map keys merchant string (and supplier GSTIN when present) to category, GST treatment, and typical amounts. The first bill from a new merchant needs categorisation; every later one pre-fills (Zoho's autoscan precedent; no model training). The same map warms manual entry, so the fallback gets faster every week.
+
+## Acceptance criteria
+
+Done means:
+
+- Capture commit to visible `Receipt` with `Scanning` chip in under 1 second on mid-range Android; OCR never blocks form input or navigation; P50 capture-to-`extracted` under 5 seconds (our target), determinate progress plus notify-me past 10 seconds.
+- No field below 0.80 confidence is ever committed to a form value; merchant, date, and total gate the submit button until human-confirmed.
+- Recomputed taxes reproduce Section 170 rounding across the GST fixture set; intrastate CGST/SGST mismatch yields a flag, never a silent fix.
+- Duplicate warnings present exactly Keep both and Keep one; auto-merge happens only within the published tolerances and writes an `AuditEvent`.
+- Every `extraction_failed` receipt lands in the scan-failed queue with a reason code and a one-tap, pre-filled manual entry path; no failed scan consumes a credit.
+
+## Sources
+
+- [NN/g: Response Times, 3 Important Limits](https://www.nngroup.com/articles/response-times-3-important-limits/)
+- [Microsoft Learn: Document Intelligence confidence scores](https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/concept/accuracy-confidence?view=doc-intel-4.0.0): the 0.80 convention.
+- [Rossum Knowledge Base: Interactive Bounding Boxes](https://knowledge-base.rossum.ai/docs/interactive-bounding-boxes-in-rossum)
+- [Expensify Community FAQ: Why is SmartScan taking a long time](https://community.expensify.com/discussion/4715/faq-why-is-smartscan-taking-a-long-time): snippet-mediated; community retired Jul 2024.
+- [Expensify Help: Duplicate Detection](https://help.expensify.com/articles/new-expensify/expenses-and-payments/Duplicate-detection)
+- [Zoho Expense FAQ: When does auto scanning fail](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/)
+- [Fyle Help: automatic match and merge tolerances](https://www.fylehq.com/help/en/articles/12135470-how-fyle-automatically-matches-and-merges-your-card-expenses)
+- [ClearTax: Rounding off tax under GST, Section 170](https://cleartax.in/s/rounding-off-tax-section-170-gst)
+- [Google Cloud Vision: OCR language support](https://docs.cloud.google.com/vision/docs/languages): 9 GA Indic languages.

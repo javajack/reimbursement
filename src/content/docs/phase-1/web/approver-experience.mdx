@@ -1,0 +1,172 @@
+---
+title: The Approver Experience
+description: "An exceptions-first inbox, a six-field decision card, one-tap channels, and delegation that never strands a claim."
+---
+
+import { LinkCard, Steps } from '@astrojs/starlight/components';
+
+Approval is where reimbursement stalls: the manager inbox is the category's admitted worst bottleneck, rejections arrive without reasons, and one bad line bounces a whole claim. This page specifies the approver surfaces: the unified inbox, the decision screen, one-tap channels, reminder cadence, and delegation. The routing machinery lives in [the approval engine](/phase-1/web/approval-engine/); this page is what it feels like to the human holding the phone.
+
+## Design for the fifteen-second reality
+
+Most expense review today is ceremonial; we design for that instead of pretending every claim gets read.
+
+| What we know | Figure | Provenance | Confidence |
+| --- | --- | --- | --- |
+| Companies reviewing only a sample of reports | 60% | PayStream Advisors, cited by AppZen (vendor) | <span class="pill pill--med">Med</span> |
+| Observed rubber-stamp review time | ~15 seconds per report | single AppZen anecdote, directional only | <span class="pill pill--low">Low</span> |
+| Cost and time to process one report | $58 and 20 minutes | GBTA, 2015-vintage, industry-cited | <span class="pill pill--med">Med</span> |
+| Average claim processing time | ~9 days | vendor content (Medius, Teampay) | <span class="pill pill--med">Med</span> |
+
+<p class="source-note">Source: AppZen blog, GBTA Foundation, vendor bottleneck content. No primary source quantifies rubber-stamping precisely; treat it as directional.</p>
+
+The answer is risk-tiered attention, not faster rubber-stamping. Default posture: a human decides every Claim, through guided review that surfaces only what needs judgment. Over half of fraud cases involve multiple perpetrators (AppZen-cited), so manager eyeballs are a weak control alone: the [rule engine](/phase-1/onboarding/policy-and-rules/) pre-screens every submission first.
+
+:::tip[The optional automation tier]
+Per-company opt-in, off by default: auto-approve zero-flag claims below a threshold, route a random 5% of auto-approvals to a human (Expensify's default, configurable), and stamp every auto-decision as system actor. Opt-in because many Indian controllers mandate 100% human approval; the default stays human-approves.
+:::
+
+## The unified inbox
+
+One queue per company: every Claim in `in_review` whose `active` ApprovalStep this approver holds, plus Advances. Claims parked in `awaiting_credits` never appear; the soft paywall holds them upstream. Ordering is exceptions-first, never raw chronology: a flat reverse-chron list is how the 15-second rubber stamp happens.
+
+| Ranking signal | Source | Effect |
+| --- | --- | --- |
+| Rule outcomes (`flag`, `warn`, `cap`, `block`) | rule evaluation at submission | flagged claims sort above clean; soft `block` firings pin to top |
+| `DUPLICATE_SUSPECT` firings | dedupe layers in [OCR and itemisation](/phase-1/capture/ocr-itemisation/) | boosts rank, shows a duplicate hint chip |
+| Amount vs the high-value threshold | company config; defaults to the top limit of the DoA grid (the wizard's 50-250 template lands it at the finance tier) | higher amounts outrank lower at equal risk |
+| SLA clock on the `active` step | 48h standard, 24h high-value | rank rises toward the deadline; breached items pin |
+| Age since submission | claim timestamps | tiebreaker, oldest first |
+
+Every row carries one of two badges: <span class="pill pill--allow">approve-recommended</span> when every rule resolved `allow`, or <span class="pill pill--flag">needs-review</span> when anything fired. Opening a needs-review claim starts guided review: the approver steps through the flags only, one per screen, acting on each (acknowledge, edit with rationale, or decide the line). Clean fields are never paraded for re-reading.
+
+Bulk approve is strictly scoped: multi-select exists only for zero-flag rows; flagged rows render greyed with their first flag as the visible exclusion reason, never hidden. This is a deliberate gap-shot: Concur restricts mass approval to the back-office Processor role, a long-standing manager complaint; Expensify's May 2025 bulk approvals are restricted to low-risk compliant reports (vendor). Ours goes to the line approver, fenced where it cannot do damage.
+
+## The decision screen
+
+Six fields, one screen, two buttons. Everything else is one tap deeper.
+
+| # | Field | Content |
+| --- | --- | --- |
+| 1 | Amount | claimed and approved-so-far totals from `amount_paise`; cap outcomes inline |
+| 2 | Merchant and date | extracted values; low-confidence fields marked |
+| 3 | Purpose | the employee's stated business purpose |
+| 4 | Receipt thumbnail | tap to zoom, pinch; multi-page tray |
+| 5 | Policy flags, plain language | every rule firing translated (microcopy below) |
+| 6 | Requester context | recent claims, duplicate hints, recent send-backs |
+
+The two primary actions are **Approve** and **Send back**, and send back requires a non-empty comment. The Claim moves to `sent_back`, the employee reads the comment verbatim, and resubmission re-enters `submitted` free (same claim, same credit). Rejection-without-reasons is a documented category pain; the required comment is the structural fix (Concur and Zoho precedent).
+
+Line-level decisions live one tap deeper: each LineItem is approved, capped, or rejected with a per-line reason, ending `approved | capped | rejected`. A Claim with any approved line proceeds, `approved_amount_paise` never exceeding `claimed_amount_paise`. One bad line never bounces nine good ones (Zoho's selective rejection is the precedent; whole-report bounce is the anti-pattern).
+
+Approvers can also fix trivial fields inline (category, cost center, project tag) with a mandatory rationale, logged as an AuditEvent with before and after values. Amounts and merchant are never approver-editable; those go back via send back. This attacks the correction loop GBTA prices at $52 and 18 minutes per error (2015-vintage figure).
+
+| Rule | Action | What the approver reads |
+| --- | --- | --- |
+| `GSTIN_FORMAT` | `warn` | "GSTIN fails its checksum. Input-tax credit cannot be claimed; reimbursement is unaffected." |
+| `PER_DIEM_CAP` | `cap` | "Meals exceed the ₹1,750/day cap for Grade L2, Tier-2 cities. Approving pays ₹1,750 of ₹2,400." |
+| `DUPLICATE_SUSPECT` | `flag` | "Same merchant and total (₹890) as a claim from 14 May. Compare side by side." |
+| `RECEIPT_REQUIRED_ABOVE` | `block` (soft) | "Receipts are required above ₹500; this ₹2,100 line has none. Attach one or reject the line." |
+
+Four of the six rule actions (`allow`, `flag`, `warn`, `cap`, `block`, `route`) appear above; `route` never surfaces as copy, it selects the chain itself. Hardness decides who sees a `block`: a hard `block` stops submission at the employee review screen and never reaches this inbox; a soft `block`, like the receipt row above, resolves the chain and surfaces as a pinned exception (the [approval engine](/phase-1/web/approval-engine/) states the same split). Amounts are illustrative policy defaults.
+
+## One-tap channels
+
+Approvers decide where they already are. The India ladder, in priority order:
+
+| Priority | Channel | When it ships | Guardrail | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 | Plain HTML email, magic-link buttons | launch | signed, single-use, amount-bounded; step-up above threshold | <span class="pill pill--build">Build</span> |
+| 2 | WhatsApp utility nudge with deep link | launch | strictly transactional copy; decision happens on web | <span class="pill pill--build">Build</span> |
+| 3 | Outlook Actionable Messages | only on M365 customer demand | org-scope registration in their tenant; plain-link fallback always works | <span class="pill pill--caution">Caution</span> |
+| 4 | Gmail AMP / one-click actions | skipped at launch | whitelisting bar an early-stage sender cannot clear | <span class="pill pill--avoid">Avoid</span> |
+
+**Email magic links.** Approve and Send back buttons are signed single-use tokens bound to the ApprovalStep, the approver, and an amount snapshot; they expire when the step resolves or after 7 days. Send back never decides from email: its button always opens the web decision screen with the comment field focused, because a send back requires a comment. Only Approve completes in one tap, and only below the high-value threshold (the top limit of the DoA grid, the same knob that tightens the SLA); at or above it, Approve steps up and opens the web decision screen instead of deciding. A used link lands on a decided-state page; replays are rejected, so a forwarded email cannot fire twice.
+
+:::danger[One-tap is a control surface]
+Every one-tap action is single-use, expiring, amount-bounded, and channel-logged. Submitter and approver must differ, enforced server-side on every decision write, whatever the channel. Each decision writes an AuditEvent: actor, role at decision time, action, before and after values, timestamp, IP and device, channel (`web`, `email_link`, `whatsapp`). Retention is 8 financial years: [audit and retention](/compliance/audit-and-retention/).
+:::
+
+**WhatsApp.** A utility-category template nudges the approver with a deep link into the specific claim; the decision happens on the web screen it opens. Utility messages cost roughly ₹0.115 to ₹0.145 plus 18% GST (BSP-quoted: Whautomate, Interakt; rates vary and Meta revises them), free inside the 24-hour service window since per-message billing began on 1 July 2025.
+
+```text
+Claim clm_…K8NP from Priya Nair is pending your approval.
+Amount: ₹4,300 across 3 line items, receipts attached.
+Waiting 26 hours of a 48-hour SLA.
+[View claim]
+```
+
+:::caution[Recategorization is a silent 6-7x price hike]
+Since 16 April 2025 Meta recategorizes utility templates carrying promotional copy to marketing without notice, at roughly 6 to 7 times the price (marketing ₹0.8631 from 1 January 2026, BSP-quoted). Nudge copy stays transaction-specific, the button deep-links to that claim only, and every copy change passes a compliance check. Quick replies (up to 10 per template) make approve-in-chat possible; we defer it, since tokenized in-chat decisions complicate audit and compliance for marginal gain.
+:::
+
+**Outlook Actionable Messages.** Built only when an M365-heavy customer demands it, registered at org scope in their tenant. The constraints are sharp (Microsoft FAQ): single-user mailboxes only, 10 actionable emails open at once, no actions on messages older than a month, gateways like Mimecast silently strip the cards. Legacy auth tokens were retired on 8 June 2026, so any build targets Action.Execute, with the magic-link fallback always working underneath.
+
+**Gmail AMP and one-click actions: skipped.** Google's sender registration expects 100+ emails per day to Gmail for weeks, near-zero spam rates, and no promotional content before whitelisting (Google and MailerSend guidance, vendor). An early-stage sender does not clear the bar, and plain HTML magic links already work in Gmail. Revisit at scale.
+
+## Reminders, escalation, and the close
+
+Cadence is admin-tunable; the cap of two nudges per item is not.
+
+<Steps>
+
+1. **Clock starts** when the ApprovalStep turns `active`: 48-hour SLA standard, 24-hour at or above the high-value threshold.
+
+2. **Mid-SLA nudge.** One reminder on the approver's preferred channel.
+
+3. **Pre-escalation warning.** The second and final reminder; never more than two per item.
+
+4. **Escalate on breach.** The step closes `escalated` and a successor step opens for the backup or delegate, then the approver's manager or the admin queue, each with a fresh clock; when the ladder is exhausted without a decision the step ends `expired` and the claim parks in the admin queue. Guards live in [state machines](/spec/state-machines/).
+
+</Steps>
+
+Reminders go out only inside configured working hours with IST-aware quiet hours; multiple pending items collapse into one daily digest per approver, WhatsApp nudges included. During period close, reminder copy carries the approve-by date, and the pending-by-approver dashboard with one-click remind-all sits in the [finance console](/phase-1/web/finance-console/), because finance chasing approvers is the documented month-end pain.
+
+## Delegation: never route to nobody
+
+A claim waiting on an absent human is a product failure, so delegation ships as three primitives plus a guaranteed floor.
+
+| Primitive | Set by | Behavior | Audit |
+| --- | --- | --- | --- |
+| Out-of-office approver | the approver, time-bound | pending and new items auto-forward to the named person's own inbox; no account access; auto-expires | forwarding logged; decisions attributed to the actual actor |
+| Standing delegate | the approver or an admin, ongoing | acts on the approver's queue (EAs, finance ops) | every action attributed "as delegate of"; step status `delegated` |
+| Admin-assigned delegation | an admin, any time | covers extended leave, departed managers, vacant roles | logged with the assigning admin |
+| Company fallback approver | admin config, mandatory | any routing that resolves to nobody lands here, flagged `rule_gap` | unroutable items surface on the admin dashboard |
+
+The admin-assigned case is a direct gap-shot: on Concur Standard, admins cannot reassign an absent approver's queue, a documented cause of stuck approvals during extended leave (Concur community). We ship it day one. Two invariants hold: delegation never creates a self-approval loophole (the acting approver must differ from the claim's maker, engine-enforced), and a Claim is never blocked at submission for routing reasons; the worst case is the fallback queue, visible and flagged, never a black hole.
+
+## The approver on a phone
+
+No trustworthy public statistic measures approver-side mobile share; submission-side surveys put mobile preference near 70% (PmarketResearch 2024, vendor-cited) <span class="pill pill--low">Low</span>. Nudges arrive by email and WhatsApp, so design as if the first render is a phone in a hallway.
+
+Layout: single-column card with amount, badge, and merchant in the first viewport; Approve and Send back pinned within thumb reach; send-back comment in a keyboard-safe bottom sheet; full-screen pinch zoom on receipts; flags as expandable rows; line-level actions behind a per-line tap; guided review one flag per screen, swipe to advance. The deep link opens the responsive web app inside WhatsApp's in-app browser with no install: the Stage 0 posture that governs capture.
+
+## Done means
+
+- The inbox never renders raw chronology; ranking is unit-tested against the signal table.
+- Bulk approve cannot include a non-`allow` item; exclusions render visibly with reasons.
+- Send back rejects an empty comment; the comment reaches the employee verbatim and the AuditEvent.
+- A claim with one `approved` and one `rejected` line proceeds at the reduced `approved_amount_paise`.
+- A reused email token changes no state; above-threshold links never decide directly.
+- WhatsApp templates pass utility review; copy changes are gated by a compliance checklist.
+- Every decision AuditEvent records channel and role-at-decision-time; submitter and approver verified distinct server-side.
+- No claim routes to nobody: fallback approver and the unroutable dashboard are covered by tests.
+
+<LinkCard title="The Approval Engine" description="Chains, thresholds, routing, and the simulate-a-claim tester behind this inbox." href="/phase-1/web/approval-engine/" />
+
+<LinkCard title="Finance Console" description="After approval: verification queue, payout batches, the period-close sweep." href="/phase-1/web/finance-console/" />
+
+## Sources
+
+- [AppZen: Manager approval process for expense reports, useless or useful?](https://www.appzen.com/blog/manager-approval-process-for-expense-reports-useless-or-useful) (vendor): 60% sample-review (PayStream), the 15-second anecdote, multi-perpetrator fraud.
+- [GBTA: How much do expense reports really cost a company?](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/) (industry association, 2015-vintage): $58/20 minutes, 19% errors, $52/18 minutes per fix.
+- [Expensify Community: Random spot checks for auto-approved reports](https://community.expensify.com/discussion/8167/introducing-peace-of-mind-with-random-spot-checks-for-auto-approved-reports) (vendor): the default 5% random audit.
+- [SAP Concur Community: Mass or bulk approval in Concur](https://community.concur.com/t5/Concur-Expense-Forum/Mass-or-Bulk-approval-in-Concur/m-p/58530) (vendor forum): bulk approval locked to the Processor role.
+- [Expensify: May 2025 product update](https://use.expensify.com/blog/may-2025-expensify-product-update-ai-receipt-detection-bulk-approvals-amp-pdf-downloads) (vendor): bulk approvals restricted to low-risk, compliant reports.
+- [Medius: Six signs your employee expense management process isn't working](https://www.medius.com/blog/six-signs-your-employee-expense-management-process-isnt-working/) (vendor): the ~9-day average claim processing figure.
+- [SAP Concur Community: Approvers on extended leave](https://community.concur.com/t5/Concur-Expense-Forum/Approvers-on-extended-leave/m-p/50) (vendor forum): no admin-assigned delegates on Standard.
+- [Zoho Expense Help: Approving reports](https://www.zoho.com/us/expense/help/reports/approving-reports/) (vendor docs): line rejection, edit-with-rationale, required reasons, bulk approve.
+- [Zoho Expense FAQ: Delegate vs out-of-office approver](https://www.zoho.com/us/expense/kb/delegation/difference-delegates-out-of-office-approver/) (vendor docs): the two delegation primitives.
+- [Whautomate: WhatsApp Business API pricing India](https://whautomate.com/whatsapp-business-api-pricing-india) (BSP, vendor): per-message utility and marketing rates plus GST.
+- [YCloud: WhatsApp template category guidelines update, 1 July 2025](https://www.ycloud.com/blog/whatsapp-api-message-template-category-guidelines-update) (BSP, vendor): the no-notice recategorization policy.
+- [Microsoft Learn: Actionable Messages FAQ](https://learn.microsoft.com/en-us/outlook/actionable-messages/actionable-messages-faq) (primary docs): Actionable Message constraints and token retirement.

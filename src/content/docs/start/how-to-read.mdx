@@ -1,0 +1,88 @@
+---
+title: How to Read This Dossier
+description: "Reading paths by role, the conventions used on every page, and how LLM coding agents should consume the spec."
+---
+
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+This dossier is two documents in one binding: a build memo a human reads cover to cover, and ground truth an LLM coding agent implements from. Nobody needs every page. Pick the path for your role below, learn the conventions once, and carry one precedence rule throughout: the canonical contracts (entity names, state names, the six rule actions, credit semantics, the capture ladder, API conventions, the pricing ladder), fixed in the Spec section starting at [/spec/data-model/](/spec/data-model/) and [/spec/state-machines/](/spec/state-machines/) (`research/THESIS-V2.md` for repo readers), are the spine, and where a narrative page and a spec page disagree, the spec page wins.
+
+## The seven sections
+
+One honest line each, in sidebar order.
+
+| Section | What it actually is |
+| --- | --- |
+| Start Here | The thesis compressed into [vision and scope](/start/vision-and-scope/), plus this manual. The only section every reader finishes. |
+| Phase 1 | The product at screen level: capture, OCR, approvals, onboarding, credits, payouts, edge cases, runbooks. Longest section, because Phase 1 is the entire build commitment. |
+| Spec | Ground truth for implementers: architecture, data model, API, state machines, config and rule schemas. Dense by design; an agent should build from it without asking questions. |
+| Phase 2 | Vendor reimbursement as overview plus deltas. Thin on purpose; nothing in it gates Phase 1. |
+| Compliance | Why the payout model needs no RBI authorization, what GST Sec 17(5) blocks, DPDP duties, 8-financial-year retention. Short and binding. |
+| Strategy | Market, competitors, pain evidence, the pricing ladder, unit economics, the verdict. Where the soft numbers live; every one carries its label. |
+| Reference | Bank file formats, the glossary, the source register. Lookup, not narrative. |
+
+## Reading paths by role
+
+<Tabs>
+  <TabItem label="Founder or evaluator">
+
+You are deciding whether this is worth building. Read [vision and scope](/start/vision-and-scope/), then Strategy in sidebar order from [the problem](/strategy/the-problem/) through [pricing](/strategy/pricing/) and [unit economics](/strategy/unit-economics/), then [the verdict](/strategy/verdict/), then the [Phase 1 overview](/phase-1/overview/) to see exactly what the conditional build buys. That sequence gives you the claim, the evidence, the judgement, and the scope, in that order.
+
+  </TabItem>
+  <TabItem label="Product or design">
+
+Read Phase 1 front to back in sidebar order: [overview](/phase-1/overview/), [personas and journeys](/phase-1/personas-and-journeys/), [end-to-end flow](/phase-1/end-to-end-flow/), the capture suite from [camera](/phase-1/capture/camera/) through [submit and track](/phase-1/capture/submit-and-track/), the web suite from [employee portal](/phase-1/web/employee-portal/) through [finance console](/phase-1/web/finance-console/), onboarding, [credits and metering](/phase-1/credits-and-metering/), [payouts](/phase-1/payouts/), [edge cases](/phase-1/edge-cases/), [ops runbooks](/phase-1/ops-runbooks/). Every page carries screen states, microcopy tables, and acceptance criteria ("Done means:"); the order matters because later pages assume earlier vocabulary.
+
+  </TabItem>
+  <TabItem label="Engineer or LLM agent">
+
+Read [vision and scope](/start/vision-and-scope/) for intent, then the spec in this order: [architecture](/spec/architecture/), [data model](/spec/data-model/), [API](/spec/api/), [state machines](/spec/state-machines/), [capture pipeline](/spec/capture-pipeline/). Then read the Phase 1 page for whatever surface you are building (the spec defines contracts; Phase 1 pages define behaviour and microcopy). THESIS contracts are ground truth; spec pages win conflicts with narrative pages.
+
+  </TabItem>
+  <TabItem label="Advisor or CA">
+
+Read Compliance in order: [regulatory map](/compliance/regulatory-map/), [money movement](/compliance/money-movement/), [data protection](/compliance/data-protection/), [audit and retention](/compliance/audit-and-retention/). Then [pricing](/strategy/pricing/) and [unit economics](/strategy/unit-economics/): prepaid credit packs raise deferred-revenue, breakage, and GST-invoicing questions that the dossier explicitly flags for CA signoff rather than answers.
+
+  </TabItem>
+</Tabs>
+
+## Conventions on every page
+
+### Pills
+
+Three pill families recur. They are visual shorthand, not decoration; each has a fixed meaning.
+
+| Family | Pills | Meaning |
+| --- | --- | --- |
+| Verdict | <span class="pill pill--build">Build</span> <span class="pill pill--caution">Caution</span> <span class="pill pill--avoid">Avoid</span> | Strategy-grade judgements, used sparingly. |
+| Confidence | <span class="pill pill--high">High</span> <span class="pill pill--med">Med</span> <span class="pill pill--low">Low</span> | How much weight a number or claim bears. |
+| Outcome | <span class="pill pill--allow">allow</span> <span class="pill pill--flag">flag</span> <span class="pill pill--block">block</span> | Rule outcomes in product and spec pages. Pills exist for three of the six canonical rule actions; `warn`, `cap`, and `route` render as plain code. |
+
+### Provenance and confidence discipline
+
+Load-bearing numbers carry one of five provenance labels: analyst, vendor, govt, primary docs, or our derivation, plus a confidence pill when soft. Vendor claims are never laundered into facts: Tally's roughly 70-80% SMB accounting share stays labelled vendor-claimed and not independently audited; the GBTA cost-to-process baseline (~$58 and 20 minutes per report) stays labelled 2015-vintage even though it is still industry-cited. Tables get a `source-note` caption. An unlabelled number is our derivation, and you should treat it with exactly that much trust.
+
+### Money and units
+
+Amounts render in ₹, never "Rs". Stored and transmitted money is always integer paise in an `amount_paise` field with a `currency` defaulting to INR; rupee figures in prose are display formatting, not the data type. Plan prices are ex-GST with 18% GST extra, stated wherever a price appears.
+
+### Links
+
+Internal links are root-relative with a trailing slash (the form used on this page). A build plugin injects the deployment base prefix; no page body hardcodes it. The one exception is the home hero, whose frontmatter links cannot use the plugin and hardcode the base.
+
+## If you are an implementing agent
+
+Treat this dossier as your system contract, with the spec section as the authoritative layer.
+
+:::danger[Binding names and precedence]
+1. Canonical names are binding. Entities like `Claim`, `LineItem`, `Receipt`, `CreditEntry`, `PayoutBatch`; states like `awaiting_credits`, `sent_back`, `extraction_failed`; the six rule actions `allow`, `flag`, `warn`, `cap`, `block`, `route`; the plan names Free, Starter, Growth, Scale; the capture stages `intake` through `review_items`. Never rename, alias, or "improve" them.
+2. Examples are normative. A worked JSON payload, SQL DDL, or HTTP exchange is part of the contract, including ID prefixes (`clm_`, `rcp_`, `cre_`) and error shapes.
+3. Conflicts resolve upward. Spec pages beat Phase 1 narrative pages; the THESIS contracts beat everything. Surface the discrepancy rather than silently picking one.
+4. Anything unspecified follows the conventions in [/spec/api/](/spec/api/) and [/spec/data-model/](/spec/data-model/): snake_case fields, prefixed ULIDs, ISO 8601 UTC timestamps, RFC 7807 errors, `Idempotency-Key` honored on POSTs, cursor pagination.
+:::
+
+:::note[Why this page exists]
+The dossier is written to be read connected: each page references what precedes it and points at what follows. This page is the joint between the two halves, the argument (Strategy, Compliance) and the build (Phase 1, Spec).
+:::
+
+If you landed here first, back up one page: [vision and scope](/start/vision-and-scope/) states what we are building and refusing to build, in about five minutes. The build memo proper begins at the [Phase 1 overview](/phase-1/overview/).

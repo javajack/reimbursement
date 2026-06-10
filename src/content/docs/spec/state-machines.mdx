@@ -1,0 +1,240 @@
+---
+title: State Machines
+description: "Transition tables with guards and side effects for claims, approval steps, receipts, payout batches, and instructions."
+---
+
+import { CardGrid, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Phase 1 runs on five machines: Claim, ApprovalStep, Receipt, PayoutBatch, PayoutInstruction. Every transition below is a guarded compare-and-swap committed in one PostgreSQL transaction together with its AuditEvent and its outbox row; if any part fails, the whole transition fails. This page is normative: where prose elsewhere disagrees with a table here, the table wins. Tables and DDL live in [/spec/data-model/](/spec/data-model/); the endpoints that fire these events live in [/spec/api/](/spec/api/).
+
+## Conventions
+
+- Actors are Membership roles (`employee`, `approver`, `finance`, `admin`) plus `system` (workers, timers, webhooks in). `auditor` is read-only and never an actor.
+- Audit event names are dotted `entity.event`, for example `claim.submitted`; they are internal. Outbound webhook types are the [/spec/api/](/spec/api/) catalog, HMAC-SHA256 signed via `X-Kharcha-Signature`; side-effect cells below cite the catalog name where an event exists.
+- Guard failures return RFC 7807 `application/problem+json`, using the [/spec/api/](/spec/api/) error catalog: illegal state transitions and stale versions return `409 invalid_state_transition`; input guards (a missing required comment, say) return `422 validation_failed`.
+- Money is integer paise in `amount_paise`. "Balance" always means the company credit balance, `sum` of the CreditEntry ledger.
+
+## Claim
+
+```text
+draft --submit--> [credit gate]
+        |-- balance covers --> submitted --> in_review --+--> approved --> in_payout --> paid --> closed
+        |-- balance short ---> awaiting_credits          |--> rejected  (terminal)
+              |  top-up: FIFO auto-drain                 +--> sent_back --resubmit (free)--> submitted
+              +--------------> submitted
+cancel from draft, awaiting_credits, submitted, in_review, sent_back --> cancelled (terminal)
+```
+
+| State | Meaning | Who can act |
+| --- | --- | --- |
+| `draft` | Being composed; receipts attach and OCR runs; nothing metered yet | employee |
+| `awaiting_credits` | Submit accepted but balance short; visible FIFO queue, NOT in the approval flow | admin (top-up), system (drain), employee (cancel) |
+| `submitted` | Credit consumed; chain snapshotted; routing in progress | system |
+| `in_review` | Exactly one ApprovalStep active | active approver; employee or admin may cancel |
+| `sent_back` | Returned with a required comment; awaiting fixes | employee |
+| `approved` | Every required step satisfied; eligible for the batch builder | finance |
+| `rejected` | Terminal decline with reason | nobody (read-only) |
+| `in_payout` | Member of an exported or executing PayoutBatch | system |
+| `paid` | Every PayoutInstruction paid; UTR on record | finance (accounting export) |
+| `closed` | Included in a posted accounting export; final terminal | nobody |
+| `cancelled` | Withdrawn pre-decision; terminal | nobody |
+
+### Transitions
+
+| From | Event (actor) | Guard | To | Side effects |
+| --- | --- | --- | --- | --- |
+| `draft` | submit (employee) | balance covers `credits_required` (1, plus 1 per additional 5 receipt images beyond 5); at least one LineItem; merchant, date, total confirmed; no claim-scope hard `block` fired and every `warn` rule's required reason typed (rule engine, see [/spec/rule-schema/](/spec/rule-schema/)) | `submitted` | CreditEntry `consumption` rows written in the same transaction (expiring-soonest first; one row per grant drawn); rule engine runs (line_item scope then claim scope); ApprovalChain snapshotted, ApprovalStep rows created; audit `claim.submitted`; webhook `claim.submitted` |
+| `draft` | submit (employee) | balance short of `credits_required`; no partial consumption (this extends THESIS's balance-0 wording to multi-credit claims where the balance is positive but short; flagged for THESIS ratification) | `awaiting_credits` | nothing consumed; FIFO position shown; one-tap "remind your admin" nudge; admin alert (threshold burn alerts, default 50/80/95/100, plus forecast ride the same channel); audit `claim.awaiting_credits`; webhook `credits.exhausted` (catalog name) |
+| `awaiting_credits` | top-up posts (system) | new balance covers the oldest queued claim; drains oldest first | `submitted` | identical to submit, plus audit `claim.submitted` carries `drained_from_queue` |
+| `submitted` | activate step 1 (system, immediate) | snapshot has at least one step; the undeletable fallback rule guarantees one, so claims are never blocked for routing reasons (worst case routes to the admin queue flagged `rule_gap`) | `in_review` | step 1 `pending` to `active`; SLA timer starts; approver notified (web, email magic link, optional WhatsApp); audit `claim.in_review` |
+| `in_review` | send_back (active approver) | comment required | `sent_back` | active step ends `sent_back`; employee notified with the comment; audit `claim.sent_back`; webhook `claim.sent_back`. No refund; resubmission is free |
+| `sent_back` | resubmit (employee) | none on credits (same claim, same credit) | `submitted` | earlier approved steps stand and the claim re-enters at the querying step, UNLESS `claimed_amount_paise` increased or category or cost center changed, in which case the chain re-resolves fresh against current policy and all steps reset; rules re-evaluate at the resubmission instant (both traces retained, see [/spec/rule-schema/](/spec/rule-schema/)); audit `claim.resubmitted` |
+| `in_review` | final approve (approver) | every non-superseded step `approved` or `skipped`; at least one line ends `approved` or `capped`; claim `approved_amount_paise` does not exceed `claimed_amount_paise` | `approved` | audit `claim.approved`; employee notified with the approved amount; webhook `claim.approved` |
+| `in_review` | reject (active approver) | comment required; hard reject | `rejected` | remaining `pending` steps end `skipped` (reason `claim_rejected`); audit `claim.rejected`; employee notified; webhook `claim.rejected`; credit not refunded |
+| `approved` | batch leaves building (system) | claim is in a PayoutBatch moving to `exported` or `executing`; payee BeneficiaryAccount verified | `in_payout` | audit `claim.in_payout` |
+| `in_payout` | all instructions paid (system) | every PayoutInstruction of the claim is `paid`; Phase 1 creates exactly one per claim | `paid` | UTR stored on the claim; audit `claim.paid`; employee notified ("₹8,040 credited, UTR N123..."); webhook `claim.paid` |
+| `paid` | export posted (finance or system) | claim included in a posted accounting export (Tally JV or CSV) | `closed` | audit `claim.closed`; record frozen under the 8 financial year retention clock (Companies Act) |
+| pre-decision states | cancel (employee on own claim, or admin) | state is `draft`, `awaiting_credits`, `submitted`, `in_review`, or `sent_back` | `cancelled` | open steps end `skipped` (reason `claim_cancelled`); active approver notified if in review; audit `claim.cancelled`; consumed credits are NOT auto-refunded, admins may post a ledger `adjustment` |
+
+Line items carry their own terminal decisions, `approved`, `capped`, or `rejected`; `cap` sets the line `approved_amount_paise` to the lesser of claimed and cap, and a claim with any approved line proceeds. Approval is the conjunction of all required steps, not the last click. `paid` means money confirmed out; `closed` means books done. Clawback after `paid` or `closed` is a separate Recovery process record, never a claim state.
+
+:::caution[Month-end exhaustion is a finance incident waiting]
+Claims in `awaiting_credits` are NOT in the approval flow. If the balance hits zero on the 28th, nothing routes until top-up, so the queue banner, the admin burn forecast ("out in ~N days"), and the employee nudge must all be loud. Pricing mechanics live in [/phase-1/credits-and-metering/](/phase-1/credits-and-metering/).
+:::
+
+## ApprovalStep
+
+```text
+pending --activate--> active --+--> approved
+   |                           |--> rejected   (claim -> rejected)
+   +--> skipped                |--> sent_back  (claim -> sent_back)
+   (self-approval, re-route,   |--> delegated --> successor step pending -> active
+    claim ended)               +--> escalated --> successor step pending -> active
+                                    (ladder exhausted without a decision --> expired;
+                                     claim parks in the admin queue)
+```
+
+Chains are serial in Phase 1: steps activate in `position` order, exactly one `active` step per claim. `delegated` and `escalated` rows are superseded by successor rows; `expired` is the terminal marker for an escalation ladder exhausted without a decision; a step is "satisfied" only when `approved` or `skipped`.
+
+| From | Event (actor) | Guard | To | Side effects |
+| --- | --- | --- | --- | --- |
+| `pending` | predecessor satisfied (system) | claim is `in_review`; no other step active | `active` | SLA timer starts (canon default 48h, 24h above the company high-value threshold); approver notified via the channel ladder; audit `step.activated` |
+| `pending` | activation check (system) | assignee equals claimant; prevent-self-approval is ON by default with skip-up | `skipped` | next step activates; if skipping would empty the chain, route to the company fallback approver instead (never auto-approve); audit `step.skipped` reason `self_approval` |
+| `pending` | claim ends or admin re-route (system, admin) | claim rejected or cancelled, or chain re-routed | `skipped` | reason `claim_rejected`, `claim_cancelled`, or `rerouted`; audit `step.skipped` |
+| `active` | approve (assignee or delegate) | actor differs from claimant, server-enforced on every channel; email magic links are amount-bounded with step-up to web above the threshold | `approved` | per-line decisions recorded (`approved`, `capped`, `rejected`); next step activates or the claim finalizes; audit `step.approved` with channel (`web`, `email_link`, `whatsapp`) |
+| `active` | reject (assignee or delegate) | comment required | `rejected` | claim moves to `rejected`; audit `step.rejected` |
+| `active` | send back (assignee or delegate) | comment required | `sent_back` | claim moves to `sent_back`; audit `step.sent_back` |
+| `active` | delegate (system window, approver, or admin) | out-of-office window, standing delegate, or admin assignment; delegate differs from claimant | `delegated` | successor step created for the delegate and activated; decisions audit-attributed "as delegate of"; audit `step.delegated` |
+| `active` | SLA breach (system timer) | reminders exhausted: one mid-SLA nudge, one pre-escalation warning, max 2, IST-aware quiet hours; an escalation target exists (reroute order: backup or delegate, then manager, then admin, ending at the company fallback approver so nothing routes to nobody) | `escalated` | successor step created and activated for the escalation target with a fresh SLA clock; both parties notified; audit `step.escalated`; webhook `approval.escalated` |
+| `active` | SLA breach, ladder exhausted (system timer) | reminders exhausted as above; the escalation ladder has no target left | `expired` | terminal marker; the claim parks in the admin queue; admin notified; audit `step.expired` |
+
+Admin re-route: chains snapshot at submission, so configuration edits never silently change an in-flight claim. The explicit "re-route in-flight" action ends every open step as `skipped` (reason `rerouted`), creates fresh steps from the new chain version, and writes `chain.rerouted` with both policy versions. Routing configuration and the simulate-a-claim tester are specified in [/phase-1/web/approval-engine/](/phase-1/web/approval-engine/).
+
+## Receipt
+
+```text
+uploaded ----> processing --+--> extracted
+   |               ^        +--> extraction_failed --retry--> processing
+   +--> queued ----+               |
+   (credits_exhausted,             +--> manual entry (image stays attached)
+    backlog, fair_use_cap)
+```
+
+| State | Meaning | Who can act |
+| --- | --- | --- |
+| `uploaded` | Bytes stored in object storage (Mumbai); perceptual hash computed | system |
+| `queued` | Accepted but not processing; `queue_reason` is `credits_exhausted`, `backlog`, or `fair_use_cap` | admin (top-up), system |
+| `processing` | OCR extraction running; async "Scanning" chip on the draft, never blocks the form | system |
+| `extracted` | Structured fields and line items with per-field confidence | employee (review) |
+| `extraction_failed` | Extraction gave up; reason recorded; manual path open | employee |
+
+| From | Event (actor) | Guard | To | Side effects |
+| --- | --- | --- | --- | --- |
+| (new) | upload (employee, or system via email-in) | `Idempotency-Key` dedupe; max payload sanity | `uploaded` | perceptual-hash duplicate match fires DUPLICATE_SUSPECT as a dismissible flag, never a block; audit `receipt.uploaded` |
+| `uploaded` | worker pickup (system) | balance above zero OR receipt belongs to a submitted claim; pre-submission scans within fair use, `max(20, 3 x remaining credits)` per month; OCR capacity available | `processing` | audit `receipt.processing` |
+| `uploaded` | guard fails (system) | any pickup guard failed | `queued` | `queue_reason` set; visible position; employee nudge when `credits_exhausted`; audit `receipt.queued` |
+| `queued` | top-up drain or capacity clears (system) | FIFO order, oldest first | `processing` | audit `receipt.processing` |
+| `processing` | extraction succeeds (system) | deterministic validation ran (GSTIN checksum, arithmetic totals, date sanity) | `extracted` | fields at confidence 0.80 or above auto-accept, lower fields flag for tap-to-fix; merchant, date, total require explicit confirmation; completion notification; audit `receipt.extracted` |
+| `processing` | extraction fails (system) | model error, timeout, or hopeless image (faded thermal, handwritten) | `extraction_failed` | per-receipt reason; one-tap manual entry pre-filled with whatever was extracted; image stays attached as evidence; no extra credit is ever consumed; audit `receipt.extraction_failed` |
+| `extraction_failed` | retry (employee, or bulk) | free, fair-use counted | `processing` | audit `receipt.retried` |
+
+:::note[Two queues, one word]
+The device-side IndexedDB outbox retries network failures; the server-side `queued` state means we already hold the bytes and processing is paused by policy. Never conflate them: the soft paywall is an application state, not a retry loop. Capture details are in the camera and pipeline specs.
+:::
+
+Receipts gate nothing downstream: a claim whose receipts all ended `extraction_failed` still submits on manual line items, and manual submissions consume a credit like any other (the meter is the submission and its workflow, not the OCR).
+
+## PayoutBatch
+
+| State | Mode | Meaning | Who can act |
+| --- | --- | --- | --- |
+| `building` | both | Finance adds approved claims; instructions `pending`; member claims remain `approved` | finance |
+| `exported` | file | Bank-format file generated and downloaded; awaiting execution in the customer's net banking | finance |
+| `executed` | file | Customer confirmed, or return file ingested; per-row outcomes applied | finance, system |
+| `executing` | api | Partner payout API calls in flight, per-instruction idempotency keys | system |
+| `completed` | api | Every instruction succeeded | system |
+| `partially_failed` | api | At least one instruction failed | finance |
+| `reconciled` | both | Every instruction terminal and amounts tie out; terminal | nobody |
+| `cancelled` | both | Abandoned while building; claims stay `approved` | nobody |
+
+<Tabs>
+
+<TabItem label="File mode (default)">
+
+```text
+building --export--> exported --confirm or return file--> executed --tie-out--> reconciled
+    +--cancel--> cancelled
+```
+
+| From | Event (actor) | Guard | To | Side effects |
+| --- | --- | --- | --- | --- |
+| `building` | export (finance) | at least one instruction; every payee BeneficiaryAccount verified (builder warns at add time, export hard-blocks); one source BankAccount per batch; file total equals the sum of instruction `amount_paise`; a matching reference stamped per row | `exported` | file rendered in the customer's bank format (see [/reference/bank-files/](/reference/bank-files/)); instructions to `dispatched`; member claims to `in_payout`; audit `batch.exported`; webhook `payout.batch.exported` |
+| `exported` | confirm or return file (finance, system) | return rows match instructions by the stamped reference | `executed` | per row: instruction to `paid` with UTR, or `failed` with reject reason; audit `batch.executed` |
+| `executed` | tie-out (system) | every instruction terminal: `paid`, or `failed` with a linked reissue or write-off; totals match | `reconciled` | claims with all instructions paid move to `paid`; audit `batch.reconciled` |
+| `building` | cancel (finance) | none | `cancelled` | instructions to `cancelled`; claims remain `approved`; audit `batch.cancelled` |
+
+</TabItem>
+
+<TabItem label="API mode (per-customer)">
+
+```text
+building --execute--> executing --+-- all paid --> completed --------+--> reconciled
+    +--cancel--> cancelled        +-- any fail --> partially_failed --+
+```
+
+| From | Event (actor) | Guard | To | Side effects |
+| --- | --- | --- | --- | --- |
+| `building` | execute (finance, one click) | the company has its own Razorpay-style payout integration configured; beneficiaries verified; per-instruction `Idempotency-Key` stamped | `executing` | instructions to `dispatched`; claims to `in_payout`; audit `batch.executing` |
+| `executing` | all success webhooks (system) | every instruction reported success | `completed` | instructions to `paid` with UTR; claims to `paid`; audit `batch.completed`; webhook `payout.batch.completed` |
+| `executing` | failure webhook (system) | at least one instruction failed after partner retries | `partially_failed` | failed instructions to `failed` and into the repair queue; successful instructions still go `paid` and their claims go `paid`; finance notified; audit `batch.partially_failed` (each failed instruction emits `payout.instruction.failed`; the batch-level audit name has no catalog event) |
+| `completed`, `partially_failed` | tie-out (system) | same as file mode | `reconciled` | audit `batch.reconciled` |
+| `building` | cancel (finance) | none | `cancelled` | same as file mode |
+
+</TabItem>
+
+</Tabs>
+
+Partial failure is per-instruction, never transactional across the batch: money that moved stays moved, successes are never rolled back, and `reconciled` means every rupee is accounted for, not that every payee was paid. Batch-builder UX and the payroll-export alternative are in [/phase-1/payouts/](/phase-1/payouts/).
+
+## PayoutInstruction
+
+THESIS-V2 fixes the entity and its `pin_` prefix; the states below are derived here and are canonical for implementation. Instructions are IMMUTABLE attempts: reissue creates a new PayoutInstruction (new `pin_`) on the same claim in a new `building` batch, with audit `instruction.reissued` linking old to new.
+
+```text
+pending --batch exports/executes--> dispatched --+--> paid (UTR stored)
+   |                                             +--> failed (terminal for this attempt)
+   +--batch cancelled--> cancelled                    |--reissue--> NEW instruction (new pin_) pending in a new building batch
+                                                      +--write-off--> cancelled (claim returns to approved)
+```
+
+| From | Event (actor) | Guard | To | Side effects |
+| --- | --- | --- | --- | --- |
+| `pending` | batch leaves building (system) | BeneficiaryAccount verified; `amount_paise` above zero; idempotency key (api) or remarks reference (file) stamped | `dispatched` | audit `instruction.dispatched` |
+| `dispatched` | return-file row or success webhook (system) | row or webhook matches the stamped reference or key | `paid` | UTR stored; when all the claim's instructions are paid the claim goes `paid` (Phase 1: exactly one instruction per claim, so immediately); audit `instruction.paid` |
+| `dispatched` | reject row or failure webhook (system) | matched by reference or key | `failed` | failure reason recorded (wrong IFSC, closed account, partner error); enters the finance repair queue; the claim HOLDS at `in_payout`; audit `instruction.failed`; webhook `payout.instruction.failed` |
+| `failed` | reissue (finance) | BeneficiaryAccount repaired and re-verified by fresh penny-drop (about ₹3 per check, Setu pricing, high confidence) | `failed` (unchanged; immutable attempt) | a NEW PayoutInstruction (new `pin_`) is created `pending` on the same claim in a new `building` batch; the claim stays at `in_payout`; audit `instruction.reissued` linking old to new |
+| `failed` | write-off (finance) | explicit reason required | `cancelled` | claim returns to `approved` for a future batch or out-of-band settlement; audit `instruction.cancelled` |
+| `pending` | batch cancelled or claim removed (finance) | batch still `building` | `cancelled` | audit `instruction.cancelled` |
+
+## Cross-machine interactions
+
+| When | Then |
+| --- | --- |
+| Every non-superseded ApprovalStep is `approved` or `skipped` | Claim moves to `approved`; the conjunction rule, never the last click alone |
+| Any step ends `rejected` (hard reject) | Claim moves to `rejected`; remaining `pending` steps end `skipped` |
+| A step ends `sent_back` | Claim moves to `sent_back`; resubmit is free and re-enters at the querying step, unless the amount increased or category or cost center changed, in which case the chain re-resolves fresh |
+| A batch leaves `building` | Member claims move to `in_payout`; their instructions move to `dispatched` |
+| An instruction ends `paid` | Its claim moves to `paid` once ALL its instructions are paid; Phase 1 creates exactly one instruction per claim, so the cascade is immediate |
+| An instruction ends `failed` | The claim holds at `in_payout`; repair reissues a NEW instruction (new `pin_`) into a new `building` batch; write-off returns the claim to `approved` |
+| A CreditEntry top-up posts | `awaiting_credits` claims and `queued` receipts drain FIFO, oldest first |
+| A receipt ends `extraction_failed` | Nothing blocks: manual line items carry the claim forward with the image attached |
+| A claim ends `cancelled` or `rejected` | Open steps end `skipped`; its unprocessed receipts leave the OCR queue |
+
+## Idempotency and concurrency
+
+Every stateful row carries an integer `version`. Transitions are single-statement compare-and-swaps; a stale writer updates zero rows and receives `409`.
+
+```sql
+UPDATE claims
+SET status = 'submitted', version = version + 1, updated_at = now()
+WHERE id = $1 AND version = $2 AND status = 'draft';
+-- 0 rows updated => 409 invalid_state_transition (application/problem+json)
+```
+
+Events are exactly-once via the transactional outbox: the state update, the AuditEvent insert, and the outbox insert commit together; the dispatcher delivers notifications and webhooks at-least-once and consumers dedupe on the `evt_` ULID, so receivers observe each event once. `Idempotency-Key` is honored on all POSTs: a replayed submit returns the original claim and cannot consume a second credit, because consumption happens at most once per claim per submit event; the `consumption` rows of that event (one per grant drawn, expiring-soonest first, each carrying its `grant_id` and `amount`) key on the claim id, and a uniqueness guard rejects any second draw. SLA and expiry timers run in the worker under the same compare-and-swap rules; a timer firing against a stale version is a no-op.
+
+:::danger[Hard invariants]
+1. No transition without an AuditEvent in the same transaction. No skipped audit, ever.
+2. No credit consumption without a claim transition, and at most one `consumption` event per claim (one ledger row per grant drawn); resubmission after `sent_back` never consumes.
+3. No instruction dispatch without a verified BeneficiaryAccount.
+4. Submitter never approves their own claim, enforced server-side on every channel.
+5. `approved_amount_paise` never exceeds `claimed_amount_paise`, per line and per claim.
+6. Capture never blocks at balance zero: uploads are accepted, queued visibly, and nothing is ever lost.
+7. Funds never touch our accounts: we render bank files and call the customer's own payout integration, nothing else.
+8. Terminal states (`closed`, `rejected`, `cancelled`, `reconciled`) are immutable; clawback and recovery live in a separate process record.
+:::
+
+<CardGrid>
+<LinkCard title="Config Schema" href="/spec/config-schema/" description="The chain templates, thresholds, SLA windows, and category sets these guards read from." />
+<LinkCard title="Rule Schema" href="/spec/rule-schema/" description="The six-action rule engine that runs inside the submit transition." />
+</CardGrid>

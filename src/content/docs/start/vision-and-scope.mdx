@@ -1,0 +1,120 @@
+---
+title: Vision and Scope
+description: "The product in full: a pure-software, two-phase reimbursement platform for India, employee-first, with the invariants that never move."
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+<span class="pill pill--build">Conditional Build</span>
+
+Kharcha is a pure-software reimbursement platform for India, built employee-first. Phase 1 ships the whole employee loop: scan a bill in the browser with a document-scanner-grade camera, get honest itemised extraction, route the Claim through maker-checker approval, and hand finance a payout file their own bank executes. Phase 2 adds vendor reimbursement and payouts, later and separately. We sell software, never touch money, and meter submissions instead of seats. This page fixes the scope, the verdict, the invariants, the pillars, the non-goals, and the 12-month bar.
+
+## What we are building
+
+One loop, end to end, every stage built to depth rather than checkbox breadth:
+
+```text
+capture       PWA camera (file-input primary, enhanced viewfinder where supported),
+              photo library, email-in; offline-tolerant upload outbox
+extract       OCR to LineItems: merchant, date, GSTIN, line amounts,
+              CGST/SGST/IGST split, total, each field with a confidence score
+review_items  employee confirms merchant + date + total, taps to fix flagged
+              fields; manual entry if extraction fails (image stays attached)
+submit        Claim -> submitted, 1 credit consumed; at balance 0 ->
+              awaiting_credits, a visible queue that drains FIFO on top-up
+approve       maker-checker chain by amount thresholds and org relationships;
+              SLA timers, reminders, escalation; sent_back -> free resubmission;
+              line items end approved | capped | rejected
+payout        approved -> in_payout via PayoutBatch: bank bulk-payment file
+              (default) or per-customer payout-API run (opt-in)
+close         paid -> closed; finance exports, reports, append-only AuditEvents
+```
+
+The PWA (the installable capture app) and the Console (employee portal, approver inbox, finance console, admin) are one React codebase. Contracts are fixed before code: money is integer paise (`amount_paise`), states are named once and reused everywhere (`awaiting_credits`, `sent_back`), and the rule engine has exactly six action verbs: allow, flag, warn, cap, block, route. The screen-level walkthrough starts at [the end-to-end flow](/phase-1/end-to-end-flow/).
+
+## Two phases, employee-first
+
+Vendor payments are the larger adjacent pool, which is precisely why they wait. Paying a vendor drags in counterparty KYC, withholding tax, and statutory clocks that employee payouts never see, and it sells through a different motion: AP-automation deals are procurement-led and slow, while employee reimbursement is felt by every employee every month and onboards self-serve with the same finance team. Deferring vendors keeps Phase 1's tax surface to GST capture and informational ITC tagging.
+
+| Dimension | Employee (Phase 1) | Vendor (Phase 2) |
+| --- | --- | --- |
+| Counterparty setup | Already on payroll; one verification-gated BeneficiaryAccount | Full KYC: PAN, GSTIN, bank, Udyam |
+| Tax surface | GST fields on LineItems; ITC_ELIGIBLE tagging, informational for finance | TDS (194C/194J), RCM handling |
+| Statutory clock | Finance's own payout cadence | MSME 45-day clock (Sec 43B(h)) |
+| Buyer motion | Finance and HR ops; days to value | AP-automation adjacency; quarters |
+
+<p class="source-note">Source: THESIS-V2 phase definition and v1 feasibility research (our derivation).</p>
+
+Phase 2 is documented as an overview plus deltas, never mixed into Phase 1 pages: see [the Phase 2 overview](/phase-2/overview/).
+
+## The verdict, carried and updated
+
+v1 of this research asked whether the product is worth building and answered conditional build. v2 carries that verdict ([the full scoring](/strategy/verdict/)) and fixes what v1 left open.
+
+- **The card pool stays closed, deliberately.** Zaggle, the listed bellwether, earns roughly 75 to 80 percent of revenue from interchange and program fees, with SaaS subscriptions near 3 percent (investor materials, vendor-stated; <span class="pill pill--low">Low</span> on the precise split). That pool sits behind RBI net-worth gates (non-bank PPI ₹5 cr rising to ₹15 cr; Payment Aggregator ₹15 cr rising to ₹25 cr) [govt, high]. The horizontal clone path is narrowing anyway: Happay sold to MakeMyTrip in Nov 2024 [primary]. We wedge; we do not clone.
+- **Monetisation moved from seats to submissions.** Seat fees plus scan meters are the documented resentment: Zoho Standard at ₹99/user/month still caps autoscans at 20 per user, Expensify gives 25 free SmartScans then charges per scan, and foreign tools price in USD at roughly 10x the India point (Fyle USD 11.99 to 14.99 per user) [vendor pricing, high]. Our plans are `Free`, `Starter`, `Growth`, and `Scale`, plus prepaid Credit Packs: unlimited seats everywhere, `Free` includes 20 submissions/company/month, and packs run from ₹499 for 50 credits to an effective ₹5.00/credit at ₹74,999. One credit is one Claim submitted into workflow, covering OCR for up to 5 receipt images, storage, approvals, payout-file generation, and exports. The full ladder lives at [pricing](/strategy/pricing/).
+- **Capture moved from WhatsApp-first to PWA-first.** WhatsApp remains the India fast-follow for intake and the approver nudge channel; the wedge UX is now a browser camera engineered to scanner grade, because that is where incumbents demonstrably fail (pillars below).
+- **What keeps it conditional.** Per-employee frequency (2 to 6 submissions/month) is an unbenchmarked estimate to validate with design partners before GTM scales; the payout model takes a written legal opinion before go-live; and the team stays services-light, or the SMB price point decays into consulting (the v1 failure mode that still applies).
+
+## What never moves
+
+:::danger[The four product invariants]
+
+1. **No cards, no float.** No corporate cards, no prepaid instruments, no lending, no holding customer funds. Either phase, ever.
+2. **Funds never touch us.** Money moves from the customer's own bank account to the employee. RBI treats a SaaS whose payout model is file hand-off or regulated-partner initiation, funds never in its own accounts, as needing no PA or PPI authorization [confirmed, high]. We still take the written legal opinion: [money movement](/compliance/money-movement/).
+3. **Bank file by default, payout API by opt-in.** The default artifact is a bulk-payment file in the customer's bank format, executed in their own net-banking. A per-customer Razorpay-style payout-API integration (about ₹1.75 to 5 per transfer, vendor pricing) is offered, never required: [payouts](/phase-1/payouts/).
+4. **Unlimited seats, metered submissions.** Users and approvers are free and unlimited on every plan. The meter is submissions per company; at balance 0 the soft paywall holds Claims in `awaiting_credits` and queues receipts, never blocking capture and never losing anything: [credits and metering](/phase-1/credits-and-metering/).
+
+:::
+
+## Five pillars, five documented failures
+
+Each pillar answers a failure we can cite, not a hunch. The complaint evidence, with its caveats (review sites were bot-blocked, so quotes are search-snippet-mediated), is assembled at [pain points](/strategy/pain-points/).
+
+| # | Pillar | The documented incumbent failure it answers | Confidence |
+| --- | --- | --- | --- |
+| 1 | **Deterministic capture**: scanner-grade PWA camera with edge detection, de-skew, glare and blur gates, the no-distortion rule | Expensify's open bug #45904: blurry receipts produce a confidently wrong "random amount" with no warning; Concur shipped a months-long iPhone 15 blurry-camera regression; no big-7 incumbent puts scanner-grade capture in its core mobile flow | <span class="pill pill--high">High</span> |
+| 2 | **Honest OCR**: async extraction with a visible `Scanning` state, field-level confidence, tap-to-fix, manual fallback that keeps the image | SmartScan officially takes "a few minutes to a few hours"; misreads force re-keying; forced hotel itemisation is the most hated data-entry task | <span class="pill pill--med">Med-High</span> |
+| 3 | **Connected approvals**: one decision card, two primary verbs (Approve, Send back with required comment), SLA timers, escalation; `sent_back` keeps the Claim visible and resubmission free | The approval black hole: the manager inbox is the admitted #1 bottleneck; rejections arrive without reasons; rejected reports vanish from AP visibility; one bad line bounces a whole report | <span class="pill pill--high">High</span> |
+| 4 | **The payout-date answer**: an approved Claim shows when money lands; `in_payout` to `paid` is employee-visible | "When do I get paid?" is unanswered in-product category-wide; 43% of employees say slow reimbursement hurts their work experience (Webexpenses UK 2024); ~9-day average claim processing | <span class="pill pill--med">Medium</span> |
+| 5 | **Config without a consultant**: 5-step wizard, demo claim approved in-wizard, simulate-before-activate, first claim in under 15 minutes | Concur's consultant-dependent configuration reputation; median SaaS time-to-value is ~1.5 days and median activation 37%, a bar to beat, not a norm | <span class="pill pill--med">Med-High</span> |
+
+<p class="source-note">Source: THESIS-V2 pain-point and onboarding canon (complaint mining plus benchmark studies, mixed confidence).</p>
+
+Pillar 1 is the deepest engineering bet and gets the deepest spec: start at [the camera](/phase-1/capture/camera/), which fixes the capture ladder (file-input as the universal primary path, the enhanced viewfinder as progressive enhancement) and the no-distortion rule.
+
+## Non-goals
+
+| Non-goal | Ruling |
+| --- | --- |
+| Corporate cards, prepaid instruments | Never, either phase |
+| Float, lending, holding customer funds | Never, either phase |
+| Travel booking | Out of scope |
+| Native apps | Not in Phase 1: PWA first; optional TWA or Capacitor wrapper later, only if Play-Store presence is demanded |
+| Vendor flows: KYC, TDS/RCM, vendor payouts, the MSME clock | Not in Phase 1: documented as Phase 2 deltas |
+| Deep ERP suites, bespoke fraud ML | Deferred until a paying deal funds them (carried from v1) |
+
+## Success in 12 months
+
+Three measured outcomes, not a feeling.
+
+1. **Design partners with real burn data.** Five to ten live companies spanning the configuration range (a 20-person agency to a 500-person field-sales company), replacing the 2 to 6 submissions/employee/month estimate with measured cohorts. The arithmetic to confirm: a 25-employee company at an estimated 4 submissions/employee/month (our derivation; frequency unbenchmarked) is about 100 submissions, roughly ₹700/month at the Growth-pack rate of ₹7.00/credit, against ₹2,475/month for Zoho Standard at 25 seats [our derivation; vendor prices, high].
+2. **Activation that beats the medians.** Demo claim approved inside the onboarding wizard in-session; first real claim within 24 hours; activation comfortably above the ~37 percent SaaS median [benchmark, medium]. The sentence we must be able to say truthfully: first claim in 15 minutes, no consultant.
+3. **Credit-burn that proves the pricing.** `Free` companies hitting the 20-submission ceiling and topping up; Credit Packs repurchased, not trialled once; the soft paywall observed queueing and draining in production without churn; gross margin holding in the modelled 67 to 90 percent band on COGS of ₹1.0 to 2.5 per submission [our derivation, medium].
+
+If measured frequency lands far below estimate, the pricing ladder reshapes before GTM spends a rupee. If capture or OCR misses the quality bar, approval polish will not save the wedge. De-risking those two levers is what the rest of this dossier is for.
+
+<CardGrid>
+  <LinkCard title="How to read this dossier" href="/start/how-to-read/" description="Reading order, page types, and the contracts that bind every page." />
+  <LinkCard title="Phase 1 overview" href="/phase-1/overview/" description="The build plan: capture, approvals, credits, payouts, onboarding." />
+  <LinkCard title="Architecture" href="/spec/architecture/" description="The TypeScript monolith, Postgres row-level security, and the OCR interface." />
+</CardGrid>
+
+## Sources
+
+- [Zaggle Q4FY24 Investor Presentation](https://ipo.zaggle.in/wp-content/uploads/2024/05/investor-presentation-zaggle-Q4FY24.pdf) (primary): interchange and program fees roughly 75 to 80 percent of revenue.
+- [Zoho Expense India pricing](https://www.zoho.com/in/expense/pricing/) (vendor): the seat-price anchor and per-user autoscan caps.
+- [Fyle / Sage Expense Management pricing](https://www.fylehq.com/pricing) (vendor): USD seat pricing, the foreign-tool price umbrella.
+- [RBI FAQs, Prepaid Payment Instruments](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812) (govt): PPI net-worth thresholds behind the card pool.
+- [RazorpayX Payouts](https://razorpay.com/x/payouts/) (vendor): the per-customer payout-API pattern and per-transfer pricing.
+- [MakeMyTrip to Acquire Happay](https://www.businesswire.com/news/home/20241118432629/en/MakeMyTrip-to-Acquire-Happay-Expense-Management-Platform-from-CRED) (primary): horizontal-category consolidation.

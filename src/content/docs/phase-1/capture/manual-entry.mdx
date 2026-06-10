@@ -1,0 +1,135 @@
+---
+title: Manual Line-Item Entry
+description: "The OCR-failed fallback: fast one-at-a-time line entry that keeps every claim inside the same workflow."
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Every field force produces bills no OCR can read: faded thermal auto-rickshaw slips, handwritten dhaba bills, a parking chit torn in half. The answer is a manual path engineered to the same standard as the scanner: it opens warm with whatever extraction salvaged, finishes a 3-line claim in under 90 seconds on the Galaxy A24-class P75 baseline device, and feeds the identical downstream workflow. Expensify keeps a permanent "Fill out details myself" escape hatch on every receipt precisely so OCR stays a draft, never a gate; we adopt that stance wholesale. This page picks up where [OCR itemisation](/phase-1/capture/ocr-itemisation/) ends, at the `extraction_failed` queue.
+
+## Three doors into one composer
+
+There is exactly one line composer. Three routes open it; none creates a special "manual claim" object. A Claim is a Claim, whatever typed its lines.
+
+| Entry point | Where it lives | What pre-fills |
+| --- | --- | --- |
+| Scan-failed queue, one tap | A Receipt lands in `extraction_failed` with a plain-language reason (blurry, several bills in one photo, unreadable print); the row offers Retry and "Enter manually". | Everything salvage recovered: merchant, date, total where legible. The image stays attached. |
+| Skip the scan | Secondary action on the capture screen: "No bill? Enter it manually". For per-diem days, mileage, and expenses that never had paper. | Nothing except smart defaults (below). |
+| Add a line in review | Inside `review_items` on a scanned bill, "Add line" appends to the extracted list for items the OCR missed. | Claim header context: merchant, date, GSTIN if extracted. |
+
+The recoverable-queue shape is borrowed deliberately from Zoho Expense's "Scan Failed Receipts" bucket, the category's best-documented failure UX (vendor docs, high confidence).
+
+## Warm start: extraction is salvage, not all-or-nothing
+
+A failed extraction usually recovers something. Whatever survived (often total and date) pre-fills the composer in neutral machine styling and turns confirmed only on human touch, the same Rossum-derived semantic as the review screen. Two invariants hold on this path:
+
+- The Receipt and its image never detach. Approvers and finance see the original photo beside hand-typed lines, and the audit trail retains it for the full retention window.
+- Failed OCR never consumes a credit; the meter charges once, at submission, however many scans died on the way.
+
+## The composer: one line at a time
+
+Lines edit in a focused bottom row-sheet (the Zoho Itemize pattern), never a dense grid. Each field is tuned for thumbs on a Galaxy A24-class device, the P75 baseline (engineering guidance, high confidence).
+
+| Field | Control | Default | Behavior |
+| --- | --- | --- | --- |
+| Amount | Numeric keypad first (`inputmode="decimal"`), fixed ₹ prefix | Empty, keypad open on focus | Paise accepted; stored as integer `amount_paise`; the claim total updates live. |
+| Category | Icon grid with labels, ordered by tenant frequency then user frequency | Most-used categories in the first row | One tap; "More" expands the admin-enabled set. |
+| Date | Date chip, calendar on tap | Today | Backdating allowed within the Policy window; older dates fire `warn` or `block` per rule hardness. |
+| Merchant | Text with merchant-memory suggestions | Suggested, never forced | Picking a known merchant also sets the learned category and GST defaults. |
+| GST details | Collapsed toggle | Off | Opens per-line taxable value, rate, and tax split; see below. |
+| Receipt | Chip: attach or pick from the claim's receipts | The failed Receipt, when arriving from the queue | Per-line association; new photos enter through the same [capture ladder](/phase-1/capture/camera/). |
+
+<Steps>
+
+1. Type the amount; the keypad is already open.
+
+2. Tap a category icon. The grid is ordered by what this company actually claims.
+
+3. Confirm or change the date chip. Today is right most of the time.
+
+4. Optionally toggle GST details or attach a bill photo to the line.
+
+5. Hit "Save and add another", or "Done" to return to the claim.
+
+</Steps>
+
+### GST fields stay behind the toggle
+
+Most field expenses are simple receipts, not tax invoices, so GST entry is opt-in per line. When toggled on: taxable value, rate, CGST and SGST in equal halves intrastate or IGST interstate, and an inclusive/exclusive switch reconciling sum-of-lines against the printed total. Recomputed tax follows Section 170 CGST Act normal rounding, per component, per invoice, so totals match the printed bill to the rupee (statutory, high confidence). A typed GSTIN runs the `GSTIN_FORMAT` checksum on entry; a failure flags the field with a re-check prompt and reaches the approver flagged, never blocks the save. If CGST and SGST disagree we flag the line; we never silently "fix" it.
+
+### Per-line receipt association
+
+A LineItem may reference any Receipt on the Claim: one hotel bill can back three lines (room, food, laundry), or every line can carry its own parking chit. Up to 5 receipt images ride inside a single claim credit; beyond that, 1 more credit per additional 5, the anti-batching fair-use guard documented in [credits and metering](/phase-1/credits-and-metering/).
+
+## Smart defaults that compound
+
+| Default | Mechanic | Why it pays |
+| --- | --- | --- |
+| Merchant memory | Per-tenant map of merchant to category and GST defaults; first entry teaches it, later entries auto-fill | Zoho's documented precedent: entry gets faster every week, zero model training (vendor docs, high confidence) |
+| Repeat last line | Copies the previous line's category, merchant, and date; clears the amount | Multi-line days (three autos, two meals) become amount-only typing |
+| Per-diem template | Inserts an allowance line computed from the `PER_DIEM_CAP` policy table (city tier by grade), with the computation shown | No bill exists; the policy table is the evidence |
+| Mileage template | Distance in, amount out at the policy's per-km rate; the line shows the formula for the approver | Kills the most error-prone manual arithmetic |
+
+Templates read the live policy tables from [policy and rules](/phase-1/onboarding/policy-and-rules/); a policy edit reprices the next line, not a release.
+
+## Validation at entry, not at rejection
+
+The same Rule engine that guards submission fires while typing, with the same six actions: `allow`, `flag`, `warn`, `cap`, `block`, `route`. Surfacing consequences in the composer is the cheapest fix for the category's most hated approval failure, the late whole-claim bounce.
+
+| While typing | Rule | Inline behavior | Outcome |
+| --- | --- | --- | --- |
+| Amount exceeds the category cap | `PER_DIEM_CAP` or any `cap` rule | Live preview: "Tier-2 lodging is capped at ₹3,500. You will be reimbursed up to the cap." The line shows its `approved_amount_paise` before submit. | <span class="pill pill--info">cap</span> |
+| Amount over the receipt threshold, no bill attached | `RECEIPT_REQUIRED_ABOVE` | Inline: "Bills are required above ₹500 for Meals. Attach a photo, or this line reaches your approver flagged." | <span class="pill pill--flag">flag</span> |
+| Date and amount collide with an existing line | `DUPLICATE_SUSPECT` | Dismissible warning with explicit verbs: Keep both / Keep one. | <span class="pill pill--flag">flag</span> |
+| Hard policy breach (disabled category, date outside the window) | Any `block` rule with hardness `hard` | Submit disabled, the rule's message shown, "Save as draft" always available. | <span class="pill pill--block">block</span> |
+
+`warn` lets the employee proceed past a soft notice, `route` only changes who approves, and `allow` is silent. Threshold amounts above (₹3,500, ₹500) are example policy values, not product constants. Routing gaps never strand a claim: if no approval rule matches, it lands in the admin queue flagged `rule_gap`. Every rule firing writes an AuditEvent with rule id, version, and input snapshot.
+
+## Vernacular and accessible by construction
+
+The composer serves the least technical employees in the company, so it is numbers-first, icons-first, and labelled in the employee's language. The mandate is demographic: 98% of India's 886M internet users consume Indic-language content and 55% are rural (IAMAI-Kantar 2024, high confidence). Hindi plus 2-3 state languages ship at launch, and the web stack deploys label fixes same-day with no store-release train.
+
+| Moment | English | Hindi |
+| --- | --- | --- |
+| Receipt needed | "Bills are required above ₹500." | "₹500 से ऊपर बिल ज़रूरी है।" |
+| Offline save | "Saved on phone. Uploads when you are back online." | "फ़ोन पर सेव हो गया। नेटवर्क आते ही अपलोड होगा।" |
+
+Accessibility is the same discipline: every control carries a screen-reader label, the category grid announces icon names, the keypad announces the running total, and the whole flow works as a linear field list without ever touching an image (AFB AccessWorld patterns, medium confidence).
+
+## Parity: a manual claim is a claim
+
+:::note[Parity is the contract]
+Manual submissions consume a credit exactly like scanned ones: the meter is the submission and its workflow, not the OCR. At zero balance a manual claim waits in `awaiting_credits` with everything else; resubmission after `sent_back` stays free; the Free plan's 20 monthly submissions count manual and scanned alike. Same rules, same approval chain, same audit trail.
+:::
+
+This is a deliberate departure from Expensify, which meters scans (25 free SmartScans a month, then $0.20) while leaving manual entries unlimited (third-party pricing trackers, medium confidence). Their meter prices OCR; ours prices workflow. An unlimited manual lane would make the meter trivially gameable and would misprice the real cost drivers, which are approvals, storage, exports, and payout-file generation, not extraction: COGS is roughly ₹1.0-2.5 per submission against pack prices of ₹5.00-9.98 per credit (our derivation). The pricing FAQ states it plainly.
+
+## Anti-abuse: manual does not mean unexamined
+
+:::caution[Finance sees the difference]
+Manual entry skips extraction, never scrutiny. `RECEIPT_REQUIRED_ABOVE` applies at full force, so typing a line instead of scanning it cannot dodge an evidence threshold. `DUPLICATE_SUSPECT` runs on date and amount collisions regardless of entry method, and perceptual-hash dedupe still covers any attached images. Every line records `entry_method` (`ocr`, `ocr_edited`, `manual`), and the [finance console](/phase-1/web/finance-console/) shows an "Entered manually" badge and filter to drive sampling. The badge informs review; it is never a penalty.
+:::
+
+## Done means
+
+- A 3-line claim entered in under 90 seconds on a Galaxy A24-class device, measured composer-open to submit-tap.
+- One tap from `extraction_failed` to a warm composer, salvage pre-filled, image attached.
+- Amount focus opens a numeric keypad; the common path needs zero free-text typing.
+- GST fields hidden by default; toggling on and off never loses entered values.
+- Per-diem and mileage templates compute from live policy tables, never hardcoded numbers.
+- Every control screen-reader labelled; the full flow completes under TalkBack.
+- Submission consumes exactly 1 credit; prior failed scans consumed none.
+- `entry_method` recorded per line and surfaced as a finance badge and filter.
+
+With lines in place, the claim moves to submission, status tracking, and the "when do I get paid" answer in [submit and track](/phase-1/capture/submit-and-track/).
+
+## Sources
+
+- [Expensify Help: Add an expense](https://help.expensify.com/articles/expensify-classic/expenses/Add-an-expense) (vendor): the permanent "Fill out details myself" escape hatch.
+- [SaaSPricePulse: Expensify pricing](https://www.saaspricepulse.com/tools/expensify) (third-party tracker): 25 free SmartScans/month, $0.20 overage, unlimited manual entries.
+- [Zoho Expense FAQ: When does auto scanning fail?](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/) (vendor): the Scan Failed queue with per-receipt manual entry and bulk retry.
+- [Zoho Expense FAQ: Itemize an expense](https://www.zoho.com/de-de/expense/kb/expenses/itemize-expense/) (vendor): row-sheet itemisation, per-line category and tax, merchant memory.
+- [ClearTax: Rounding off tax under GST, Section 170](https://cleartax.in/s/rounding-off-tax-section-170-gst) (primary docs): normal rounding per tax component per invoice.
+- [IAMAI-Kantar Internet in India 2024, via BestMediaInfo](https://bestmediainfo.com/insights/rural-india-makes-up-55-of-the-886-million-internet-users-in-2024-report-8628510) (industry body): 886M users, 98% Indic-language content, 55% rural.
+- [Alex Russell: The Performance Inequality Gap, 2026](https://infrequently.org/2025/11/performance-inequality-gap-2026/) (engineering guidance): Galaxy A24 4G as the P75 baseline device.
+- [AFB AccessWorld: Voice Dream Scanner review](https://afb.org/aw/20/5/16444) (analyst): non-visual capture and labelled-control patterns extended here to entry.

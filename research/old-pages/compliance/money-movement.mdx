@@ -1,0 +1,107 @@
+---
+title: Money Movement and RBI Licensing
+description: Why a payout-file or partner-API model needs no RBI Payment Aggregator or PPI licence, and exactly when it would.
+---
+
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+The decisive regulatory question for a reimbursement product is not "is moving money regulated" but "does the money ever sit in, pool in, or settle out of an account you own or control." If the answer is never, you are a technology provider and you need no RBI Payment Aggregator (PA) authorization and no Prepaid Payment Instrument (PPI) licence. <span class="pill pill--build">Build</span> the software-only path. The moment funds touch your account, you cross into PA or PPI territory: a Payment Aggregator needs ₹15 crore net worth at application (₹25 crore by year 3) with escrow, and a non-bank PPI needs ₹5 crore rising to ₹15 crore. Either bar is infeasible for an indie team. <span class="pill pill--high">High</span> confidence.
+
+## The line is fund handling, not money movement
+
+RBI draws the regulated/unregulated boundary precisely on who custodies the funds. A Payment Aggregator receives payments from customers, pools them, and then settles them onward after a time period. A Payment Gateway provides technology infrastructure to route and process a transaction "without any involvement in handling of funds." RBI itself states the distinction is fund handling: aggregators handle funds and need authorization under the Payment and Settlement Systems Act, 2007; gateways do not.
+
+The 2025 consolidation reinforces this. The Reserve Bank of India (Regulation of Payment Aggregators) Directions, 2025 (dated 15 September 2025, RBI/DPSS/2025-26/141) defines a PA as an entity that facilitates "aggregation of payments made by customers to the merchants ... and subsequently settles the collected funds to such merchants." That is a collections definition. A pure outbound reimbursement or vendor-payout flow is not even the textbook PA case; it falls outside the definition by exclusion.
+
+:::danger[Product invariant: funds never touch our account]
+
+Customer or payer money must never sit in, flow through, pool in, or settle out of an account the SaaS owns or controls. This is the single design choice that keeps the product outside PA and PPI scope. Codify it in the architecture, the contract, and the marketing copy, exactly as EnKash ("not a bank, does not hold a banking license") and Open do.
+
+:::
+
+## The three compliant architectures
+
+All three keep money off the SaaS balance sheet. Ship the first; offer the second as a premium tier; the third is the conservative default for the simplest customers.
+
+<Tabs>
+<TabItem label="File hand-off">
+
+The SaaS generates a bulk-payment file in the customer's bank format (ICICI CIB, HDFC ENet, Axis PayPro, SBI, Kotak). The customer uploads and authorizes it in their own corporate net banking. Money debits from the customer's own current account. The SaaS never holds funds. This is the cleanest, lowest-risk path and the right MVP choice. See [/product/payouts/](/product/payouts/) for the file formats.
+
+</TabItem>
+<TabItem label="Regulated partner API">
+
+A licensed partner (RazorpayX, Cashfree Payouts, Open or Zwitch, Decentro) initiates the NEFT, RTGS, IMPS or UPI payout. Funds debit from a current or escrow account that the partner holds and controls (RazorpayX sits on a Razorpay-managed current account at partner banks like ICICI, Axis, RBL, YES). The SaaS is just an API caller and orchestrator. The regulatory burden, and the recipient KYC, sit with the partner.
+
+</TabItem>
+<TabItem label="Connected banking">
+
+The SaaS connects to the customer's own current accounts across multiple banks and orchestrates the transfer; the debit still happens on the customer's account. EnKash and Open run this model and state plainly that they are not banks and do not hold customer funds. Useful for the multi-source-account router (map travel vs vendor vs petty-cash to a debit account).
+
+</TabItem>
+</Tabs>
+
+| Architecture | Who custodies funds | RBI licence needed | Indie fit |
+| --- | --- | --- | --- |
+| File hand-off | Customer's own bank account | None | Best (MVP) |
+| Regulated partner API | The licensed partner | None (partner holds it) | Good (premium tier) |
+| Connected banking | Customer's own current account | None | Good |
+| Pool or pre-fund to your account | You | PA (or PPI) | Avoid |
+
+<p class="source-note">Source: RBI PA/PG Guidelines 2020 and PA Directions 2025; research synthesis (govt primary + law-firm analysis, high confidence).</p>
+
+## When a licence or escrow actually triggers
+
+A licence becomes mandatory the instant you hold third-party money. There are two distinct triggers; do not conflate them.
+
+| Trigger | Regime | Threshold |
+| --- | --- | --- |
+| You collect or pool customer funds before disbursing | Payment Aggregator | Net worth ₹15 cr at application, ₹25 cr by end of year 3; mandatory escrow with one scheduled commercial bank |
+| You issue a wallet or card you load and disburse from | Non-bank PPI | Incorporated in India, net worth ₹5 cr at application rising to ₹15 cr by the third financial year, own escrow |
+
+<p class="source-note">Source: AuthBridge / RBI PA Directions 2025 and RBI PPI FAQ (govt primary + analyst summary, high confidence).</p>
+
+Non-bank PAs must apply for a Certificate of Authorisation under the PSS Act, 2007, at least 30 days before starting business, keep collected funds in escrow, and never mix operational funds with customer transaction funds. The net-worth bar alone rules this out for an indie team, which is why the compliant path is to design so the trigger never fires.
+
+:::caution[The enforcement precedent confirms the line]
+
+In December 2022 RBI barred Razorpay, Cashfree, Stripe, Paytm and PayU from onboarding new merchants for their collections (PA) business pending final licences. RazorpayX, the payouts and current-account product, kept onboarding throughout. The restriction targeted collections aggregation, not outbound payouts. Razorpay received final PA approval in December 2023.
+
+:::
+
+## Gotchas that quietly break the exemption
+
+The exemption survives only if you have zero dominion over the money at every step. Five ways teams lose it:
+
+<Steps>
+
+1. **Nominal pass-through or sweep.** An escrow, nodal, or pooled account in the SaaS's name counts as handling funds even if a partner bank holds it, because control, not custody location, is the test. "It only sits there for a second" is still pooling. <span class="pill pill--block">Block</span>
+
+2. **Pre-funding to your account.** Asking customers to top up a SaaS-controlled wallet so payouts run faster re-characterizes you as a PA or a PPI issuer. The convenience is not worth the licence.
+
+3. **Riding a partner without contractual clarity.** When a regulated partner initiates payouts, the partner (not you) must KYC the recipients. Your contract must state you never have dominion over funds.
+
+4. **Cross-border reimbursements.** Paying overseas employees or vendors brings FEMA in addition to the PA rules: purpose codes, AD-bank involvement, and possibly a PA Cross Border (PA-CB) licence for the partner (the 2025 Directions cap PA-CB outward at ₹25 lakh per transaction; primary, medium confidence pending re-verification against the live Directions). This is a different regime; do not assume the domestic answer carries over.
+
+5. **Closed-loop credits going cashable.** Credits usable only inside your platform are not a payment system. The moment that value becomes cashable or transferable to third parties, PPI rules bite.
+
+</Steps>
+
+## What this means for the build
+
+Ship file hand-off first, add a regulated-partner API tier later, and never design a flow where reimbursement money lands in a SaaS-owned account or wallet. Note one honest caveat: the 2025 Directions do not contain an explicit positive carve-out naming "payout-only" platforms. The conclusion that they fall outside PA scope is by exclusion, and it is the consensus reading of multiple law firms (Saraf and Partners, Trilegal, AZB), but absence of an explicit safe harbour means you should get a written legal opinion confirming your chosen architecture is outside PA scope before go-live. The cost of being wrong (operating an unauthorized payment system under the PSS Act) is severe.
+
+For how this constrains the disbursement design, see [/product/payouts/](/product/payouts/). For where this sits in the broader compliance picture, see [/compliance/regulatory-map/](/compliance/regulatory-map/). For the failure modes if the boundary is crossed, see [/business/risks/](/business/risks/).
+
+## Sources
+
+- [Reserve Bank of India (Regulation of Payment Aggregators) Directions, 2025 (full text)](https://www.fidcindia.org.in/wp-content/uploads/2025/09/RBI-PAYMENT-AGGREGATORS-DIRECTIONS-15-09-25.pdf) (primary)
+- [RBI Guidelines on Regulation of Payment Aggregators and Payment Gateways, 2020](https://gujfed.com/circular/2020-Circular/17.03.2020%20Guidelines%20on%20Regulation%20of%20Payment%20Aggregators%20and%20Payment%20Gateways.pdf) (primary)
+- [Prepaid Payment Instruments (PPIs) FAQ](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812) (govt)
+- [RBI's Guidelines on PA and PG (fund-handling distinction)](https://trilegal.com/knowledge_repository/rbis-guidelines-on-regulation-of-payment-aggregators-and-payment-gateways/) (primary)
+- [Analysis of the RBI PA Directions, 2025](https://sarafpartners.com/rbi-issues-the-reserve-bank-of-india-regulation-of-payment-aggregators-directions-2025/) (primary)
+- [RBI Payment Aggregator Master Direction 2025: key details (net worth, deadlines)](https://authbridge.com/blog/rbi-payment-aggregator-master-direction-2025/) (analyst)
+- [RBI Compliance for Payment Aggregators and Gateways (authorization trigger, escrow)](https://enterslice.com/learning/rbi-compliance-for-payment-aggregators-and-gateways/) (analyst)
+- [RBI asks Razorpay, Cashfree to pause onboarding new customers (Dec 2022)](https://startup.outlookindia.com/sector/fintech/rbi-asks-razorpay-cashfree-to-pause-onboarding-of-new-customers-news-6907) (analyst)
+- [RazorpayX Payouts (partner fund-flow architecture)](https://razorpay.com/docs/x/payouts/) (vendor)
+- [EnKash Connected Banking ("not a bank, no banking license")](https://www.enkash.com/connected-banking) (vendor)

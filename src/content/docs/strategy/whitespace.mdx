@@ -1,0 +1,79 @@
+---
+title: The Whitespace and the Wedge
+description: "Where a pure-software, employee-first product wins: the seven-part wedge and why it holds."
+---
+
+The whitespace in Indian expense software is not a missing feature category; it is the core loop itself, done badly by everyone for structural reasons. Every documented, unresolved pain in [the pain-point evidence](/strategy/pain-points/) sits inside capture, OCR, approval, payout visibility, onboarding, or pricing: exactly the loop Phase 1 builds end to end. The v2 wedge is therefore seven specific, demonstrable product claims, each mapped to a complaint incumbents have left open for years, not a clever adjacent market. <span class="pill pill--build">Conditional Build</span> here.
+
+## Why the gap is structural
+
+Three forces hold it open, and none of them requires out-spending anyone.
+
+**Card-led players subsidise software with interchange and chase the mid-market.** Roughly 75-80% of Zaggle's net revenue was card interchange per 9MFY24 disclosures; program fees grew 69.5% to ₹545.6 cr in FY25 (filing-derived, high), with SaaS subscriptions around 3% of the mix <span class="pill pill--high">High</span>. Happay, Volopay, EnKash and Kodo run the same logic: the expense software is bait, the card is the business. A 30-person agency that wants ₹40,000 of monthly reimbursements processed and exported to Tally generates almost no interchange, so nobody in that camp is incentivised to perfect a bill-scanning camera or a 15-minute onboarding for it. You cannot be undercut on a price the other side is not trying to charge.
+
+**Zoho anchors the price floor but under-invests in capture and field UX.** Zoho Expense is free up to 3 users, then ₹99/user/mo Standard and ₹199 Premium (₹79/₹149 annual, min 5 users, +GST) [vendor page, high]. That kills any "same thing, cheaper" play. But the evidence shows where Zoho stops: 20 autoscans per user per month even on paid tiers, a KB that admits autoscan fails on wrinkled or faded receipts, click-heavy policy configuration, GL-mapping complaints, and an autoscan language list of 14-15 languages with zero Indic scripts [primary vendor KB, high]. The opening against Zoho is not price; it is capture quality, OCR honesty, and field-staff reality.
+
+**Global tools are USD-priced and consultant-configured.** Fyle (now Sage Expense Management) lists at USD 11.99-14.99/user/mo, roughly 10x the India software point [vendor, high]. Concur runs ~USD 9/user/mo plus ~USD 8-9 per report on quote-only pricing, with multi-country implementations reported at 6-12 months [mixed, medium]. None of them is Tally-native, and Tally holds an estimated 70-80% of Indian SMB accounting [vendor-claimed, not independently audited] <span class="pill pill--med">Medium</span>. A product whose revenue depends on implementation complexity cannot pivot to "first claim in one session, no consultant"; that is our lane by construction.
+
+:::tip[The shape of the opening]
+Software-only, INR-priced, employee-first reimbursement where the capture-to-payout loop actually works: document-scanner capture, honest OCR, approvals that never go dark, a payout date, self-serve onboarding, and pricing that meters submissions instead of people. Card-led players will not fund it; Zoho will not re-architect for it; global suites cannot price for it.
+:::
+
+## The seven-part wedge
+
+Each plank attacks a documented, unresolved failure. The evidence is mined from review sites, vendor KBs and bug trackers (snippet-mediated where sites were bot-blocked; treat quotes as paraphrase-risk).
+
+| # | Plank | The unresolved evidence | Specified in |
+|---|-------|------------------------|--------------|
+| 1 | Deterministic document-scanner capture in a PWA | No big-7 incumbent ships edge-detection capture in its core mobile flow; they coach users ("flat, dark surface, hold steady"). Concur shipped a months-long iPhone 15 blur regression; users switched phones [high] | [/phase-1/capture/camera/](/phase-1/capture/camera/) |
+| 2 | Honest OCR, never silently wrong | Expensify bug #45904: blurry receipts yield a confidently wrong "random amount" with no warning flag; SmartScan officially takes "a few minutes to a few hours" [high] | [/phase-1/capture/ocr-itemisation/](/phase-1/capture/ocr-itemisation/) |
+| 3 | Connected approvals: per-line decisions, escalation on by default, no black hole | Manager inbox is the admitted #1 bottleneck (Fyle's own blog); rejections arrive without reasons; rejected reports vanish from AP view; one bad line bounces the whole report [high] | [/phase-1/web/approval-engine/](/phase-1/web/approval-engine/) |
+| 4 | The payout-date answer | "When do I get paid?" is unanswered in-product category-wide; 43% of UK employees say slow reimbursement hurts their work experience (Webexpenses 2024); ~9-day average claim processing [medium] | [/phase-1/payouts/](/phase-1/payouts/) |
+| 5 | Onboarding to first claim in one session, no consultant | Concur implementations run 6-12 months; Zoho config is click-heavy per G2; median SaaS time-to-value is ~1.5 days. We target the demo claim in-wizard, first real claim in under 24h [medium] | [/phase-1/onboarding/company-onboarding/](/phase-1/onboarding/company-onboarding/) |
+| 6 | Unlimited seats, metered submissions, soft paywall | Per-user fees plus scan meters (Expensify 25 free SmartScans/mo then $0.20; Zoho 20 autoscans) plus Trustpilot-documented billing traps are the loudest complaint cluster [high] | [/phase-1/credits-and-metering/](/phase-1/credits-and-metering/) |
+| 7 | India depth: GST line-itemisation, Indic OCR path, Tally JV export, WhatsApp-first approvals | GST/ITC-grade capture rarely automated (vendor claim: up to 60% of T&E ITC lost, directional); Zoho autoscan supports zero Indic languages while Cloud Vision has 9 GA; no clean Tally JV export; finance lacks search-by-amount and MIS [medium-high] | [/spec/integrations/](/spec/integrations/) |
+
+<p class="source-note">Sources: Expensify GitHub issues, Concur and Apple support forums, Zoho KB (primary, high); G2/Capterra/Trustpilot via search snippets (medium); India ITC and cycle-time stats are vendor marketing (directional). Full corpus in research-pain-points-software.md.</p>
+
+Three planks deserve a sentence each. Plank 1 is the demo: the capture ladder (universal file-input primary, enhanced viewfinder as Android-first progressive enhancement) with a `quality_gate` that prompts retake instead of letting a blurry bill through. Plank 2 is the trust claim: field-level confidence, auto-accept only at or above 0.80, manual fallback that keeps the image as evidence; the literal opposite of bug #45904. Plank 3 is the workflow claim: LineItems individually end `approved`, `capped` or `rejected`, so a claim with `approved_amount_paise` below the claimed amount still proceeds, `sent_back` carries a required comment and resubmission is free, and SLA timers escalate by default instead of by admin configuration nobody enables.
+
+Plank 6 is pricing as product, not a discount. A 25-employee company at an estimated 4 submissions/employee/month (our derivation; frequency unbenchmarked) runs ~100 submissions, about ₹700/mo on the Growth pack versus ₹2,475/mo on Zoho Standard seats (which still cap autoscans). Break-even density versus Zoho is ~14 submissions/user/month, far above our estimated reality, and per-employee frequency (2-6/mo) is to be validated with design partners <span class="pill pill--med">Medium</span>. When credits hit zero, nothing is lost: uploads queue, submissions land in `awaiting_credits`, employees get a one-tap nudge. The plan names and full ladder (`Free`, `Starter`, `Growth`, `Scale`, plus Credit Packs) live in [pricing](/strategy/pricing/).
+
+## Positioning map
+
+| Axis | This product | Zoho Expense | Card-led (Zaggle, Happay, Volopay) | Concur |
+|------|--------------|--------------|-------------------------------------|--------|
+| Capture quality | Document-scanner PWA: edge detection, de-skew, quality gate, offline outbox | File-input + autoscan; KB-documented failures on wrinkled/faded bills | Optimised for card-feed matching, not bill scanning; chronic mobile reliability complaints | Months-long iPhone 15 blur regression; coaching over engineering |
+| OCR honesty | Field-level confidence, flag-don't-guess, free manual fallback | 20 autoscans/user/mo; zero Indic languages | OCR is secondary to card data | Forced hotel itemisation is the most hated task in its forums |
+| Pricing model | Unlimited seats; metered submissions; soft paywall that queues | ₹99-199/user/mo + autoscan caps | Free software subsidised by interchange and float | ~USD 9/user/mo + ~USD 8-9/report, quote-only |
+| India depth | GST line split, GSTIN validation, Tally JV export, WhatsApp approvals, Indic OCR path | India-priced, GST-aware, but no Indic OCR, weak Tally story | India-native but card-first; MIS and disbursement complaints | USD-priced, not Tally-native, consultant-dependent |
+| Time to first claim | One session: 5-step wizard ends with an approved demo claim | Self-serve but click-heavy config | Sales-led onboarding tied to card issuance | 6-12 month implementations reported |
+
+<p class="source-note">Sources: vendor pricing pages (high); review-site cons and forum threads (snippet-mediated, medium); our product columns are spec commitments, argued in the linked Phase 1 pages.</p>
+
+## Why it holds 18-24 months, and what erodes it
+
+The wedge persists because copying it is off-strategy for each incumbent, not because it is secret. Zaggle and the card-led camp would have to fund deep software for customers who generate no interchange; their FY25 revenue mix says they will not. Zoho would have to abandon per-seat pricing and autoscan metering across a suite priced that way everywhere, and re-engineer capture it currently treats as a KB-documented user problem. Concur and the global suites earn on implementation complexity and USD seats; "no consultant, ₹-priced, Tally-native" is a strategy reversal, not a feature release. That misalignment buys roughly 18-24 months of differentiated runway [our derivation, medium].
+
+:::caution[What erodes it, honestly]
+Every plank is individually replicable. Expensify's open-source repo shows active fixes to the exact bugs we cite; Zoho could add Indic OCR by adopting Cloud Vision's 9 GA Indic languages; jscanify is MIT-licensed, so scanner-grade capture is a quarter of work for any funded team. Complaint mining also over-samples angry users: these products keep broadly positive ratings, so the pains are wedges, not proof of collapse. The durable assets are the stack of all seven planks, the pricing architecture (which incumbents cannot adopt without cannibalising themselves), and earned trust in "never silently wrong". Re-verify each "unsolved" claim at build time.
+:::
+
+:::danger[The invariant under the wedge]
+The wedge is software, never money. Payouts are a bank bulk-file the customer executes, or an optional per-customer payout API; funds never touch our accounts. That keeps us outside RBI PA/PPI authorization (PA net worth ₹15 cr rising to ₹25 cr; non-bank PPI ₹5 cr rising to ₹15 cr) [confirmed, high]. Crossing it converts a software wedge into a licensing problem.
+:::
+
+This page is the why; the rest of the dossier is the how. The competitive detail behind each camp is in [competitors](/strategy/competitors/), the monetisation mechanics in [pricing](/strategy/pricing/), and the scored go/no-go, with the conditions that would change it, in [the verdict](/strategy/verdict/).
+
+## Sources
+
+- [Expensify/App GitHub issue #45904](https://github.com/Expensify/App/issues/45904) (primary): blurry receipt produces a random amount with no warning flag.
+- [Apple Support Communities, Concur iPhone 15 blur thread](https://discussions.apple.com/thread/255243765) (primary): users switched phones to work around capture failure.
+- [Zoho Expense KB, autoscan failure modes and language list](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/) (primary vendor): wrinkled/faded failures; no Indic languages.
+- [Fyle blog, expense approval bottlenecks](https://www.fylehq.com/blog/expense-approval-bottlenecks) (practitioner): manager inbox as the admitted #1 bottleneck.
+- [Corpay relay of Webexpenses 2024 survey](https://www.corpay.com/resources/blog/employee-expense-reimbursement) (secondary): 43% say slow reimbursement hurts work experience.
+- [SaaSPricePulse, Expensify cost breakdown](https://www.saaspricepulse.com/tools/expensify) (secondary): 25 free SmartScans/mo, $0.20 overage, per-user tiers.
+- [Trustpilot, Expensify reviews](https://www.trustpilot.com/review/www.expensify.com) (review corpus, snippet-mediated): billing and cancellation complaints.
+- [Spendbase, SAP Concur pricing](https://www.spendbase.co/vendors/sap-concur/) (secondary): ~$8-9 per report, quote-only.
+- [hrsoftwarehyderabad.com, ITC loss claim](https://hrsoftwarehyderabad.com/expense-management-software/) (vendor marketing, directional): up to 60% of T&E ITC lost.
+- [GBTA, expense report cost baseline](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/) (industry body, 2015-vintage, still cited): $58 and 20 min per report; 19% error rate; $52 + 18 min per fix.

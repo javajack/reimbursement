@@ -1,0 +1,233 @@
+---
+title: Operations Runbooks
+description: "How a two-person team runs this in production: support tiers, triage runbooks, billing ops, and the monitoring that matters."
+---
+
+import { LinkCard, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Two people cannot out-staff production; they can only out-design it. The v1 feasibility study named the 2-person ceiling the binding risk of this whole venture: OCR long-tail edge cases, compliance, and support for many small accounts can exceed a tiny team's capacity and push it into unsustainable services work (our adversarial synthesis, carried unchanged into v2). So Phase 1 ops runs on three rules: every error state self-serves before it tickets, every runbook is triggered by a named metric rather than by a customer's anger, and every assisted ticket gets a root-cause tag that feeds the backlog. The edge-cases catalogue that precedes this page is the input; this page is what we actually do when one fires.
+
+## Support model
+
+Two channels, deliberately. A WhatsApp Business number, because Indian SMB admins already live there: replies inside the 24-hour service window are free, and template-initiated messages cost ₹0.115-0.145 plus 18% GST <span class="pill pill--high">High</span> (Meta/BSP pricing). And a support email, the durable channel for billing, data requests, and anything with attachments. No phone line, no chat-widget SLA theatre. In-product, every error state links to its own doc page, so the first responder is the documentation.
+
+| Severity | Looks like | First response | Posture |
+| --- | --- | --- | --- |
+| S1 | Bank rejects a payout file; credits paid but not granted; platform down | 2 business hours; best-effort pager off-hours | Both founders until mitigated |
+| S2 | OCR failure spike; one company's approvals all stuck; WhatsApp channel dead | Same business day | Workaround first (manual entry, email fallback), root fix after |
+| S3 | One stuck claim; config how-to; invoice correction | Next business day | Doc link plus assisted fix |
+| S4 | Feature requests; cosmetic bugs | Weekly triage | Backlog with root-cause tag |
+
+<p class="source-note">Response targets are our own commitments, sized to two people on IST business hours (Mon-Sat, 09:00-19:00). We publish them and we do not sell 24x7.</p>
+
+What is self-serve versus assisted is a product decision, not a staffing one:
+
+| Self-serve (the product absorbs it) | Assisted (a human answers) |
+| --- | --- |
+| Onboarding wizard, approval-matrix edits with simulate-a-claim | Bank-file rejections and per-bank format puzzles |
+| Credit purchase, auto-top-up, GST invoice download, burn forecast | Billing disputes, invoice reissue, refunds-by-exception |
+| CSV import fix-in-grid, magic-link resend, manual entry after OCR failure | `rule_gap` escalations, re-routing in-flight claims |
+| Failure queues with per-receipt reasons and bulk retry | DPDP data requests, anything legal |
+
+:::caution[Support burden is the binding risk]
+Carried from v1: the predictable failure mode for an indie team is the OCR and integration long-tail creating unbounded support load for two people. The countermeasure is mechanical: every assisted ticket gets a root-cause tag, and any tag hit three times in a month becomes a product fix, a doc page, or a guardrail. Support is a defect detector, never a department.
+:::
+
+## Runbooks
+
+Six runbooks cover what actually breaks. Each opens with the metric that triggers it; if no metric fires and no ticket exists, there is no incident.
+
+### 1. OCR failure spike
+
+**Trigger:** `extraction_failed` above 10% of receipts on a 30-minute window, OCR P95 over 30 seconds, or provider error rate over 5%. Baseline failure is low single digits: clean-print accuracy runs 94-99% vendor-stated, falling to the low-to-mid 80s on thermal and crumpled paper <span class="pill pill--med">Medium</span>.
+
+<Steps>
+
+1. Slice failures by taxonomy: provider errors (5xx, timeouts), deterministic-validation failures (GSTIN checksum, arithmetic totals, date sanity), or image-quality rejects. The split decides the branch.
+
+2. Provider errors: check the provider status page. The OCR layer is provider-agnostic by design (Gemini Flash family or Claude Haiku class behind one interface); flip the fallback engine via config and requeue receipts stuck in `processing`.
+
+3. Validation failures clustering on one merchant or layout: an engine flip will not help. Sample 20 failures, name the pattern (new POS template, regional-language layout), ship a prompt or validator fix.
+
+4. If queue age P95 exceeds 10 minutes, post the in-app banner on capture and review screens: "Scanning is slow right now. Your bills are safe. You can enter line items manually; the image stays attached." Manual entry consumes the same single credit; failed OCR never consumes an extra one.
+
+5. On recovery, bulk-retry the failure queue (a first-class screen with per-receipt reasons, specified in [OCR and itemisation](/phase-1/capture/ocr-itemisation/)), watch the rate fall back under threshold, write the post-incident note.
+
+</Steps>
+
+### 2. Stuck claim, stuck approval
+
+**Trigger:** any ApprovalStep `active` beyond the 48-hour SLA (24 hours above the high-value threshold), claims flagged `rule_gap` in the admin queue, or the ticket "my claim is stuck".
+
+<Steps>
+
+1. Pull the Claim by ID. Its AuditEvent timeline shows every transition, reminder, escalation, and rule firing; most stuck claims are diagnosed in one glance.
+
+2. Identify the live ApprovalStep and its status. Check whether the mid-SLA nudge and pre-escalation warning fired (max 2 reminders per item) and whether auto-escalation already moved it.
+
+3. Approver absent: confirm delegation or out-of-office cover. If neither, escalate down the ladder: primary, then backup or delegate, then manager or admin. The company fallback approver guarantees nothing routes to nobody.
+
+4. Routed wrong: use the admin re-route action. Claims snapshot their chain at submission, so fixing the approval matrix never silently moves in-flight claims; re-routing is explicit and audited (see [the approval engine](/phase-1/web/approval-engine/)).
+
+5. Root cause is a matrix hole: claims are never blocked at submission for routing reasons, they land in the admin queue flagged `rule_gap`. Fix the matrix, verify with simulate-a-claim, then re-route the flagged claims.
+
+6. Tag the root cause: approver-absence, matrix-gap, or notification-failure. Notification failures (bounced email, dead template) hand off to runbook 6.
+
+</Steps>
+
+### 3. Payout-batch incident
+
+**Trigger:** a bank rejecting an exported file (always S1), a PayoutBatch sitting in `exported` for 3 business days without confirmation, or an API-path batch ending `partially_failed`.
+
+<Tabs>
+
+<TabItem label="Bank-file path (default)">
+
+<Steps>
+
+1. Get the bank's exact rejection text from the customer; a net-banking screenshot is enough. Map it against the per-bank error table in [bank file formats](/reference/bank-files/). Usual suspects: IFSC format, beneficiary-name length or special characters, header totals disagreeing with detail rows, amounts in rupees where the format wants paise.
+
+2. Repair at the source: fix BeneficiaryAccount fields or the bank-format template, never the file by hand. Hand-edited files cannot be regenerated or audited.
+
+3. Build a corrective batch from the same claims (they hold at `in_payout` through the repair) and export again. `amount_paise` on an instruction is immutable; corrections create new PayoutInstructions, so the trail survives.
+
+4. Partial execution: import the bank's return file. Instructions with UTRs move their claims from `in_payout` to `paid`; instructions without UTRs go back for re-batching. The batch is `reconciled` only when every instruction is resolved.
+
+5. Comms beat tickets: if payday slips, tell the company admin a day early. "When do I get paid" is the category's most asked, least answered question; do not recreate it (see [payouts](/phase-1/payouts/)).
+
+</Steps>
+
+</TabItem>
+
+<TabItem label="Payout-API path (optional)">
+
+<Steps>
+
+1. List failed PayoutInstructions with gateway error codes: invalid account, IMPS limit, beneficiary bank downtime.
+
+2. Data failures: fix the BeneficiaryAccount (verification-gated) and reissue only the failed subset; each reissue is a new PayoutInstruction on the same claim in a fresh batch.
+
+3. Gateway incident: wait it out, or fall back to a bank file for the residue. The file path is always available by design.
+
+4. Mark the batch `reconciled` when every instruction is terminal.
+
+</Steps>
+
+</TabItem>
+
+</Tabs>
+
+:::danger[Funds never touch our accounts]
+We debug files and API calls; we never move money. The default rail is a file the customer executes in their own net-banking, and the optional payout API runs on the customer's own gateway account. That invariant keeps us outside PA/PPI authorization per RBI's framework (confirmed, high; written legal opinion before go-live).
+:::
+
+### 4. Credit and billing ops
+
+**Trigger:** payment-confirm-to-credit-grant lag over 5 minutes, a failed auto-top-up, a GST invoice complaint, a refund request, or a company burning over 3x its trailing 4-week average.
+
+<Steps>
+
+1. "Paid but no credits": find the payment in the gateway dashboard, then the matching `pack_purchase` in the CreditEntry ledger. If the webhook died, replay it or grant manually via `adjustment` with the payment reference in the memo. This lag is the most trust-sensitive number in the product: the queue it unblocks is someone's reimbursement money (see [credits and metering](/phase-1/credits-and-metering/)).
+
+2. Failed payment: nothing granted, nothing owed; the buyer retries. Auto-top-up failures alert the admin and disable after three consecutive failures. Never retry silently into a corporate card; the auto-recharge surprise is OpenAI's most reliable complaint generator (community threads, high).
+
+3. GST invoice wrong (GSTIN, legal name, address): issue a credit note plus a corrected invoice, never edit an issued one. Prepaid packs are deferred revenue with breakage; the recognition and GST flow carries a standing CA-signoff caveat.
+
+4. Goodwill credits: `promo_grant`, capped at 50 credits per company per quarter, always logged with a reason, reviewed in the weekly digest. Uncapped goodwill quietly erodes the ₹4/credit floor.
+
+5. Refunds: packs are non-refundable with 12-month validity, stated at checkout. Documented exceptions only: duplicate charge, a billing error on our side, or a fully unused pack within 7 days of purchase. Everything else resolves in credits, not cash.
+
+6. Expiry care: the balance widget shows the expiry date and a reminder goes out 30 days before it. Expiry complaints are predictable; pre-empt them.
+
+</Steps>
+
+### 5. DPDP data request
+
+**Trigger:** not a metric, a register. Any access or erasure request, from a company admin or directly from an employee, opens an entry the same day.
+
+<Steps>
+
+1. Log it: date, requester, company, type. We are the data processor and the employer is the fiduciary, so a direct employee request is acknowledged and routed through the company admin within 1 business day.
+
+2. Access: generate the export (profile, Memberships, Claims with LineItems, Receipts, AuditEvents naming the user) and deliver it to the admin via an expiring link.
+
+3. Erasure: run the retention-hold check first. Financial records sit under the 8-financial-year Companies Act retention, the binding longest period; claims, receipts, and audit trails inside that window are retained, with the legal basis documented in the response. Delete the deletable now (notification tokens, never-submitted drafts, marketing preferences) and schedule the rest for retention expiry.
+
+4. Close the register entry with dates and artefacts. Why the register is non-negotiable: security-safeguard failures carry a ₹250 crore penalty ceiling (Sec 8(5)) and breach-notification failures ₹200 crore (Sec 8(6)); Rules notified 14 Nov 2025, full obligations around May 2027 (govt, high). Consent posture and the breach runbook live in [data protection](/compliance/data-protection/).
+
+</Steps>
+
+### 6. WhatsApp template rejection or recategorization
+
+**Trigger:** the BSP webhook flips a template to rejected or paused, WhatsApp delivery failures over 5%, or a per-message cost anomaly on the BSP invoice.
+
+<Steps>
+
+1. Confirm the fallback fired: every WhatsApp notification degrades automatically to email magic-link buttons (rung 1 of the channel ladder), so a dead template is a cost and latency problem, never an outage.
+
+2. Rejected template: strip anything that smells promotional. Utility copy must be strictly transactional ("Claim `clm_01H...` for ₹4,200 needs your approval") because Meta recategorizes utility to marketing without notice (policy since 16 Apr 2025), and marketing runs roughly 6-7x utility: ₹0.8631 per message since 1 Jan 2026 (BSP rate card, medium; re-verify at build), versus the ₹0.115-0.145 utility rate (Meta/BSP, high).
+
+3. Recategorized template: the invoice anomaly catches it. Fix the copy, resubmit, reconcile the month's cost delta.
+
+4. Keep two pre-approved variants per message class as spares, so a rejection never empties a class. Template health is a weekly-cadence line item.
+
+</Steps>
+
+## The monitoring page
+
+One dashboard, ten numbers. If a metric here cannot trigger a runbook, it does not belong here.
+
+| Metric | Healthy | Warn | Page | Runbook |
+| --- | --- | --- | --- | --- |
+| Capture success rate (stored receipt per started session) | 95%+ | under 95% for a day | under 90% for 2 hours | 1 |
+| OCR latency P50 / P95 | P50 under 5 s | P50 over 8 s, or P95 over 30 s | P50 over 10 s for 30 min | 1 |
+| Confidence distribution (fields below the 0.80 auto-accept line) | stable share | 2x week-over-week shift | quality drift, not an outage | 1 |
+| `extraction_failed` rate | low single digits | over 5% hourly | over 10% on a 30-min window | 1 |
+| Receipt queue depth and age (`queued`, `processing`) | oldest under 5 min | oldest over 15 min | oldest over 60 min | 1 |
+| Claims in `awaiting_credits` | zero outside month-end | any month-end spike | admin alerts own it; ops calls | 4 |
+| Approval SLA breaches (`active` past 48 h / 24 h high-value) | zero | any | 10+ in one company (systemic) | 2 |
+| Payout failure rate | zero | over 2% of instructions failed (API path) | any bank file rejection | 3 |
+| Webhook lag (payment confirm to credit grant) | under 1 min | over 2 min | over 5 min | 4 |
+| Credit-burn anomaly (over 3x trailing 4-week average) | rare | review each flagged company | fair-use or fraud review | 4 |
+
+<p class="source-note">Thresholds are our derivation: starting points, tuned after 4-6 weeks of baselines. The externally anchored values are the 5 s / 10 s OCR latency regimes (Nielsen-derived UX boundaries; vendor latency claims are marketing) and the 0.80 auto-accept confidence convention.</p>
+
+A burn anomaly is three different stories: batching abuse (the anti-batching guard already charges +1 credit per additional 5 images), a runaway integration, or a genuinely growing customer. The first is a fair-use conversation, the last is a sales call; the dashboard cannot tell them apart, so a human looks.
+
+:::caution[Month-end is a finance incident waiting]
+Queued submissions in `awaiting_credits` are not in the approval flow. A company exhausting credits in the last week of the month risks missing close; the 50/80/95/100% burn alerts and the out-in-N-days forecast exist exactly for this, and ops treats a month-end `awaiting_credits` spike as a same-day proactive call, not a passive nudge. Zapier's held-tasks history shows the failure mode precisely: the silence generates the anger, not the holding. And bill shock is a churn event: 73% of bill-shocked customers churn within 90 days <span class="pill pill--med">Medium</span> (Recurly-cited, directional).
+:::
+
+## Status page and weekly cadence
+
+Public hosted status page, five components: capture and upload, processing, approvals and notifications, payouts and exports, billing and credits. Updates are manual and honest: an S1 is posted within 30 minutes of confirmation, with a post-incident note within 72 hours. No invented uptime theatre; formal SLOs are set in the non-functionals spec.
+
+The weekly ops review is Monday, 60 minutes, both founders:
+
+| Check | Pass condition |
+| --- | --- |
+| Open tickets by severity | No S1/S2 past target; S3 queue shrinking |
+| Root-cause tags | Any tag at 3+ this month has a backlog item |
+| Error taxonomy top 5 | No new unexplained bucket |
+| Credit ops | Burn anomalies reviewed; expiring balances got the 30-day reminder; promo-grant digest clean |
+| `awaiting_credits` | No company queued over 48 h without a call |
+| Payout watch | No batch in `exported` over 3 business days |
+| WhatsApp health | All template classes have an approved spare; per-message cost matches expected |
+| DSAR register | Nothing unanswered over 7 days |
+| Monthly extras | Restore-from-backup drill done; volatile prices re-verified (Meta rates, OCR provider, payout API fees) |
+
+This page closes Phase 1. Everything above assumes the contracts defined earlier in the dossier; the spec section that follows turns them into schemas and endpoints.
+
+## Sources
+
+- [DPDP Act 2023 penalty schedule, Sec 33](https://www.dpdpa.com/theschedule.html): ₹250 crore (security safeguards) and ₹200 crore (breach notification) ceilings (govt-derived, high).
+- [DPDP Rules 2025 implementation roadmap, TCSA](https://www.tcsa.in/resources/dpdp-rules-2025-implementation-roadmap): notification and phased-compliance timeline to ~May 2027.
+- [RBI FAQs on prepaid payment instruments](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812): why file hand-off and customer-executed payouts stay outside PPI/PA licensing.
+- [Zapier: troubleshoot held Zap runs](https://help.zapier.com/hc/en-us/articles/37454233721869-How-to-troubleshoot-held-Zap-or-step-runs): the queue-not-block precedent and its silent-backlog failure mode.
+- [Alguna on bill shock](https://blog.alguna.com/bill-shock/): Recurly-cited 73% churn within 90 days of bill shock (directional).
+- [OpenAI prepaid billing help](https://help.openai.com/en/articles/8264644-how-can-i-set-up-prepaid-billing): 12-month expiry and the auto-recharge complaint pattern our auto-top-up rules pre-empt.
+- [Meta WhatsApp Business Platform pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing) and [India INR rates, Go4WhatsUp](https://www.go4whatsup.com/guides/meta-whatsapp-pricing/): utility versus marketing per-message economics.
+
+<LinkCard title="Edge cases" description="The failure catalogue these runbooks exist to answer." href="/phase-1/edge-cases/" />
+
+<LinkCard title="Non-functionals" description="Formal SLOs, performance budgets, and reliability targets behind the thresholds above." href="/spec/non-functionals/" />

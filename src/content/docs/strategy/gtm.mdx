@@ -1,0 +1,105 @@
+---
+title: Go-to-Market
+description: "PLG by free tier and nudges, the CA and Tally channels, founder-led WhatsApp sales, and the design-partner program."
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+GTM for this product is decided by arithmetic, not ambition. India SMB ACVs in our band are too small to fund an outbound salesforce, so the motion is product-led at the bottom and relationship-led at the top: a free tier that onboards whole companies, an employee-nudge loop that recruits the buyer from inside the product, content and the CA/Tally channel for low-CAC pipeline, and the founder closing over WhatsApp. The pricing model in [pricing](/strategy/pricing/) is not adjacent to this plan; it is the distribution engine.
+
+## The free tier is the PLG engine
+
+Every plan, including `Free`, has unlimited seats. That single decision changes what "trial" means in this category. With Zoho's 3-user free cap, a trial is a finance person poking at a sandbox. With unlimited seats plus 20 submissions per company per month, a trial is the WHOLE company live in production: every employee installs the PWA, every approver gets a real inbox, the finance lead runs a real payout file. Nothing about the org is held back; only volume is metered.
+
+The 20-per-month trickle does two jobs at once:
+
+- **It keeps small firms alive forever.** A 5-person shop filing 2-6 claims per employee per month (our estimate, unbenchmarked; see the design-partner section) may never exhaust it. That is fine: they are references, word-of-mouth, and future growers, at a COGS of roughly ₹1.0-2.5 per submission (our derivation from Document AI and OCR+LLM pricing, medium confidence).
+- **It creates the upgrade moment mechanically.** A 25-person company at 4 submissions per employee per month burns 100 credits and hits the soft paywall in week one. Claims land in `awaiting_credits`, visibly queued, never lost; capture keeps working. The product converts itself the moment the company grows into it, with no sales touch.
+
+Free-to-paid conversion for tightly targeted B2B tools runs 5-15% versus 1-5% for broad tools (ChartMogul/First Page Sage benchmarks, directional). Our paywall is tighter than a feature gate: it fires exactly when usage proves value. <span class="pill pill--med">Medium</span> confidence on the rate, <span class="pill pill--high">High</span> on the trigger timing, because the trigger is usage itself.
+
+## The employee-nudge loop: distribution inside the product
+
+The soft paywall is also the sales rep. When credits hit zero, every queued bill shows the employee a calm banner ("Your bills are safe; processing resumes when credits are added") and a one-tap "remind your admin" nudge. The admin sees aggregated nudge counts, queue depth, burn forecasts, and a one-click buy. This is the Notion request-button and Figma seat-request pattern applied to expense money, and stronger than either precedent: the value withheld is the employee's own reimbursement, so upgrade pressure is distributed across the whole company while only the owner can pay.
+
+:::caution[The loop cuts both ways]
+Delayed reimbursement money is emotionally hotter than hidden Slack history. If admins ignore nudges, employees blame us, not their admin. The permanent free trickle, the 80% and 100% burn alerts, and the "out in ~N days" forecast exist so the paywall is never a surprise; and queued claims are NOT in the approval flow, so month-end exhaustion must be communicated loudly or it becomes a finance incident. Mechanics in [credits and metering](/phase-1/credits-and-metering/).
+:::
+
+## Channel economics, ranked
+
+The CAC figures are from a single India consultancy benchmark (upGrowth, 2026) calibrated to the ₹10-30 crore ARR band; a pre-revenue indie team will see different, usually lower-ticket economics. Single-source, directional, not audited. <span class="pill pill--low">Low</span>
+
+| Channel | CAC | Fit | Notes |
+| --- | --- | --- | --- |
+| Free tier + in-product nudges (PLG) | PLG median ₹500-1,500 per customer (aggregator, directional) | Primary | Unlimited seats makes the trial the deployment |
+| Content / SEO | ₹40-80k | Strong only amortised across many companies per asset (see the payback table in [unit economics](/strategy/unit-economics/)) | Compounds; ranks on GST ITC, capture, Tally queries |
+| CA / Tally-partner referral | ₹50k-1.5L | Strong on revenue-share terms only, never at flat CAC | Trust transfers from the accountant relationship |
+| Marketplace listings (Zoho Marketplace, Tally ecosystem) | Near-zero to list | Strong | Top-of-funnel only; founder closes |
+| Founder-led WhatsApp / email sales | Founder time | Strong early | The default India SMB motion; converts engaged free companies |
+| Outbound / SDR | ₹2-4L | Avoid | Unaffordable at our ACVs |
+| ABM | ₹5-12L | Avoid | Enterprise-only economics |
+
+<p class="source-note">Source: upGrowth CAC benchmarks for Indian B2B SaaS, 2026 (analyst, single source, medium confidence); PLG CAC from productgrowth.in (aggregator, directional); channel fit is our derivation.</p>
+
+The arithmetic against outbound is unchanged from v1 and sharper under v2 pricing: a company on the Growth pack spends about ₹700 per month at 100 submissions (our derivation from the canonical ladder). No SDR motion at ₹2-4L CAC ever pays back against that. The whole funnel must be self-serve or near-free, which is exactly what the free tier and the nudge loop provide.
+
+## Design partners first
+
+Before any spend, 10-15 hand-recruited design partners: field-heavy SMBs in the 20-200 employee band (sales teams, service engineers, logistics) where claim volume is real and the capture pain in [pain points](/strategy/pain-points/) is daily.
+
+What we ask of them:
+
+- A weekly call with the finance lead or owner.
+- Real claims through the real pipeline, not staged demos: actual thermal-paper bills, actual approvers, actual payout files.
+- Frequency telemetry. The 2-6 submissions per employee per month figure that sizes the free tier and the packs is an unbenchmarked training-knowledge estimate. <span class="pill pill--low">Low</span> Design partners are how it becomes a measured number before pack sizes are locked. If real medians are 1-2 per month, the free tier is too generous for sub-10-person firms and the ladder shifts.
+
+What they get: lifetime pricing locked at design-partner rates, direct input on the configuration model and the Tally export, and a named line to the founder. Cheap for us, durable for them, and it produces the reference customers every later channel needs.
+
+## The sequence
+
+<Steps>
+
+1. **Design partners (now).** Prove the wedge in production, measure submission frequency, harvest the first stretched-vs-clean capture comparisons and close-week stories.
+
+2. **Content on the pain canon, with the capture demo as the hero asset.** The pain points page is the editorial calendar: silent capture failures, the approval black hole, "when do I get paid", lost ITC. The hero asset is a 30-second video, a stretched, unreadable bill from an incumbent's capture flow next to our edge-detected, perspective-corrected scan (the no-distortion rule from [the camera spec](/phase-1/capture/camera/) made visible). Capture quality is the one differentiator a finance buyer can SEE in half a minute. Content/SEO CAC of ₹40-80k compounds from here.
+
+3. **The CA and Tally channel, with the JV export as the door-opener.** Tally claims 28,000+ partners (2022, vendor-claimed, not independently audited), many CA-founded and embedded inside SMB accounting. The pitch to a partner is not "refer our software"; it is "your client's reimbursements arrive as a clean Tally journal voucher instead of manual re-keying". The export that makes the product win is also the relationship that distributes it; a per-deal referral fee or revenue share, co-branded onboarding, and a partner-facing connector guide make it concrete. Connector detail in [integrations](/spec/integrations/). Partnership CAC ₹50k-1.5L (same single source).
+
+4. **Marketplace listings.** Zoho Marketplace (free to publish; vendor-claimed 60M+ users across products) and the Tally ecosystem. Top-of-funnel lead-gen off installed bases whose accounting decision is already made; founder-led WhatsApp sales close what these surface.
+
+5. **Light inside sales, only after 2-4 produce volume.** Not before.
+
+</Steps>
+
+## Positioning one-liners per buyer
+
+The same product, three sentences, three people in the buying committee.
+
+| Buyer | One-liner | What it indexes on |
+| --- | --- | --- |
+| Finance lead / CA | "GST-grade capture with the CGST/SGST split and ITC eligibility flagged, MIS you can search by amount, and a close-week sweep that empties the pending queue." | ITC leakage, month-end close, audit trail |
+| Owner / economic buyer | "Unlimited seats free; you pay about ₹7 per claim. A 25-person team costs about ₹700 a month here versus ₹2,475 on Zoho Standard, which still caps scans at 20 per user." (At an estimated 4 submissions/employee/month; our derivation, frequency unbenchmarked.) | Price arithmetic, no seat-counting |
+| Employee (the daily user) | "Scan the bill in 10 seconds, watch it move, and see the date you get paid." | The "when do I get paid" pain, answered in-product |
+
+<p class="source-note">Zoho comparison from its published India pricing (vendor page, high confidence); our per-claim figure from the canonical pack ladder in [pricing](/strategy/pricing/).</p>
+
+## Honest channel risks
+
+- **Every CAC number on this page traces to one consultancy benchmark** plus one aggregator blog. Treat the ranking as robust (content and partners beat outbound at these ACVs under any plausible error) and the absolute numbers as soft.
+- **The nudge loop can sour.** If the upgrade moment reads as ransom on employees' money, the free trickle and the alert ladder are the only defence. This is a copy and product problem before it is a channel problem.
+- **The CA/Tally channel is slow to start and easy to overestimate.** The 28,000-partner figure is vendor marketing; the active, motivated subset is unknown. Referral economics only work once the product needs no hand-holding, so this channel follows design partners, never precedes them.
+- **Marketplaces generate browsers, not buyers.** Without founder follow-up they are a vanity metric.
+- **Frequency risk is GTM risk.** If submission frequency is materially below 2-6 per employee per month, free-tier exhaustion (the conversion trigger) arrives later or never for small firms, and the funnel math in [unit economics](/strategy/unit-economics/) loosens. This is the single most important thing design partners must measure.
+
+## Sources
+
+- [CAC Benchmarks for Indian B2B SaaS by ARR Band (upGrowth)](https://upgrowth.in/cac-benchmarks-indian-b2b-saas-arr-band-2026/) (analyst, single source): channel-level CAC, ACV, sales cycles
+- [India SaaS Trends 2026 (productgrowth.in)](https://productgrowth.in/insights/saas/india-saas-trends/) (aggregator, directional): PLG vs sales-led CAC, PLG default below USD 10M ARR
+- [Zoho Expense India Pricing](https://www.zoho.com/in/expense/pricing/) (vendor, high): the per-seat anchor and autoscan caps used in the owner one-liner
+- [Tally Partners](https://tallysolutions.com/partners/) (vendor-claimed): 28,000+ partner ecosystem
+- [Zoho Marketplace Partner Program](https://marketplace.zoho.com/become-a-partner) (vendor): free to publish, install-base reach
+- [ChartMogul SaaS Conversion Report](https://chartmogul.com/reports/saas-conversion-report/) (analyst): free-to-paid conversion benchmarks
+- [SaaS Freemium Conversion Rates (First Page Sage)](https://firstpagesage.com/seo-blog/saas-freemium-conversion-rates/) (analyst, directional): 3-5% good, 8-12% great self-serve freemium
+- [Notion: Change your plan](https://www.notion.com/help/upgrade-or-downgrade-your-plan) and [Figma seat requests](https://help.figma.com/hc/en-us/articles/1500003870721-Approve-or-decline-seat-upgrade-requests) (vendor docs): the member-requests-upgrade pattern behind the nudge loop
+- [SaaSBoomi](https://saasboomi.org/) (primary): 4,000+ India founder community, warm intros and GTM learning, not a paid channel

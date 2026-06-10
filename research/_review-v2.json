@@ -1,0 +1,1613 @@
+[
+  {
+    "slug": "index",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "a 25-person company pays roughly ₹700/month here versus ₹2,475/month on seat pricing",
+        "problem": "The ₹700 figure is entirely a function of the 4 submissions/employee/month assumption, which THESIS-V2 explicitly marks as an unbenchmarked estimate to validate with design partners. The homepage states the comparison as a settled fact with no assumption and no provenance label; vision-and-scope carries both. THESIS demands soft numbers carry their caveat everywhere.",
+        "fix": "Rewrite as: \"a 25-person company at an estimated 4 submissions/employee/month pays roughly ₹700/month here versus ₹2,475/month on seat pricing [our derivation; frequency unbenchmarked]\"."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "at 67-90% gross margin on a ₹1.0-2.5 per-submission cost base",
+        "problem": "Load-bearing derived numbers in the 90-second bullets carry no provenance tag. THESIS gives the margin as two distinct bands (67-75% at ₹5, 80-90% at ₹8-10); flattening to one 67-90% band without an \"our derivation\" label launders a model output into a fact, against the authoring guide's provenance rule.",
+        "fix": "Append a provenance marker, e.g. \"at a modelled 67-90% gross margin on a ₹1.0-2.5 per-submission cost base (our derivation, medium confidence)\"."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "description: A research-backed product and build dossier",
+        "problem": "Frontmatter description is not wrapped in double quotes; the authoring guide says wrap in double quotes ALWAYS to avoid YAML colon bugs. It is also at the ~160-char ceiling.",
+        "fix": "Quote the description and trim, e.g.: description: \"A research-backed build dossier for a pure-software, employee-first reimbursement SaaS for India, deep enough for LLM agents to build from.\""
+      },
+      {
+        "severity": "minor",
+        "type": "bad-crosslink",
+        "offendingText": "href={import.meta.env.BASE_URL + 'start/vision-and-scope/'}",
+        "problem": "LinkCard hrefs concatenate BASE_URL while every prose link on the same page is root-relative per the slug map. The guide says the build plugin handles the base prefix; manual concatenation bypasses the plugin and breaks if BASE_URL lacks a trailing slash. Same pattern on all four LinkCards and the source-note anchor.",
+        "fix": "Change all LinkCard/anchor hrefs to root-relative slug-map form, e.g. href=\"/start/vision-and-scope/\", matching the rest of the site, unless the plugin is verified not to process JSX hrefs (in which case document that exception in how-to-read)."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "link: /reimbursement/start/vision-and-scope/",
+        "problem": "Hero frontmatter hardcodes the /reimbursement base, which the authoring guide forbids and which how-to-read flatly denies happens (\"no page hardcodes it\"). The inline comment mitigates the maintenance risk but the cross-page contradiction remains.",
+        "fix": "Keep the hardcoded hero links (frontmatter limitation is real) but reconcile the claim in /start/how-to-read/ to name this single exception; see that page's issue."
+      }
+    ]
+  },
+  {
+    "slug": "start/vision-and-scope",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "about ₹2 to 5 per transfer, vendor pricing",
+        "problem": "THESIS-V2 carries the canonical payout-API price as ~₹1.75-5/txn [Setu, high]. Rounding the floor up to ₹2 silently alters a canonical figure.",
+        "fix": "Change to \"about ₹1.75 to 5 per transfer, vendor pricing\" to match the THESIS figure."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "<span class=\"pill pill--build\">Build</span> <span class=\"pill pill--caution\">Conditional</span>",
+        "problem": "The verdict renders as two pills (Build + Conditional, with pill--caution carrying the word \"Conditional\"), while the homepage renders one pill--build labelled \"Conditional Build\" and how-to-read defines pill--caution as meaning \"Caution\". Three pages, three renderings of the same verdict.",
+        "fix": "Standardise on one form site-wide; simplest is the homepage's single <span class=\"pill pill--build\">Conditional Build</span> here, dropping the pill--caution span."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "Phase 2 adds vendor reimbursement, later and separately.",
+        "problem": "THESIS defines Phase 2 as \"vendor reimbursement and payouts\". The lead drops payouts; the comparison table covers it, but the scope sentence that fixes the phase definition should match the canonical phrasing.",
+        "fix": "Change to \"Phase 2 adds vendor reimbursement and payouts, later and separately.\""
+      }
+    ]
+  },
+  {
+    "slug": "start/how-to-read",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "A build plugin injects the deployment base prefix; no page hardcodes it.",
+        "problem": "Factually false: index.mdx hardcodes /reimbursement in both hero action links (with a comment admitting it). A conventions page that misstates the codebase's own conventions undermines its purpose as the agent's manual.",
+        "fix": "Amend to: \"A build plugin injects the deployment base prefix; no page body hardcodes it. The one exception is the home hero, whose frontmatter links cannot use the plugin and hardcode the base.\""
+      },
+      {
+        "severity": "minor",
+        "type": "bad-crosslink",
+        "offendingText": "the canonical contracts in `research/THESIS-V2.md`",
+        "problem": "The published site does not ship the research/ directory; readers and implementing agents consuming the rendered dossier are pointed at a file they cannot open. The danger aside repeats the dependency (\"the THESIS contracts beat everything\") without an on-site location for those contracts.",
+        "fix": "Reference the on-site mirror instead, e.g. \"the canonical contracts (entity names, state names, the six rule actions, credit semantics, the capture ladder, API conventions, the pricing ladder), fixed in the Spec section starting at [/spec/data-model/](/spec/data-model/) and [/spec/state-machines/](/spec/state-machines/)\", keeping the repo path only as a parenthetical for repo readers."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "An unlabelled number is our derivation, and you should treat it with exactly that much trust.",
+        "problem": "Two sentences earlier the page asserts \"Every load-bearing number carries one of five provenance labels\". If every number is labelled, unlabelled numbers cannot exist; the two statements cannot both be the convention.",
+        "fix": "Reword the first sentence to \"Every load-bearing number carries one of five provenance labels... or is unlabelled, which means our derivation\", or drop the absolute \"Every\"."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/overview",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "Concur rollouts run 6-12 months",
+        "problem": "The research (raw2/research-pain-points-software.md, Spendbase via Navan/Rho reviews) supports 6-12 months only for MULTI-COUNTRY Concur implementations: 'multi-country rollouts frequently reported to take 6-12 months'. Dropping the qualifier generalises it to all Concur rollouts, overstating the evidence in the row most likely to be quoted against a competitor.",
+        "fix": "Change to: 'Concur multi-country rollouts are reported at 6-12 months (review-reported, medium) and its configuration is consultant-dependent'."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Zoho's policy and workflow config is click-heavy",
+        "problem": "No research input characterises Zoho config as click-heavy; raw2/research-onboarding-config.md documents a sharper, sourced Zoho failure: a submitted claim matching no approval flow hard-blocks the employee ('does not match your organization's approval criteria'), and per-user Submits-To pointers live on each user record. 'Click-heavy' is an invented gloss.",
+        "fix": "Replace with the documented anti-pattern: 'Zoho hard-blocks submission when a claim matches no approval flow (vendor KB, high)'."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "Enforced by the performance budget",
+        "problem": "The performance budget (~150 KiB HTML/CSS + 300-350 KiB JS, P75 first load under 5s) bounds first load, not the capture-to-submit duration; 'enforced by' claims a causal guarantee the budget cannot provide. The under-60-seconds target is our derivation and should read as such.",
+        "fix": "Change the anchor cell to: 'Our derivation, made plausible by the performance budget: P75 first load under 5 seconds within ~150 KiB HTML/CSS and 300-350 KiB JS gzipped; Android is 93.2% of India's mobile web (StatCounter, May 2026)'."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/personas-and-journeys",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "owner-led buying in the 20-500 employee band",
+        "problem": "raw/research-personas-buying.md segments the economic buyer as owner/founder in SMB (10-200) and CFO/Finance Head with HR co-sponsor in mid-market (200-2000). Claiming owner-led buying across the whole 20-500 band stretches the research past the 200-employee boundary, and the anti-persona row repeats the framing ('self-serve and owner-led for the 20-500 band').",
+        "fix": "Change the owner/admin row cell to 'owner-led buying below ~200 employees, finance-head-led with an HR co-sponsor above (general B2B research, medium)' and soften the anti-persona row to 'self-serve for the 20-500 band, owner- or finance-head-led'."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/end-to-end-flow",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "(chain snapshotted, SLA timers armed)",
+        "problem": "The status-trace code block attaches 'chain snapshotted' to the in_review line, but step 7 ('snapshots the chain at submission'), the master table's submitted row ('chain snapshot recorded'), and THESIS-V2 onboarding canon (snapshot-at-submission) all fix the snapshot at submitted. The page contradicts itself on which transition records the snapshot.",
+        "fix": "In the trace block, move 'chain snapshotted' onto the submitted line: 'draft → submitted (CreditEntry: consumption, balance -1; chain snapshotted)' and leave in_review annotated '(SLA timers armed)'."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/capture/camera",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "| `queued` | Written locally; waiting for network or backoff |",
+        "problem": "The local outbox chip is named `queued`, identical to the canonical Receipt.status `queued` (credits exhausted or backlog) used one page later in ocr-itemisation.mdx. The page itself contains a caution titled 'Two queues that must never be confused', then names both queues the same thing. The Done-means bullet 'Three pages captured in airplane mode show `queued` chips' compounds the ambiguity for an implementing agent.",
+        "fix": "Rename the outbox chip vocabulary to something disjoint from Receipt.status, e.g. `waiting` / `syncing` / `synced` / `failed` (chip copy 'On this phone; waiting for network'), and update the Done-means bullet to 'show `waiting` chips'. Keep `queued` exclusively for the server-side Receipt.status."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "most blurry receipts come from the capture tap",
+        "problem": "Stated as fact with no provenance. Neither THESIS-V2 nor raw2/research-mobile-capture-tech.md asserts that tap-induced shake is the dominant blur cause; research only says commercial SDKs sell auto-capture-on-steadiness.",
+        "fix": "Reframe as rationale, not fact: 'tap-induced shake is a classic capture failure; commercial SDKs sell auto-capture on steadiness for exactly this reason, and we implement it.'"
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "| Full-sensor still | Chrome 59+ (2017) | iOS 18.4 (Mar 31, 2025)",
+        "problem": "verify-v-camera.md explicitly flags that whether WebKit's takePhoto returns true full-sensor resolution on iPhone hardware (vs stream-sized exposures) is not independently benchmarked. The table row labels iOS 18.4 support as 'Full-sensor still' without that caveat, laundering an unverified property into a fact.",
+        "fix": "Add a caveat to the row or the source note: 'API present on iOS 18.4+; whether iPhone takePhoto returns true full-sensor resolution is unbenchmarked (verify at build).'"
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "assertAspect(canvas, cw / ch);",
+        "problem": "Both assertAspect calls are tautological: they compare the canvas's aspect against the exact values just used to size that canvas (captureFullFrame asserts videoWidth/videoHeight against a canvas sized from videoWidth/videoHeight; captureWysiwyg asserts cw/ch against cw/ch). As written the dev assert can never fail, so it cannot catch the CSS-pixel-sizing regression it claims to guard.",
+        "fix": "Assert against an independently derived expectation: in captureFullFrame compare canvas aspect to the track's getSettings() aspect; in captureWysiwyg compare canvas aspect to the preview box aspect (boxAspect), with a tolerance for integer rounding."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/capture/ocr-itemisation",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "| `uploaded` | \"Saved. Uploading…\" (offline: \"Waiting for network\") |",
+        "problem": "The page claims 'The chip maps 1:1 to `Receipt.status`; the UI never invents a state', but `uploaded` is the first SERVER state in the canonical Receipt lifecycle (`uploaded` → `queued` → `processing`). An image still in the local outbox, or offline, cannot be in server status `uploaded`; the copy 'Uploading…' describes a pre-upload condition. This also collides with the camera page's local outbox chips, which own exactly that condition.",
+        "fix": "Split the row: while the image is in the outbox the chip is the camera page's local outbox chip (waiting/syncing); the `uploaded` chip appears only after server ack, with copy like 'Uploaded. In line for scanning.' Drop the '(offline: Waiting for network)' parenthetical from the Receipt.status row."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "{ \"check\": \"gstin_luhn_mod_36\", \"result\": \"pass\" }",
+        "problem": "The same check carries two names on one page: the payload's validations array calls it `gstin_luhn_mod_36` while the GST table calls it `GSTIN_FORMAT (Luhn-mod-36)`, the Rule-engine built-in. An implementing agent cannot tell whether the extraction-time validator and the Rule are one mechanism or two.",
+        "fix": "State the relationship once where the table introduces GSTIN_FORMAT: the deterministic extraction validator `gstin_luhn_mod_36` runs at extract time and its result feeds the `GSTIN_FORMAT` rule at submit, or unify on a single name for both."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "- NN/g, Response Times: 3 Important Limits: https://www.nngroup.com",
+        "problem": "The Sources section uses bare pasted URLs instead of the labelled markdown links used by camera.mdx, manual-entry.mdx, and submit-and-track.mdx; inconsistent house style within the same batch.",
+        "fix": "Convert each source to a labelled markdown link, e.g. `[NN/g: Response Times, 3 Important Limits](https://www.nngroup.com/articles/response-times-3-important-limits/)`, matching the sibling pages."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/capture/manual-entry",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "A typed GSTIN passes the `GSTIN_FORMAT` checksum before save.",
+        "problem": "Implies a hard gate: the GSTIN must validate before the line can be saved. The OCR page's GST table specifies GSTIN_FORMAT as a `flag` action whose 'Never' column is 'Block submission', and the page's own validation table reserves blocking for `block` rules with hardness hard. A faded or genuinely odd GSTIN typed from a paper bill would strand the employee at save, which is the exact anti-pattern both pages reject.",
+        "fix": "Rewrite to: 'A typed GSTIN runs the `GSTIN_FORMAT` checksum on entry; a failure flags the field with a re-check prompt and reaches the approver flagged, never blocks the save.'"
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "finishes a 3-line claim in under 90 seconds on a low-end phone",
+        "problem": "The lead calls the benchmark device 'a low-end phone' while the composer section and Done-means correctly anchor on 'a Galaxy A24-class device, the P75 baseline'. The research (Alex Russell 2026) defines the A24 as the P75 baseline, with a quarter of users on worse hardware; 'low-end' overstates it and the two framings drift within one page.",
+        "fix": "Use one framing: 'in under 90 seconds on the Galaxy A24-class P75 baseline device' in the lead, matching the Done-means criterion."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/capture/submit-and-track",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "and send back only the ones with questions",
+        "problem": "Reads as a line-level sent_back state. Canonically `sent_back` is a Claim.status, and LineItem terminal outcomes are exactly `approved | capped | rejected`; there is no per-line sent_back. The surrounding text ('Resubmission returns the claim to `submitted`') is claim-level, so the sentence is ambiguous for an implementing agent wiring the state machines.",
+        "fix": "Rephrase: 'and send the claim back with the query pinned to specific lines; decided lines keep their outcomes and only the queried lines reopen.' Keep sent_back strictly claim-level."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "| Merchant, date, total confirmed before a line counts |",
+        "problem": "The assembly rule states the OCR trio confirmation as a universal per-line gate, but manual-entry lines (per-diem and mileage templates especially) have no extraction trio to confirm; merchant is explicitly 'suggested, never forced' on that path. The gate as written cannot apply to a templated allowance line.",
+        "fix": "Scope the rule: 'Scanned lines: merchant, date, total human-confirmed before the line counts; manual and templated lines validate via the composer's required fields instead.'"
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/web/employee-portal",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "(`uploaded` → `processing` → `extracted`)",
+        "problem": "Presents a three-state Receipt lifecycle; canonical Receipt.status is `uploaded` → `queued` → `processing` → `extracted` | `extraction_failed`, with `queued` firing on credit exhaustion or backlog. Eliding `queued` here invites an implementer to skip the state the soft paywall depends on.",
+        "fix": "Change to: (`uploaded` → `processing` → `extracted`, via `queued` when credits are exhausted or there is a backlog)."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "Extraction finished or failed | Daily digest",
+        "problem": "The OCR-itemisation canon promises notify-on-completion for async extraction (\"we'll notify you\"). Defaulting `extraction_failed` to a daily digest can sit on a failure for up to 24 hours while the employee's draft is blocked on manual entry.",
+        "fix": "Split the row: `extraction_failed` notifies immediately (email on, deep link to manual entry); successful extraction completions batch into the daily digest."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Bulk upload is the desktop superpower",
+        "problem": "Marketing fluff in an operator's build memo voice.",
+        "fix": "Replace with a plain statement, e.g. \"Bulk upload is the one capability the desktop adds: drop 12 receipts at once and they land in a tray as individual Receipt records.\""
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/web/approver-experience",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "company config, wizard default ₹25,000",
+        "problem": "Defines the high-value threshold default as ₹25,000 (repeated in the magic-link paragraph: \"default ₹25,000, the same knob that tightens the SLA\"). The approval-engine page defines the same knob as \"above the top DoA threshold\" and its worked example places it at ₹75,000. The two pages give an implementing agent contradictory ground truth. ₹25,000 is the wizard's add-finance-tier threshold in THESIS, not a high-value SLA default.",
+        "fix": "Adopt the engine's definition on this page: change both occurrences to \"company config; defaults to the top limit of the DoA grid (the wizard's 50-250 template therefore lands it at the finance tier)\" and delete \"wizard default ₹25,000\" as the high-value default."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "flagged claims sort above clean; `block` firings pin to top",
+        "problem": "approval-engine states \"`block` stops submission before the resolver runs\", so a block firing can never reach an approver inbox; this page both pins block firings to the top and writes approver-facing block microcopy (the RECEIPT_REQUIRED_ABOVE row: \"Attach one or reject the line\"). Direct cross-page contradiction; THESIS does not settle it but defines rule hardness (hard|soft).",
+        "fix": "Reconcile via hardness: state here that hard `block` stops submission at the employee review screen (employee-facing copy), while soft `block` resolves the chain and pins as a top exception; relabel the RECEIPT_REQUIRED_ABOVE microcopy row as a soft `block` (or switch the example to `flag`). Mirror the identical sentence on the approval-engine page."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "Approve and Send back buttons are signed single-use tokens",
+        "problem": "A one-tap email Send back button contradicts the page's own rule that send back requires a non-empty comment; the email path's behaviour for Send back is unspecified.",
+        "fix": "State explicitly that the email Send back button always opens the web decision screen with the comment field focused (only Approve can complete in one tap, below the threshold)."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "vendor content (Medius, Teampay)",
+        "problem": "The ~9-day figure and the \"Expensify's May 2025 bulk approvals\" claim are both supported by research/raw2/research-approval-ux.md but neither source appears in the page's Sources section, breaking the provenance chain the guide requires.",
+        "fix": "Add the Medius \"6 Signs\" blog link (the ~9-day figure) and the Expensify May 2025 product-update link from research-approval-ux.md to Sources."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "Claim #4127 from Priya Nair",
+        "problem": "The dossier defines only `clm_` prefixed ULIDs; no human-readable claim number exists anywhere in the contracts, so the WhatsApp template references an undefined identifier.",
+        "fix": "Either define a display `claim_number` where first used (per the guide's derive-and-define rule) or use a short ULID suffix, e.g. \"Claim clm_…K8NP\"."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/web/approval-engine",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "`block` stops submission before the resolver runs",
+        "problem": "Contradicts the approver-experience page, which pins `block` firings to the top of the approver inbox and shows approver-facing block microcopy. THESIS only says `block` overrides softer outcomes and gives rules a hardness (hard|soft) attribute; neither page may unilaterally extend that into stop-at-submission for all blocks.",
+        "fix": "Qualify by hardness: \"hard `block` stops submission at the employee review screen; soft `block` resolves the chain and surfaces as a pinned exception in the approver inbox\", and use the identical sentence on the approver-experience page and /spec/rule-schema/."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "we refuse to ship [vendor KB, high]",
+        "problem": "Inline bracket citations ([vendor KB, high], [vendor docs], [primary docs, high]) mix THESIS shorthand into page prose; the authoring guide's page conventions are confidence pills and source-note captions.",
+        "fix": "Convert the three inline bracket citations to the pill convention, e.g. <span class=\"pill pill--high\">High</span>, with the source named in prose or a source-note."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "## Four claims through the resolver",
+        "problem": "At ~2,640 words the page exceeds the Phase 1 band (1,200-2,200; only Spec pages stretch to 2,600). The four worked examples are the compressible mass.",
+        "fix": "Trim worked example 3 (the out-of-office case duplicates the delegation table) or compress examples 1 and 3 into a single two-row table to land inside the band."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/web/finance-console",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "the claim returns to `sent_back` and resubmission is free",
+        "problem": "Claims in this queue are in `approved` status; the canonical lifecycle defines `sent_back` only as a loop out of `in_review` (`in_review` → `sent_back` → resubmit to `submitted`). An `approved` → `sent_back` transition does not exist in THESIS, so this page silently extends the canonical state machine.",
+        "fix": "Define the finance-return transition explicitly: \"finance return moves the claim `approved` → `sent_back` (a transition defined with its guard, pre-batch only, in [state machines](/spec/state-machines/))\", and ensure /spec/state-machines/ actually carries it; otherwise model finance returns as Hold plus an employee fix request."
+      },
+      {
+        "severity": "major",
+        "type": "thin-coverage",
+        "offendingText": "**Filter** verified claims",
+        "problem": "\"Verified\" is never defined: the queue lists keyboard `v` verify but states no effect, the queue's named exits are add-to-batch, send back, and hold, and no flag or field records verification. The batch builder filters on a marker an implementing agent cannot locate.",
+        "fix": "Define the verification marker where first used: the `v` action stamps `verified_by` and `verified_at` on the claim (an AuditEvent, not a Claim.status), and state that the batch builder's filter admits only claims carrying that stamp."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "Keyboard: `j`/`k` move, `v` verify, `b` send back, `h` hold",
+        "problem": "The employee-portal page binds `/`, `n`, Enter, Esc with a table and stated scopes; this page drops four bindings in one prose line with no scope or conflict note (`b` and `h` are unbound elsewhere but `j`/`k` versus arrow-key list movement on the employee surface diverges silently).",
+        "fix": "Either convert to the same keyboard table format used on the employee portal (key, where, action) or add a clause noting these bindings are scoped to the verification queue split view."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/onboarding/company-onboarding",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "The meals line fires a deliberate `warn` flag",
+        "problem": "Per the six-verb contract in policy-and-rules.mdx, `warn` gates the EMPLOYEE at submit on a typed reason; what the admin sees on the demo decision card is a `flag` exception badge. The page itself says step 5 shows 'one deliberate soft flag'. An implementing agent seeding the demo claim would wire the wrong verb, and no rule is named that would fire on a ₹1,360 meals line.",
+        "fix": "Change to 'fires a deliberate `flag`' and name the seeded rule (e.g. a low-severity behavioral flag or GSTIN_REQUIRED_ABOVE configured to fire on the demo data), so the demo decision card renders an approver-facing exception badge consistent with the verb table."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "Medical, Miscellaneous",
+        "problem": "THESIS canonical category list ends in 'Misc'. The display label differs from canon and from any spec page that enumerates the system set.",
+        "fix": "Use 'Misc' to match THESIS, or define 'Miscellaneous' once as the display label for the `misc` category key and use it consistently across the batch."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "into [the configuration model](/phase-1/onboarding/configuration-model/) surface",
+        "problem": "'writes plain configuration records into the configuration model surface' is garbled; the link text plus trailing 'surface' does not parse.",
+        "fix": "Rewrite as 'writes plain configuration records into [the configuration model](/phase-1/onboarding/configuration-model/); there is no setup mode to escape later.'"
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "watching the loop run, the loop specified in",
+        "problem": "Repetition of 'the loop' twice in eight words reads like a copy-edit miss.",
+        "fix": "Rewrite as 'First value is watching the loop run; the full loop is specified in [the end-to-end flow](/phase-1/end-to-end-flow/).'"
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/onboarding/configuration-model",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "RECEIPT_REQUIRED_ABOVE would <span class=\"pill pill--block\">block</span> without an image",
+        "problem": "Policy-and-rules.mdx fixes RECEIPT_REQUIRED_ABOVE's default as `warn`, soft ('lost receipts are a field reality'), with `block` only after an explicit per-company promotion. The simulate example here shows the default tenant behavior as `block`, contradicting the catalog page an agent would implement from.",
+        "fix": "Change the example outcome to `warn` ('would require a typed reason without an image'), or add 'this tenant promoted receipt-required to a hard block' to make the promotion explicit."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "Soft built-ins on (GSTIN_FORMAT, DUPLICATE_SUSPECT); `cap` and `block` rules opt-in",
+        "problem": "Contradicts the policy-and-rules catalog: per-claim category caps (`cap`) are 'ON via template', RECEIPT_REQUIRED_ABOVE (`warn`) is ON, future-date `block` is ON, and the five non-reimbursable `block` rules (alcohol, fines, donations, gifts, personal entertainment) are ON by default. The day-one default column is wrong for the Policies domain.",
+        "fix": "Replace with: 'Wizard template on: category caps, evidence warns (receipt threshold, backdate), GSTIN_FORMAT, DUPLICATE_SUSPECT, future-date block, the non-reimbursable block set; per-diem, monthly ceilings, and behavioral detectors opt-in.'"
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "the ceiling Zoho publishes (vendor, high) <span class=\"pill pill--high\">High</span>",
+        "problem": "Confidence is stated twice in two different conventions back to back (parenthetical label plus pill).",
+        "fix": "Keep one: '...the ceiling Zoho publishes <span class=\"pill pill--high\">High</span>' with the vendor attribution remaining in the Sources line."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "Branch is a Phase 1 entity, not an enterprise upsell",
+        "problem": "Branch is not in the THESIS canonical entity list (Department, CostCenter, Grade are; Branch is not). The page is allowed to derive it, but it asserts entity status without pointing at where the derived entity is registered, so spec pages may not carry it.",
+        "fix": "Keep the claim but anchor it: 'Branch is a Phase 1 entity (defined here, carried into [the data model](/spec/data-model/)), not an enterprise upsell', and ensure /spec/data-model/ actually defines it."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "Saves fail validation until references are fixed",
+        "problem": "This cell sits in the 'New claims' column of the mutation-contract table, but it describes save-time behavior of the configuration, not what happens to new claims. New claims presumably route via the new matrix minus the deactivated approver.",
+        "fix": "Change the cell to 'Resolve against the updated matrix; rules still referencing the deactivated approver fail save-time validation until fixed.'"
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/onboarding/policy-and-rules",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "interest at 24% per annum (ClearTax, analyst, medium confidence)",
+        "problem": "Stale figure. Finance Act 2022 amended CGST Sec 50(3), retrospective from 1 July 2017: interest on ITC wrongly availed AND utilised is 18%; the 24% rate applied to the omitted Sec 42/43 mismatch cases. The research file (raw/research-regulatory-tax.md) carries 24% from an older ClearTax page, but publishing it as the current rate is factually wrong and the page's own source-note discipline ('re-verify clause wording') was not applied here.",
+        "fix": "Replace with 'wrongly claimed ITC attracts interest (Sec 50(3); ClearTax cites 24%, but Finance Act 2022 revised the rate to 18% retrospective to July 2017; re-verify before publication)' or drop the rate and keep only 'attracts interest and reversal'."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "Per-diem is a matrix, not a number",
+        "problem": "THESIS names this built-in PER_DIEM_CAP (city-tier × grade) in the rule-engine contract, but the catalog page never uses the canonical identifier, while it does use GSTIN_FORMAT, RECEIPT_REQUIRED_ABOVE, DUPLICATE_SUSPECT, ITC_ELIGIBLE by name. Spec pages will reference PER_DIEM_CAP and nothing here anchors it.",
+        "fix": "Name the rule: 'PER_DIEM_CAP is a matrix, not a number: city tier crossed with Grade...' and use the identifier in the per-diem section once."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "Gift claims above ₹5,000 this year need a policy exception.",
+        "problem": "The rule is `block`, hard, and the Overrides section states hard rules are 'not overridable at decision time'. Microcopy promising a 'policy exception' path contradicts the engine's own contract; there is no exception flow for a hard block short of an admin policy revision.",
+        "fix": "Change copy to 'Gift claims above ₹5,000 this financial year are not reimbursable under company policy.' or soften the verb to `warn` if an exception path is intended."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "ships OFF until the admin fills the matrix",
+        "problem": "The very next element is an 'illustrative template matrix' with full ₹ values, and the section header convention elsewhere uses 'template' to mean shipped defaults. It is ambiguous whether enabling per-diem preloads these numbers or starts empty.",
+        "fix": "State the binding explicitly: 'The group ships OFF; enabling it preloads this illustrative matrix for the admin to edit before activation' (or mark the table documentation-only)."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "one exception recorded, claim proceeds",
+        "problem": "The page defines exceptions as accumulated SOFT-rule outcomes an approver can override; the dinner example's only firing beyond informational tags is a hard `block` (li_3 rejected), which by the page's own taxonomy is not an exception.",
+        "fix": "Change to 'one line blocked and recorded, claim proceeds' (or have the meals cap fire as the recorded exception if an exception is wanted in the example)."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/credits-and-metering",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "the monthly plans (`Starter`, `Growth`, `Scale` as auto-pack subscriptions with bonus credits, `Scale` custom)",
+        "problem": "Garbled parenthetical lists Scale twice and implies Scale is both an auto-pack subscription and custom. THESIS canon: plans are Free, Starter, Growth, Scale (custom); the auto-pack subscription with bonus credits is the post-burn-data mechanism for the non-custom tiers.",
+        "fix": "Rewrite as: \"the monthly plans (`Starter` and `Growth` as auto-pack subscriptions with bonus credits; `Scale` custom)\"."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "<LinkCard title=\"Payouts\"",
+        "problem": "The LinkCard continue-reading pointer sits before the `## Sources` section; the authoring guide says pages end with Sources, and LinkCards are end-of-page pointers. Same pattern on ops-runbooks.",
+        "fix": "Move the LinkCard below the `## Sources` section so Sources is not the visual terminus interrupted by navigation, or keep LinkCard last consistently across the dossier (pick one convention for all four pages)."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/payouts",
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "wrong-number",
+        "offendingText": "Batched, 24x7 since 16 Dec 2021",
+        "problem": "NEFT went 24x7 on 16 December 2019, not 2021. The RTGS date in the next row (14 Dec 2020) is correct, which makes the NEFT error look deliberate and undermines the table's govt/high label.",
+        "fix": "Change to \"Batched, 24x7 since 16 Dec 2019\"."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "the fallback is first-payout probation: the account rides only in a batch finance explicitly acknowledges",
+        "problem": "Directly contradicts the section's opening invariant (\"No PayoutInstruction is ever created against an unverified BeneficiaryAccount\") and the Done-means bullet (\"The server refuses any PayoutInstruction against an unverified BeneficiaryAccount\"). Probation creates an instruction against an account that is not `verified`. An implementing agent cannot satisfy both statements.",
+        "fix": "Introduce an explicit `probation` BeneficiaryAccount status (finance-acknowledged, single-batch scope) and rewrite the invariant and Done-means bullet to: the server refuses instructions against accounts that are neither `verified` nor finance-acknowledged `probation`; probation flips to `verified` on first successful UTR."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "Finance can also pull a claim from `in_payout` back to `approved`",
+        "problem": "Contradicts the page's own earlier rule \"removing it (allowed only while `building`) returns it to `approved`\". The repair-loop pull-back happens after export/failure, i.e. outside `building`, so the two statements conflict and the state-machine guard is ambiguous.",
+        "fix": "Scope the earlier parenthetical: removal from the batch is free while `building`; after that, pull-back is a distinct explicit action allowed only on claims whose latest PayoutInstruction is `failed` or otherwise unresolved, always audited with employee notification. State that guard in both places identically."
+      },
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "Per-payout cost to the customer is effectively zero (online NEFT and RTGS are RBI-charge-waived; govt/analyst, high)",
+        "problem": "Overstated and mislabeled. RBI waived its own processing charges to banks (2019) and barred charges on online NEFT for savings-account customers (Jan 2020); corporate current accounts running bulk-upload files can still be charged per the bank's schedule. THESIS carries no zero-cost claim for the file path.",
+        "fix": "Soften to: \"Per-payout cost on the file path is low and bank-schedule dependent: RBI waived its NEFT/RTGS processing charges and online NEFT is free for savings accounts, but corporate bulk-upload pricing varies by bank; re-verify per customer (govt + bank schedules, medium).\""
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "| RTGS | ₹2 lakh | No maximum | Near-real-time, 24x7 since 14 Dec 2020 | ~₹10-20 + GST |",
+        "problem": "The ₹10-20 RTGS partner cost contradicts the page's own API-tab claim (\"roughly ₹1.75 to ₹5 plus GST\") and THESIS's payout-API range (~₹1.75-5/txn). No source supports the higher figure.",
+        "fix": "Either align the RTGS row to the canonical ~₹1.75-5 range, or add an explicit caveat in the API tab that RTGS rails price above the standard range per vendor pages (and label it vendor/medium); the two statements must agree."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "\"utr\": \"HDFCN26061012345\"",
+        "problem": "Worked-example inconsistency: the instruction's source account is ICICI (`\"bank\": \"ICICI\"`, channel `icici_cib`) but the NEFT UTR carries the HDFC remitter prefix. NEFT UTRs begin with the remitting bank's code. The same UTR is reused in the employee-copy table.",
+        "fix": "Change the UTR to `ICICN26061012345` in both the JSON example and the \"Paid 13 Jun\" microcopy row (or switch the example source account to HDFC ENet)."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "## The repair loop",
+        "problem": "Edge-cases delegates clawback/recovery to this page (\"settles by netting against a future payout... Specified in [Payouts]\"), but the page never mentions recovery records, netting an over-recovery against a future PayoutBatch, or the payroll-deduction export line.",
+        "fix": "Add a short subsection (3-5 sentences or a table row) on recovery settlement: a recovery record nets against the employee's next payout instruction or emits a payroll-deduction export line; claims never reopen; reference /spec/data-model/ for the record shape."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/edge-cases",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "intelligent processing pauses; the employee gets the nudge. Pre-submission OCR stays free under the fair-use cap",
+        "problem": "In the zero-balance paragraph this reads as pre-submission OCR continuing at balance 0, which contradicts credits-and-metering (\"at zero balance, pre-submission OCR pauses entirely and receipts hold in `queued`\" and its pauses-at-zero table listing \"Pre-submission scans\"). THESIS's max(20, 3 × remaining credits) formula is ambiguous at 0; the two pages must take the same reading.",
+        "fix": "Rewrite to match the credits page: \"Pre-submission OCR is free under the fair-use cap, max(20, 3 × remaining credits) scans per month, while the balance is positive; at zero balance it pauses entirely and receipts hold in `queued`.\""
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "admin alerts at 80% and 100% burn",
+        "problem": "Credits-and-metering and ops-runbooks both use the four-step 50/80/95/100% ladder (THESIS pricing canon); citing only 80/100 here makes the alert contract look different per page.",
+        "fix": "Change to \"admin alerts at 50/80/95/100% burn\" to match the canonical ladder used by the credits and ops pages."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "directional) <span class=\"pill pill--low\">Low</span>",
+        "problem": "The same Recurly 73% bill-shock stat carries a Medium pill on credits-and-metering and ops-runbooks but Low here. THESIS labels it \"Recurly-cited, directional\"; the confidence label should be identical wherever the figure appears.",
+        "fix": "Change the pill to `pill--med` (Medium) to match the other two pages, keeping the \"directional\" caption."
+      },
+      {
+        "severity": "minor",
+        "type": "bad-crosslink",
+        "offendingText": "claim states never reopen | [Payouts](/phase-1/payouts/)",
+        "problem": "The clawback row points to /phase-1/payouts/ as where the contract lives, but that page contains no clawback or recovery-netting content (see the thin-coverage issue filed against payouts).",
+        "fix": "Either add the recovery-settlement subsection to payouts (preferred) or repoint this row to /spec/data-model/ where the recovery record is defined."
+      }
+    ]
+  },
+  {
+    "slug": "phase-1/ops-runbooks",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "₹0.8631 per message since 1 Jan 2026, versus ₹0.115-0.145 (Meta/BSP pricing, high)",
+        "problem": "The exact marketing rate and effective date come from a third-party BSP aggregator (Go4WhatsUp, per the Sources list), not Meta primary docs; THESIS carries only \"~6-7x utility\". Labeling the precise figure \"high\" launders a vendor-aggregator number, and THESIS flags WhatsApp prices as fast-changing.",
+        "fix": "Relabel: \"...₹0.8631 per message since 1 Jan 2026 (BSP rate card, medium; re-verify at build), roughly 6-7x the ₹0.115-0.145 utility rate (Meta/BSP, high)\"."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "<LinkCard title=\"Edge cases\"",
+        "problem": "Two LinkCards sit before `## Sources`, same ordering deviation as credits-and-metering; the guide treats Sources as the page ending and LinkCards as end-of-page pointers.",
+        "fix": "Move both LinkCards after the Sources section, or standardize LinkCard-before-Sources across all dossier pages; apply the same choice on credits-and-metering."
+      }
+    ]
+  },
+  {
+    "slug": "spec/architecture",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "writes an AuditEvent with channel `email-link`",
+        "problem": "Channel value uses kebab-case; data-model CHECK-pins audit/approval channel values to snake_case ('web','email_link','whatsapp'), and THESIS API conventions make fields and enum values snake_case. As written, this AuditEvent insert violates the data-model CHECK on approval_steps.channel and diverges from audit_events conventions.",
+        "fix": "Change `email-link` to `email_link` in the approve-via-signed-token paragraph (and keep WhatsApp deep links writing `whatsapp`)."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "returns a `rcp_` id plus a presigned S3 PUT URL",
+        "problem": "This three-step presigned contract (POST /receipts -> S3 PUT -> POST /receipts/{id}/complete) directly contradicts capture-pipeline's Upload protocol, which specifies a single multipart POST /api/v1/receipts carrying the image bytes with an immediate 201. The two spec pages publish incompatible contracts for the system's most-trafficked endpoint.",
+        "fix": "Resolve once with capture-pipeline. Recommended: keep this presigned flow (it is interlocked with the S3 isolation section) and rewrite capture-pipeline's Upload protocol to the three-step contract; otherwise change this hot path and the 'Image bytes never transit the API process' claim to the multipart contract. Reflect the decision in /spec/api/."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "startAfter: chain.first.sla_at",
+        "problem": "The data-model approval_steps column is `sla_due_at`; `sla_at` is a field name that exists nowhere in the schema. An agent transcribing this transaction will reference a nonexistent column.",
+        "fix": "Change to `startAfter: chain.first.sla_due_at`."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "moves the claim `submitted` to `in_review`",
+        "problem": "The submitted -> in_review claim transition and ApprovalStep activation are side effects of the `notify` consumer, coupling a workflow state change to notification delivery. A notify failure or quiet-hours hold leaves the claim stranded in `submitted` with no active step, and retries of a send could double-fire the transition.",
+        "fix": "Move step activation and the submitted -> in_review transition into the submit transaction or a dedicated `activate_step` job that the notify job follows; state explicitly that notify is delivery-only and idempotent."
+      }
+    ]
+  },
+  {
+    "slug": "spec/capture-pipeline",
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "inconsistent-contract",
+        "offendingText": "multipart `POST /api/v1/receipts` with an `image` part",
+        "problem": "Contradicts architecture's hot path 1, where POST /api/v1/receipts returns a presigned S3 PUT URL and bytes never transit the API, followed by POST /receipts/{receipt_id}/complete. Client and server teams building from these two pages will not meet at the same endpoint; the page's own lead promises they 'meet exactly at POST /api/v1/receipts'.",
+        "fix": "Rewrite the Upload protocol section to the presigned three-step contract from architecture (POST /receipts for rcp_ id + presigned PUT, S3 PUT of the compressed page, POST /receipts/{id}/complete), and adapt the retry table (S3 PUT failures are network-class retryable; 403 on an expired presign re-requests a fresh URL; 401 refresh applies to the API calls only). If multipart wins instead, edit architecture's hot path and S3 section in the same change."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "SVG, GIF, BMP, TIFF, PDF, and anything else",
+        "problem": "The server `normalize` reject list bounces PDF with a 415, and the section states these rules apply 'before anything else' with no path exemption. The data-model receipts table CHECK-allows mime_type 'application/pdf' specifically for email-in, so a compliant normalize implementation would reject every email-in PDF and the mime CHECK would be dead code.",
+        "fix": "Scope the reject list to image-intake paths and add an explicit email-in row: PDF accepted on the email webhook path only, rasterized or paged into JPEG during normalize (or stored as application/pdf per the data model), with a stated page limit."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "a 12 MP frame (4032 by 3024) just fits and 16 MP fails",
+        "problem": "Arithmetic is wrong on both ends. 4032 x 3024 = 12,192,768 px, 27% under the 16,777,216 px cap, so it does not 'just fit'; and a nominal 16 MP frame (4608 x 3456 = 15,925,248 px) is also under the cap, so '16 MP fails' is false. Only areas above 16.78M px (e.g. 4096 x 4096 and up) fail pre-iOS 18.",
+        "fix": "Replace with: 'the pre-iOS 18 cap is 16,777,216 px of area (about 16.7 MP), so the 12 MP guard leaves about 27% headroom and anything at or above roughly 17 MP fails; iOS 18 raised the cap to 67,108,864 px.'"
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "the residual risk is the 7-day script-storage eviction",
+        "problem": "THESIS carries the eviction fact with its load-bearing qualifier: installed apps are exempt. Omitting it here overstates the risk for the installed-PWA case and understates why install matters; the warning rule that follows is tuned to the wrong population.",
+        "fix": "Append the qualifier: 'installed apps are exempt; the eviction risk applies to browser-tab usage where the origin goes untouched for seven days of Safari use', and note the warning rule targets non-installed sessions."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "`queue_upload` → `upload` → `extract`",
+        "problem": "The lead calls this 'the canonical pipeline' but truncates the THESIS stage list, which continues `extract` → `review_items` → attach to Claim. The page later uses `review_items` (server processing step 5), so the named canonical chain in the lead is incomplete relative to canon.",
+        "fix": "Extend the lead chain to `... upload` → `extract` → `review_items` and note that `review_items` and claim attachment are specified on /phase-1/capture/ocr-itemisation/."
+      }
+    ]
+  },
+  {
+    "slug": "spec/data-model",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "| Policy | `rules` (`rule_`), `policy_tables` (`pt_`\\*) |",
+        "problem": "THESIS lists Policy as a canonical entity (distinct from Rule), and the rule object carries policy context; this page's 25-table model has no `policies` table and never states how the canonical Policy entity is realized. `policy_tables` is a rate-table construct, not the Policy entity. An agent building from canon plus this page hits an unmapped entity.",
+        "fix": "Either add a `policies` table (`pol_` ULID, versioned, groups rules; rules gain a nullable `policy_id` FK) and bump the table count, or state explicitly in the entity map that the canonical Policy entity is realized as the versioned rule grouping in /spec/config-schema/ and that no standalone table exists, defining the mapping where first used."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "more than one credit in a single `consumption` row",
+        "problem": "Internally inconsistent with the ledger's own semantics and with THESIS consumption order. Consumption rows 'reference the grant they drain' via a single grant_id, and consumption is expiring-soonest first across grants; a -2 row cannot represent 2 credits drained from two different grants (e.g. 1 left on an expiring plan_grant plus 1 from a pack). claims.credit_entry_id being a single FK hard-codes one ledger row per claim, conflicting with the same paragraph.",
+        "fix": "Specify one consumption row per (claim, grant) pair, each with its own negative amount and grant_id; drop claims.credit_entry_id in favor of looking up credit_entries.claim_id (already indexed by adding an index on claim_id), or redefine it as 'first consumption row' with the multi-row rule stated."
+      },
+      {
+        "severity": "major",
+        "type": "thin-coverage",
+        "offendingText": "create the database from this page alone",
+        "problem": "The lead claims schema self-sufficiency, but only 7 of 25 tables get DDL. The big-six DDL contains FKs to tables with no column definitions anywhere: companies, users, memberships, advances, approval_chains, payout_batches, beneficiary_accounts. `advances` in particular (netting amounts, status) has zero columns specified on this or any referenced page. The schema literally cannot be created from this page.",
+        "fix": "Add compact column tables (or DDL) for the FK-target tables at minimum: companies, users, memberships, advances, approval_chains, payout_batches, bank_accounts, beneficiary_accounts; or soften the lead to 'create the claims spine from this page' and point to where the remaining DDL lives."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "every table except `users` carries `company_id`",
+        "problem": "`companies` itself is also an exception (it is the tenant; it cannot carry a self-referencing tenant FK in the stated form), and `idempotency_keys` is keyed (company_id, key) so it complies, but the migration-CI bullet later allowlists only `users`. As written, CI as specified fails on the companies table.",
+        "fix": "Change to 'every table except `companies` and `users`', and add `companies` to the CI allowlist in the migration conventions bullet."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "replayed for 24 hours and purged after 7 days",
+        "problem": "Capture-pipeline's outbox replays uploads 'days after capture' under the same Idempotency-Key. Between 24h and 7d the behavior here is undefined (replay or 409?), and after the 7-day purge a lost-201 replay creates a duplicate Receipt, breaking capture-pipeline's 'exactly one Receipt' acceptance criterion.",
+        "fix": "Define the window explicitly: store the canned response and replay for the full 7 days (matching the outbox's post-sync record retention), return 409 idempotency_key_reuse only on body mismatch, and state that the purge horizon must be >= the client outbox replay horizon."
+      }
+    ]
+  },
+  {
+    "slug": "spec/api",
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "inconsistent-contract",
+        "offendingText": "PATCH | `/company/config/{domain}`",
+        "problem": "Contradicts the normative config page. config-schema.mdx specifies GET/PUT /api/v1/company-config (whole document, version-checked) plus POST /company-config/validate, and its schema's domains are org, categories, policy_tables, approval, credits, payouts, notifications, locale. This page invents per-domain PATCH with domains `approval-matrix`, `policies`, and `gst` that do not exist in the schema (gst lives inside org.gstin and branches). An agent cannot implement both surfaces.",
+        "fix": "Replace the Company and configuration rows with the config-schema surface: GET /company-config, PUT /company-config (whole document, last-seen version, 409 CFG_VERSION_STALE), POST /company-config/validate, keep POST /company-config/simulate-claim and GET /company-config/versions under the same path root, and list the eight real domain names."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "POST | `/approvals/{apr_id}/reject-lines`",
+        "problem": "The Approvals table has no endpoint for a claim-level hard reject, yet the Claim machine defines in_review -> rejected via 'reject (active approver), comment required' and this page's own webhook table fires claim.rejected. The terminal rejected state is unreachable through the documented API.",
+        "fix": "Add a row: POST /approvals/{apr_id}/reject | approver | Hard reject with required comment (422 without it); claim moves to rejected, remaining pending steps end skipped, credit not refunded."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "Matched instructions become `succeeded`",
+        "problem": "PayoutInstruction has no succeeded state. The normative instruction machine (state-machines.mdx, derived as canonical) uses pending -> dispatched -> paid | failed.",
+        "fix": "Change to: Matched instructions become `paid`, claims `paid`."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "included claims move to `in_payout`",
+        "problem": "On POST /payout-batches the batch is still building. The normative state machine moves member claims to in_payout only when the batch leaves building (export or execute); while building, claims remain approved and the batch can be cancelled with claims untouched.",
+        "fix": "Change to: 'included claims stay `approved` while the batch is `building`; they move to `in_payout` when the batch exports or executes.'"
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "| `approval.escalated` | SLA breach",
+        "problem": "Event names diverge from the entity.event convention state-machines declares ('Outbound webhooks reuse the same names'): that page emits step.escalated, batch.exported, batch.completed, batch.partially_failed, instruction.failed, and claim.awaiting_credits, none of which appear in this catalog, while this catalog uses approval.escalated, payout.batch.completed, payout.instruction.paid.",
+        "fix": "Pick one namespace (recommend the state-machines entity.event names), rename approval.escalated to step.escalated, payout.instruction.paid to instruction.paid, payout.batch.completed to batch.completed, and add the missing rows: batch.exported, batch.partially_failed, instruction.failed, claim.awaiting_credits."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "Consumes 1 credit and moves to `submitted`",
+        "problem": "Flat '1 credit' contradicts the anti-batching guard stated three paragraphs earlier and in THESIS: a claim with more than 5 receipt images consumes 1 plus 1 per additional 5.",
+        "fix": "Change to 'Consumes credits_required (1, plus 1 per additional 5 receipt images beyond 5) and moves to `submitted`'."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "\"sha256\": \"9b1c4e72d0a8f3b6c5e9d2a7f4b8c1e6\"",
+        "problem": "32 hex characters is an MD5-length digest; SHA-256 is 64 hex characters. An agent copying the example will write a wrong-width column or validator.",
+        "fix": "Replace with a 64-hex-char example digest, e.g. repeat to 64 chars: \"9b1c4e72d0a8f3b6c5e9d2a7f4b8c1e69b1c4e72d0a8f3b6c5e9d2a7f4b8c1e6\"."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "tunable upward for Scale and Enterprise",
+        "problem": "THESIS plan names are Free, Starter, Growth, Scale (custom); 'Enterprise' is a credit-pack tier (₹74,999 = 15,000), not a plan. Blending pack and plan names blurs the canonical pricing vocabulary.",
+        "fix": "Change to 'tunable upward on Scale plans and for Enterprise-pack customers' or simply 'tunable upward for Scale'."
+      }
+    ]
+  },
+  {
+    "slug": "spec/state-machines",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "`409` for version conflicts, `422` for failed guards",
+        "problem": "The error taxonomy does not line up with the API error catalog: api.mdx maps illegal-state actions to invalid_state_transition (409) and has no version_conflict problem type, while this page's SQL example emits '409 version_conflict' and routes guard failures to 422. An agent implementing both pages produces two different problem-type vocabularies for the same failures.",
+        "fix": "Reuse the API catalog: state guards that fail return 409 invalid_state_transition, input guards (missing comment) return 422 validation_failed; either rename version_conflict to invalid_state_transition or add a version_conflict row to the API error catalog and reference it here."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "balance short of `credits_required`; no partial consumption",
+        "problem": "THESIS fixes awaiting_credits as 'only when company balance is 0 at submit'. This guard admits 0 < balance < credits_required (multi-image claims), a case THESIS does not define. The generalization is sensible but it silently amends canon.",
+        "fix": "Either align to THESIS ('balance is 0') or keep the credits_required guard and add an explicit note that this extends the THESIS balance-0 wording to multi-credit claims, flagging it for THESIS ratification."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "exactly one `consumption` CreditEntry per claim",
+        "problem": "With credits_required of 2 or more, expiring-soonest-first drawdown can span two grants (one pack, one plan_grant); a single consumption entry cannot attribute quantities to both, so either the uniqueness constraint or the FIFO attribution is unimplementable as written.",
+        "fix": "Specify that a consumption entry carries a quantity and a grant-allocation breakdown (or relax to 'at most one consumption per claim per submit event'), and state how expiring-soonest attribution is recorded."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "audit `claim.awaiting_credits`; webhook same",
+        "problem": "This page promises webhooks (claim.awaiting_credits, batch.exported, batch.completed via 'webhook same', instruction.failed) that are absent from the API page's canonical event table, so consumers cannot subscribe to them.",
+        "fix": "After the event names are unified (see API page issue), drop 'webhook same' where no event exists or add the matching rows to the API event catalog."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "balance covers `credits_required` (1, plus 1 per additional 5 receipt images beyond 5); at least one LineItem; merchant, date, total confirmed",
+        "problem": "The submit guard omits the rule-engine outcomes that rule-schema makes binding: a claim-scope hard block makes the claim not submittable, and warn rules gate submission on typed reasons. The guard column reads as if only credits and field confirmation gate submit.",
+        "fix": "Append to the guard: 'no claim-scope hard block fired and all warn-required reasons typed (rule engine, see /spec/rule-schema/)'. Also add the rule re-run to the resubmit side effects, since rule-schema mandates re-evaluation on every entry into submitted."
+      }
+    ]
+  },
+  {
+    "slug": "spec/config-schema",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "`PUT /api/v1/company-config` replaces it whole",
+        "problem": "Mirror of the blocker on the API page: api.mdx specifies per-domain PATCH /company/config/{domain} with a different domain vocabulary (approval-matrix, policies, gst) plus simulate-claim and versions endpoints this page never mentions. The two pages cannot both be implemented.",
+        "fix": "Coordinate with the API page on one surface (recommend keeping this page's whole-document PUT with version check) and add the agreed POST /company-config/simulate-claim and GET /company-config/versions endpoints to the Envelope and access section so this page's surface is complete."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "\"params\": { \"chain\": [\"admin\"], \"flag\": \"rule_gap\" }",
+        "problem": "The route action's params contract in rule-schema.mdx defines chain, add_steps, and sample; a flag key is not in the contract, so the system-seeded rule_fallback as shown would fail RULE_PARAMS_INVALID under the rule page's own save gate.",
+        "fix": "Either add flag to the route params contract in rule-schema.mdx (documented as 'attaches a queue flag such as rule_gap'), or move the rule_gap marker out of params into engine behavior described in the fallback aside."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "`block` is forced `hard` at save",
+        "problem": "Cross-reference nit surfaced here via the embedded Rule objects: the rule page says block is coerced to hard at save, but its validation table rejects block+soft with RULE_BLOCK_NOT_HARD. Coerce or reject, not both; config saves embedding approval.rules inherit the ambiguity.",
+        "fix": "This page's approval.rules note should state which behavior applies on config save (recommend: reject with RULE_BLOCK_NOT_HARD, matching the validation-table style of returning complete error lists), and the rule page wording should match."
+      }
+    ]
+  },
+  {
+    "slug": "spec/rule-schema",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "\"condition\": { \"all\": [ { \"field\": \"category_id\", \"operator\": \"eq\", \"value\": \"alcohol\" } ] }",
+        "problem": "The seeded template ships rule_block_alcohol referencing category id 'alcohol', but the canonical default category set (THESIS onboarding canon, reproduced in config-schema's defaults and worked example) contains no alcohol category, and this page's own save gate rejects exactly that with REF_UNKNOWN_CATEGORY. The seeded template fails its own validation at tenant creation, and the dinner-bill trace inherits the impossible category.",
+        "fix": "Either add an 'alcohol' category (non_reimbursable or itc_blocked_17_5) to the seeded category set and note it in config-schema's defaults, or ship rule_block_alcohol disabled with a note that it activates when an admin creates the category; update the trace to match."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "\"ruleset\": { \"config_version\": 9, \"rules_evaluated\": 14 }",
+        "problem": "config_version 9 is the Saral Krishi worked example in config-schema.mdx, but the trace uses grade multipliers staff/manager/leadership while that company's grades are field_executive/area_manager/regional_head, and its category set has no alcohol. The two worked examples claim to be the same tenant yet disagree.",
+        "fix": "Either decouple (use a different config_version so the trace is clearly another tenant) or align the multipliers and categories with the Saral Krishi config."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "`block` is forced `hard` at save",
+        "problem": "Internal conflict with the validation table: RULE_BLOCK_NOT_HARD rejects block submitted with hardness soft as an error. A value cannot be both silently coerced and rejected; an agent does not know which to implement.",
+        "fix": "Pick one: change the field-table wording to 'block with hardness soft is rejected at save (RULE_BLOCK_NOT_HARD)', or delete the RULE_BLOCK_NOT_HARD row and keep coercion."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "\"exceptions_for_approver\": 1",
+        "problem": "Nothing in the trace produces an approver exception: no flag fired, caps_applied is 0, and the page states blocked lines finalize at submission. The 1 is unexplained and will be cargo-culted into implementations.",
+        "fix": "Either set it to 0, or add a sentence defining that hard-blocked lines surface to the approver as informational exceptions and say so next to the summary."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "so a Budget-year change is a dated edit, never a deploy",
+        "problem": "Capitalized 'Budget' (used three times) is ambiguous: it reads as India's Union Budget, but the examples are company policy edits (meal caps, mileage rates). Precision matters on a normative page.",
+        "fix": "Use 'a fiscal-year policy change' (or 'an FY rate change') consistently in all three occurrences."
+      }
+    ]
+  },
+  {
+    "slug": "spec/integrations",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "| SSO (SAML/OIDC) plus SCIM | Google sign-in only |",
+        "problem": "The deferred-capabilities table asserts v1 ships 'Google sign-in only', but the authN contract in /spec/security-and-compliance/ defines passwordless email OTP and magic links as the primary credentials and lists no Google OAuth credential anywhere in its credential table. Two spec pages disagree on what v1 authentication actually is; an implementing agent cannot resolve it.",
+        "fix": "Change the cell to 'Email OTP and magic-link sign-in only (passwordless, per the security spec)' so it matches /spec/security-and-compliance/; alternatively, if Google OAuth is a real v1 decision, add it as a credential row on the security page. One page must win; the security page is the authN contract."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "the job validates that every category is mapped",
+        "problem": "Internal tension within the page: the front-loaded failure-handling sentence says the export job validates that every category is mapped, but the field-mapping table two paragraphs earlier says 'unmapped categories post to a configured default ledger and are flagged in the export summary'. An agent cannot tell whether unmapped categories hard-fail the job or fall through to the default ledger.",
+        "fix": "Rewrite the validation sentence to: 'the job validates that every category resolves to a ledger (explicit map or the configured default; the job fails only when no default ledger is set), that debits equal credits in paise, and that the voucher date falls in an open period'."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "pob_01JXG7Q2W9",
+        "problem": "THESIS defines IDs as prefixed ULIDs (26 characters). The examples on this page (`pob_01JXG7Q2W9`, `clm_01JXG5K2W7` in the payroll CSV, `pin_01JXH2M4K8...`) are 10-character truncations, while the security page uses full 26-char ULIDs (`co_01J9ZK3WQ8R7M2T4V6X8B0C1D2`). Worked examples are supposed to be copyable by an implementing agent.",
+        "fix": "Expand every example ID on this page to a full 26-character ULID body, e.g. `pob_01JXG7Q2W9KH3M5P7R9T1V3X`, matching the convention used in the security and API specs."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "POST /ops/replay-webhooks",
+        "problem": "An `/ops/` namespace is not defined in the THESIS API conventions and appears nowhere else as a resource pattern; resources are kebab-case nouns. A replay action hanging off an undefined ops namespace is a contract an agent will invent differently.",
+        "fix": "Rename to a resource-shaped endpoint consistent with the API conventions, e.g. `POST /webhook-endpoints/{endpoint_id}/redeliveries`, and confirm the same name appears in the /spec/api/ event-delivery section."
+      }
+    ]
+  },
+  {
+    "slug": "spec/security-and-compliance",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "channel      text,                      -- web | email_link | whatsapp | api | system",
+        "problem": "THESIS audit canon requires the append-only log to capture 'actor, role-at-decision-time, action, before/after, timestamp, IP/device, CHANNEL'. The audit_events DDL, which is the implementing contract, has no ip or device column, and the prose list of what gets logged never mentions IP/device either. The page even sells the auditor story ('approved from a WhatsApp deep link at 11pm') without the IP/device fields the canon mandates.",
+        "fix": "Add `ip inet` and `device text` (or a single `client jsonb` holding ip, user agent, device id) columns to the audit_events DDL, include them in the canonical_json hash input, and add 'IP and device for every actor-initiated event' to the what-gets-logged list."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "This page is the engineering contract: how identities authenticate, how the six roles are authorized, how tenants are isolated at the database row, how bank data is encrypted, how DPDP obligations map to code, and what the audit trail and backups must guarantee.",
+        "problem": "The lead runs five sentences with a table-of-contents enumeration; the guide caps leads at 2-4 sentences and bans filler intros. The enumeration restates the H2 structure that immediately follows.",
+        "fix": "Cut the enumeration sentence, keeping: 'Security is the deal gate, not a feature. The buyer's IT reviewer, the statutory auditor, and the DPDP questionnaire all interrogate the same handful of controls, and every one of them is cheap to build now and ruinous to retrofit. The legal reasoning lives in [data protection] and [audit and retention]; this page is what an implementing agent builds.'"
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "The statutory clocks (8 FY, GST 72 months)",
+        "problem": "The '72 months' GST retention figure appears only in this LinkCard description and nowhere in THESIS-V2 (which fixes 8 FY Companies Act as the binding longest). If /compliance/audit-and-retention/ does not state 72 months with provenance, this card invents a statutory number in passing.",
+        "fix": "Either verify /compliance/audit-and-retention/ carries the GST 72-month clock with provenance and keep the card text, or simplify the description to 'The statutory clocks and litigation hold behind the retention engine' and let the target page own the numbers."
+      }
+    ]
+  },
+  {
+    "slug": "spec/non-functionals",
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "contradiction",
+        "offendingText": "`Receipt.status = queued` and `Claim.status = awaiting_credits` are one application-layer queue with two triggers: credits exhausted, or processing unavailable.",
+        "problem": "THESIS fixes `awaiting_credits` as 'soft paywall; only when company balance is 0 at submit'. Receipt `queued` legitimately has two triggers (credits exhausted or backlog), but this danger aside assigns both triggers to both states, telling an implementing agent that claims enter `awaiting_credits` during a processing outage. That breaks the canonical claim lifecycle, and it sits in a Product-invariant danger box where agents will trust it most.",
+        "fix": "Rewrite the aside: '`Receipt.status = queued` absorbs two triggers (credits exhausted, or processing unavailable); `Claim.status = awaiting_credits` has exactly one (company balance 0 at submit). Together they form the application-layer queue the soft paywall of [Credits and metering] defines; top-up or recovery drains it FIFO through the same code path. Nothing an employee captures is ever lost, in any failure mode.'"
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "Formal SLO; ops warns earlier (P50 over 8 s, P95 over 30 s)",
+        "problem": "'Warns earlier' is half wrong: a P50-over-8s warning fires only after the P50-under-5s SLO is already breached by 60%. Only the P95 threshold (30s vs 60s) is actually earlier. As written, an agent wiring alerts will believe 8s is a pre-breach warning.",
+        "fix": "Either lower the P50 warning below the SLO ('ops warns at P50 over 4 s, P95 over 30 s') or relabel honestly ('P95 warning fires before SLO breach at 30 s; P50 over 8 s pages as a sustained breach')."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "The architecture page modelled a flatter 100 submissions per company per month (3,300 claims/day)",
+        "problem": "Mixed day bases: architecture's 3,300/day is 100k over 30 calendar days, while this page's 7,300/day is 160k over 22 working days. Quoting both side by side makes the gap look 2.2x when the underlying volume ratio is 1.6x, and gives an agent two incompatible denominators for queue sizing.",
+        "fix": "Restate the comparison on one basis: 'The architecture page modelled a flatter 100 submissions per company per month (about 4,500 claims per working day); this page sizes the heavier 160-per-company case at about 7,300.' Or footnote that the 3,300 figure is calendar-day."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "Our planning midpoint between the 25-employee sales anchor and the 500-person ICP ceiling",
+        "problem": "40 is not a midpoint of 25 and 500 by any standard mean (arithmetic 262, geometric 112). The word 'midpoint' falsely implies derivation; the value is a judgment call skewed deliberately toward the SMB end.",
+        "fix": "Replace with: 'Our planning assumption, deliberately near the SMB end of the 20-to-500-employee ICP range (most customers will be small).'"
+      }
+    ]
+  },
+  {
+    "slug": "phase-2/overview",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "mandatory at ₹5 crore turnover since 1 August 2023 [govt mandate, high]",
+        "problem": "Confidence overstated against the dossier's own evidence: the research input (raw/research-edge-cases.md) gives '₹5 crore from 1 Apr 2024; widely reported drop toward ₹2 crore (Oct 2025)' at medium confidence with an explicit confirm-against-CBIC caveat, and the sibling vendor-tax-engine page marks the current notified value low confidence. The 1 Aug 2023 date also does not appear in any assigned input.",
+        "fix": "Restate as: 'GST e-invoicing applies above ₹5 crore turnover [secondary on a govt mandate, medium], with a reported further lowering toward ₹2 crore (Oct 2025) to confirm against the CBIC notification', matching the tax engine's FY-versioned-config stance."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "about ₹1,000-1,800 to verify a 200-vendor master once, our arithmetic",
+        "problem": "This arithmetic (₹5-9/vendor: PAN + GSTIN + penny-drop) omits the Udyam check, while vendor-onboarding prices a fully verified GST-registered MSME vendor at ₹6-12 (₹1,200-2,400 for 200 vendors). The two pages give different numbers for the same exercise.",
+        "fix": "Either reuse vendor-onboarding's ₹6-12 per vendor (₹1,200-2,400 for a 200-vendor master) or state that this figure excludes the Udyam lookup."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Email-in becomes the dominant intake path",
+        "problem": "A behavioural prediction stated as fact with no provenance or 'our derivation' label, in a table that otherwise carries labels.",
+        "fix": "Soften and label: 'Email-in is expected to become the dominant intake path (our derivation); vendor PDFs and printed invoices are cleaner than thermal receipts.'"
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "card-led incumbents earn roughly 75-80% of revenue on interchange",
+        "problem": "Generalises one company's data to the category: the 75-80% interchange / ~3% SaaS split is Zaggle's 9MFY24 figure (raw/research-build-feasibility.md), cited from Zaggle's own investor presentation.",
+        "fix": "Attribute precisely: 'Zaggle, the listed proxy for the card-led camp, earns ~75-80% of revenue on interchange with SaaS near 3% [Zaggle Q4FY24 investor presentation, high]'."
+      }
+    ]
+  },
+  {
+    "slug": "phase-2/vendor-onboarding",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "| `active` | Bank detail edited | `pending_approval` |",
+        "problem": "The lifecycle's own semantics break: verification API outcomes are gathered in `pending_verification`, yet a bank-detail edit routes the vendor straight to `pending_approval` while the guard column promises 're-verification and re-approval'. An implementing agent cannot satisfy both.",
+        "fix": "Route bank edits `active` → `pending_verification` → `pending_approval`, or scope verification to the BeneficiaryAccount (account drops to `unverified`, vendor stays `active`, payouts gated) and say which model wins."
+      },
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "no vendor reaches `active` without a verified PAN, a passing or explicitly waived name-match",
+        "problem": "Contradicts the field table, which makes the bank account required only 'Before first payout': a vendor without bank details has no penny-drop name-match, so under this 'Done means' it could never reach `active`.",
+        "fix": "Condition the gate: 'no vendor with a bank account on file reaches `active` without a passing or waived name-match; no PayoutInstruction references a vendor without a verified account', keeping bank details payout-gated rather than activation-gated."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "roughly 95-97% success (HyperVerge, vendor-stated)",
+        "problem": "Body says 95-97% while the Sources entry for the same claim says '~97% success'. Trivial, but the page quotes its own source two ways.",
+        "fix": "Use '95-97% (HyperVerge, vendor-stated)' in both the body and the Sources line (matches raw/research-kyc-onboarding.md)."
+      }
+    ]
+  },
+  {
+    "slug": "phase-2/vendor-tax-engine",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "{ \"rule\": \"ITC_MATCH\", \"action\": \"allow\", \"note\": \"buyer GSTIN matches",
+        "problem": "The worked example records ITC_MATCH firing with action `allow`, but the built-ins table on the same page declares ITC_MATCH's verb as `flag` (soft) firing only when the buyer GSTIN is missing or mismatched. Canon gives each rule exactly one action verb; a rule whose condition is not met does not fire, it cannot emit a different verb.",
+        "fix": "Remove the ITC_MATCH entry from `rule_firings` (it did not fire because the GSTIN matched), or model the pass as an evaluation record with `\"fired\": false`, not an `allow` action."
+      },
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "ITC claimed wrongly accrues interest at 24% per annum",
+        "problem": "Stale law carried from a v1 ClearTax citation: Finance Act 2022 amended CGST Sec 50(3) so interest on ITC wrongly availed and utilised is 18%, retrospective to 1 July 2017. Quoting 24% as the current exposure is factually wrong.",
+        "fix": "Change to '18% per annum under Sec 50(3) as amended by Finance Act 2022 (the older 24% figure predates the amendment); CA to confirm at the rules-pack signoff'."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "`flag` at 15 days remaining; severity raised at 5 days",
+        "problem": "Off by one against payouts-and-ap's bucket table: Watch starts day 31 (14 days remaining) and Critical starts day 41 (4 days remaining).",
+        "fix": "Align both pages, e.g. flag on entering Watch (day 31, 14 days remaining) and raise severity on entering Critical (day 41, 4 days remaining), or move the bucket edges to 30/40."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "\"scope\": \"vendor_invoice\",",
+        "problem": "The Claim JSON reuses `scope`, which canon defines as a Rule field (line_item | claim | advance, plus reserved vendor scopes). Putting an identically named field with a rule-scope value on the Claim entity conflates two contracts.",
+        "fix": "Rename the Claim field (e.g. `claim_kind: \"vendor_invoice\"`) and define it at first use, keeping `scope` exclusively for rules."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "our research did not re-verify the current notified value",
+        "problem": "Understates the dossier's own inputs: raw/research-edge-cases.md does carry the threshold picture (₹5 crore, with a widely reported drop toward ₹2 crore in Oct 2025, medium confidence).",
+        "fix": "Cite it: 'last verified at ₹5 crore, with a reported lowering toward ₹2 crore (Oct 2025) not yet confirmed against the CBIC notification [secondary, medium]; ships as FY-versioned configuration'."
+      }
+    ]
+  },
+  {
+    "slug": "phase-2/payouts-and-ap",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "`net_amount_paise` plus `tds_amount_paise`",
+        "problem": "Field names contradict the vendor-tax-engine page, which fixes the PayoutInstruction contract as `gross_amount_paise`, `tds_paise`, and `amount_paise` (the net), and the canon API convention that the money field on the wire is `amount_paise`. The JSON example and the batch-lock invariant repeat the divergent names.",
+        "fix": "Adopt the tax engine's names: invariant `amount_paise + tds_paise == gross_amount_paise`; update the table cell, the JSON example (`tds_amount_paise` → `tds_paise`, `net_amount_paise` → `amount_paise`), and the CSV header."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "`msme_status` (micro, small, medium, none)",
+        "problem": "vendor-onboarding defines this Vendor field as `msme_category` with values micro|small|medium. Two names and two enums for the same field across sibling delta pages.",
+        "fix": "Use `msme_category` (micro | small | medium, absent when no Udyam registration) to match vendor-onboarding."
+      },
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "ABCFS1234K,Sharma Logistics,194C,1.0,11800000,118000",
+        "problem": "The CSV row computes 194C TDS on base 11800000 paise (₹1,18,000), the GST-inclusive gross from the worked example, contradicting the tax engine's rule that TDS is computed on taxable value excluding GST. The PAN also mismatches vendor-onboarding's Sharma Logistics (ABCDE1234F).",
+        "fix": "Change the row to `ABCDE1234F,Sharma Logistics,194C,1.0,10000000,100000,...` (base ₹1,00,000 taxable value, TDS ₹1,000), and rename headers to `base_paise,tds_paise` to match the TdsEntry fields."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "above ₹5 crore turnover (primary, high)",
+        "problem": "The provenance label is wrong: the cited source is ClearTax (advisory/secondary), and the sibling tax-engine page treats the current notified threshold as low confidence with a reported Oct 2025 lowering.",
+        "fix": "Relabel '(secondary on a govt mandate, medium)' and align wording with the cross-page e-invoicing statement."
+      }
+    ]
+  },
+  {
+    "slug": "compliance/regulatory-map",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "ITC_ELIGIBLE fires <span class=\"pill pill--flag\">flag</span>, never `block`",
+        "problem": "Contradicts the rule contract everywhere else: /spec/rule-schema/ and /phase-1/onboarding/policy-and-rules/ define ITC_ELIGIBLE as an `allow`-verb informational rule that attaches the itc tag, and vendor-tax-engine cites exactly that precedent. Canon allows one action verb per rule.",
+        "fix": "Rewrite as: 'ITC_ELIGIBLE runs as an `allow`-verb informational rule: it tags eligible vs blocked, it never gates; an employee's meal stays payable while its credit is blocked', and drop the flag pill."
+      },
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "wrongly availed credit attracts 24% per annum interest (ClearTax, analyst)",
+        "problem": "Stale: Finance Act 2022 amended Sec 50(3) to 18% for ITC wrongly availed and utilised, retrospective to July 2017; the v1 ClearTax figure predates the amendment.",
+        "fix": "Replace with '18% per annum under Sec 50(3) as amended by Finance Act 2022 (older sources still quote 24%); include in the CA go-live verification list'."
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "tax overlays use only `flag` and `warn`",
+        "problem": "In tension with ITC_ELIGIBLE (a tax overlay) being an `allow`-verb info rule once the previous fix lands; as written the sentence excludes the page's own GST mechanism.",
+        "fix": "Scope the sentence to the payroll-side overlays: 'payroll tax overlays (unspent per-diem, gift cap) use only `flag` and `warn`; ITC_ELIGIBLE is `allow` with an informational tag'."
+      }
+    ]
+  },
+  {
+    "slug": "compliance/money-movement",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "the contract states in terms that we never have dominion over funds",
+        "problem": "Garbled phrase ('states in terms that') in an otherwise tight page.",
+        "fix": "Rewrite: 'the contract states in plain terms that we never have dominion over funds'."
+      }
+    ]
+  },
+  {
+    "slug": "compliance/data-protection",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "Access (DSAR export)",
+        "problem": "DSAR is GDPR vocabulary; DPDP speaks of Data Principals and access requests. Unexpanded foreign jargon in an India-first compliance page.",
+        "fix": "Use 'Access (data principal access export)' or expand on first use: 'per-principal access export (the GDPR world calls this a DSAR)'."
+      }
+    ]
+  },
+  {
+    "slug": "compliance/audit-and-retention",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "\"claim_id\": \"clm_01JXAY2F4H6K8M0P2R4T6V8X0Z\"",
+        "problem": "The worked example carries a `claim_id` field that the AuditEvent field table above it does not define; an implementing agent gets two slightly different schemas.",
+        "fix": "Add a row to the field table (e.g. `claim_id` | Set when the subject belongs to a Claim | Joins the event to the claim dossier) or drop the field from the example."
+      }
+    ]
+  },
+  {
+    "slug": "strategy/the-problem",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "still rate roughly 4.2 to 4.7 on app stores",
+        "problem": "Hard figure in the caveat aside carries no provenance label; competitors.mdx labels the same figure 'per secondary sources'. Unlabelled, it reads as audited fact.",
+        "fix": "Append a label: 'these products still rate roughly 4.2 to 4.7 on app stores (secondary sources, directional)'."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "Our v2 synthesis (medium); FieldAssist (vendor, low)",
+        "problem": "The ~9-day average claim-processing figure originates from vendor blogs (Medius/Teampay, per raw2/research-approval-ux.md), not our synthesis. Labelling it 'our v2 synthesis' launders a vendor number into a derived fact, violating the provenance rule.",
+        "fix": "Relabel the provenance cell: 'Vendor blogs via v2 approval research (Medius/Teampay relay, medium); FieldAssist (vendor, low)'."
+      }
+    ]
+  },
+  {
+    "slug": "strategy/market",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "~50k-150k addressable companies × ~USD 1.3-2.5k ACV | ~USD 150-300M",
+        "problem": "The stated inputs multiply to USD 65-375M, not 150-300M. The narrowing from the raw product to the quoted band is unstated, so the table presents a result its own inputs do not produce.",
+        "fix": "Either show the central-case multiplication (~100k × ~USD 1.9k ≈ USD 190M, band tightened by excluding tail combinations) or widen the result cell to '~USD 65-375M raw, ~150-300M after excluding implausible corner combinations'."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "<span class=\"pill pill--build\">Build</span> the opportunity is real",
+        "problem": "Pill runs directly into the clause with no punctuation, producing a broken sentence ('Build the opportunity is real; Caution the size is overstated').",
+        "fix": "Add colons after each pill: '<span class=\"pill pill--build\">Build</span>: the opportunity is real; <span class=\"pill pill--caution\">Caution</span>: the size is overstated everywhere you will look.'"
+      }
+    ]
+  },
+  {
+    "slug": "strategy/competitors",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "unsupported-claim",
+        "offendingText": "[our derivation from v1 analysis, medium]",
+        "problem": "The ~75-80% interchange share is not a derivation: raw/research-build-feasibility.md sources it to Zaggle's 9MFY24 disclosures ('~75-80% of net revenues were interchange'). Mislabelling it undersells confidence and contradicts whitespace ('vendor-reported', High) and verdict ('vendor-disclosed') for the same figure.",
+        "fix": "Replace with 'earns roughly 75 to 80% of net revenue from card interchange (program fees, per its 9MFY24 disclosures) [filing-derived, high]' and align whitespace and verdict to the same wording."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "CRED bought Happay in 2021 (about USD 180M)",
+        "problem": "The Inc42 source reports the acquisition at a ~USD 180M valuation, not a confirmed USD 180M price. As written it states consideration as fact.",
+        "fix": "Change to 'CRED bought Happay in 2021 (at a ~USD 180M valuation)'. Apply the same fix to verdict.mdx's exit-optionality row."
+      }
+    ]
+  },
+  {
+    "slug": "strategy/pain-points",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "against pains 1-8 with <span class=\"pill pill--high\">High</span> confidence",
+        "problem": "The page's own ranking table marks pains 3, 4, and 7 as Medium-confidence evidence. The closing verdict claims High confidence for all of 1-8, contradicting the table three rows up and overstating the demand evidence.",
+        "fix": "Restate to match the table: 'Build against pains 1-8, with High confidence on 1, 2, 5, 6, and 8 and Medium on 3, 4, and 7 (per the table above), and against pain 9 with Medium confidence on magnitude but high on direction.'"
+      },
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "caps at 20 autoscans and 3 users and has removed autoscan from free without notice",
+        "problem": "States simultaneously that the free plan includes 20 autoscans and that autoscan was removed from free. The two claims come from different sources/times (G2 cap; Play Store removal complaint, snippet-mediated) and read as self-contradictory.",
+        "fix": "Separate and attribute: 'caps at 20 autoscans and 3 users; Play Store reviewers additionally report autoscan being pulled from the free app without notice (snippet-mediated, may reflect a later change)'."
+      }
+    ]
+  },
+  {
+    "slug": "strategy/whitespace",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "wrong-number",
+        "offendingText": "roughly 75-80% card interchange (program fees grew to ₹545.6 cr in FY25, vendor-reported)",
+        "problem": "The parenthetical evidence contradicts the claim it supports: ₹545.6 cr program fees against Zaggle's FY25 revenue of ~₹1,303 cr (cited on competitors and verdict) is ~42%, not 75-80%. The 75-80% figure is a 9MFY24 share of NET revenue per the research; mixing the two bases invites the reader to compute a contradiction.",
+        "fix": "Rewrite as: 'roughly 75-80% of net revenue was card interchange per 9MFY24 disclosures; program fees grew 69.5% to ₹545.6 cr in FY25 (filing-derived, high)'."
+      }
+    ]
+  },
+  {
+    "slug": "strategy/pricing",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "one of the five unresolved pains documented on",
+        "problem": "Pain-points ranks ten pains and THESIS-V2 names six failure classes; 'five' matches neither taxonomy and will confuse a cover-to-cover reader.",
+        "fix": "Change to 'one of the six unresolved failure classes documented on [pain points](/strategy/pain-points/)' (pricing resentment is class 5 of the six)."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "Admin alerts fire at 80% and 100% of burn",
+        "problem": "The Steps section says alerts at 80% and 100%, while the Risks table on the same page says '50/80/95/100% alerts'. THESIS carries both (80/100 in the credits contract, 50/80/95/100 in the pricing canon); the page should not use two different ladders without explanation.",
+        "fix": "Use one formulation in both places, e.g. 'alerts at 50, 80, 95, and 100% of burn (the 80% and 100% pair is the contractual minimum in the credits contract)'."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "| Free | ₹0 | 20/month |",
+        "problem": "Free is a plan, not a prepaid pack, but it sits as a row under the 'Pack' column header. Canon distinguishes Plans from Credit Packs.",
+        "fix": "Rename the first column header from 'Pack' to 'Tier', or pull the Free row out of the pack table into a preceding sentence ('Beneath the packs, Free grants 20 submissions/company/month, resetting monthly with no rollover')."
+      }
+    ]
+  },
+  {
+    "slug": "strategy/gtm",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "| Content / SEO | ₹40-80k | Strong |",
+        "problem": "Unit-economics computes a 73-145 month payback for Content/SEO at ₹550/month contribution ('does not pay back at this ACV unless one asset acquires many companies') and 'Never at flat CAC' for partnerships. GTM labels both channels 'Strong' at the same flat CAC figures, contradicting the sister page's arithmetic.",
+        "fix": "Qualify the fit cells: Content/SEO 'Strong only amortised across many companies per asset (see payback table in [unit economics](/strategy/unit-economics/))'; CA/Tally 'Strong on revenue-share terms only, never at flat CAC'."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "a pre-revenue indie team will see different, usually lower-ticket economics. Single-source, directional, not audited. <span class=\"pill pill--med\">Medium</span>",
+        "problem": "The same upGrowth benchmark is labelled Low confidence on unit-economics. Confidence labels for one source should not differ across pages.",
+        "fix": "Change the pill to pill--low here (matching unit-economics), since the benchmark is single-source and calibrated to ₹4-8L ACVs roughly 10x ours."
+      },
+      {
+        "severity": "minor",
+        "type": "bad-crosslink",
+        "offendingText": "(ChartMogul/First Page Sage benchmarks, directional)",
+        "problem": "First Page Sage is cited in prose but absent from the Sources list (ChartMogul is listed). Research has the link (firstpagesage.com freemium conversion rates).",
+        "fix": "Add to Sources: '[SaaS Freemium Conversion Rates (First Page Sage)](https://firstpagesage.com/seo-blog/saas-freemium-conversion-rates/) (analyst, directional): 3-5% good, 8-12% great self-serve freemium.'"
+      }
+    ]
+  },
+  {
+    "slug": "strategy/unit-economics",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "clears 50% gross margin even in the worst case",
+        "problem": "The page's own COGS table states a ₹3.1 worst case, at which Enterprise (₹5.00/credit) yields 38% and Scale (₹5.56) 44% gross margin. The margin table silently substitutes ₹2.5 as 'worst case'. The headline lead claim is contradicted by the page's own stress bound.",
+        "fix": "Define terms consistently: call ₹2.5 the worst-case COGS and ₹3.1 a stress bound, then restate the lead: 'every rung clears 50% gross at the ₹2.5 worst-case COGS; the ₹3.1 stress bound takes Enterprise to 38% and is why the ₹4 floor exists'."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "by 5-20x",
+        "problem": "From the canon figures (dedicated parsers USD 8-10/1,000 docs vs LLM-vision USD 0.0005-0.003/doc), the ratio range is ~2.7x to 20x. The 5x floor is overstated.",
+        "fix": "Change to 'by roughly 3-20x'."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "| 60-person field-sales company | 240 | Scale (₹5.56) |",
+        "problem": "240 submissions/month is 2,880/year, well under the 4,500-credit Scale pack within its 12-month validity; a rational buyer takes Growth (₹7.00). The scenario assigns an irrational pack mix (and understates that customer's revenue).",
+        "fix": "Either reprice the row on Growth (240 × ₹7.00 = ₹1,680/month revenue, ≈ ₹1,320 contribution) or raise the scenario to ~400+ submissions/month to justify Scale."
+      }
+    ]
+  },
+  {
+    "slug": "strategy/verdict",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "realistic indie outcome of ~USD 0.5-2M ARR over three years",
+        "problem": "Market.mdx explicitly demotes USD 0.5-2M to the outer envelope and commits to USD 0.4-1.2M as the realistic central case ('the top end now explicitly requiring thousands of paying companies or a Scale/Enterprise-weighted mix'). The verdict presents the envelope as the realistic outcome, contradicting the committed central case.",
+        "fix": "Change to 'a realistic indie outcome of ~USD 0.4-1.2M ARR over three years (outer envelope USD 0.5-2M; see [market](/strategy/market/), our derivation, low confidence)'."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "## The verdict",
+        "problem": "The H2 restates the page title 'The Verdict', which the authoring guide forbids ('never repeat it as a heading').",
+        "fix": "Rename the heading to '## The call' or '## Decision and gates'."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "vendor-disclosed; SaaS is ~3%",
+        "problem": "Provenance label for the Zaggle interchange share differs from competitors ('our derivation, medium') and whitespace ('vendor-reported', High). The research basis is 9MFY24 net-revenue disclosures.",
+        "fix": "Align to the standardized wording: '~75-80% of Zaggle's net revenue is card interchange per 9MFY24 disclosures; SaaS is ~3% [filing-derived, high]'."
+      },
+      {
+        "severity": "minor",
+        "type": "wrong-number",
+        "offendingText": "Happay to CRED (~USD 180M)",
+        "problem": "USD 180M is the reported valuation per the Inc42 source cited at page bottom, not confirmed deal consideration.",
+        "fix": "Change to 'Happay to CRED (at a ~USD 180M valuation)'."
+      }
+    ]
+  },
+  {
+    "slug": "reference/bank-files",
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "wrong-number",
+        "offendingText": "24x7 since 16 Dec 2021, batch",
+        "problem": "NEFT became 24x7 on 16 December 2019 (RBI), not 2021. The RTGS date in the next row (14 Dec 2020) is correct, which makes the wrong NEFT date look authoritative. Factually wrong in a reference table an implementer will copy.",
+        "fix": "Change the NEFT row to \"24x7 since 16 Dec 2019, batch\"."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "it falls back to the shorter PayoutInstruction reference",
+        "problem": "PayoutInstruction ids are prefixed ULIDs (`pin_` + 26-char ULID) per the API conventions, exactly the same length as `clm_` ids. Falling back from the claim ULID to the instruction ULID saves zero characters, so the stated fallback is incoherent as written.",
+        "fix": "Define an actual short reference for narration fallback (e.g. batch sequence number + row index, `B0421-017`, mapped to the `pin_` id on the PayoutBatch record), or state that a truncated/short alias of the `pin_` id is stored on the instruction for narration use."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "KHARCHA-REIMB-clm01JC4QH7",
+        "problem": "Canonical claim ids are `clm_` prefixed 26-char ULIDs. The example (and the sample CSV rows) silently drops the underscore and truncates the ULID to 8 characters, before the sanitization caveat is introduced, so it reads like a different id format.",
+        "fix": "Show the canonical id first (e.g. `clm_01JC4QH7VXK8ZT2M9R3EW5YA`), then state explicitly that the serializer strips the underscore and may truncate for alphanumeric-only, length-capped narration fields; keep sample-file narrations consistent with that stated transformation."
+      },
+      {
+        "severity": "minor",
+        "type": "unsupported-claim",
+        "offendingText": "length caps commonly 20 to 40 characters",
+        "problem": "A hard-ish range with no provenance label, in a page whose own caution says per-bank detail is medium confidence or lower. None of the listed sources is cited for narration length caps.",
+        "fix": "Soften and label: \"narration length caps vary by bank (roughly 20 to 40 characters in the formats reviewed; verify per bank)\" or attach the specific bank doc that states a cap."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "https://www.icici.bank.in/managed-assets/docs/form-center/File_Format_Bulk_%20Transfers_3.3.pdf",
+        "problem": "The domain `icici.bank.in` is not ICICI Bank's domain (it is `icicibank.com`); likewise `corp.sbi.bank.in` in the SBI source entry is not an SBI domain (`onlinesbi.sbi` / `sbi.co.in`). Both look like mangled URLs carried from research and will 404 or worse.",
+        "fix": "Correct the ICICI v3.3 PDF link to the icicibank.com path and the SBI corporate file-upload link to the official onlinesbi.sbi/sbi.co.in URL, or label both as unverified mirrors."
+      }
+    ]
+  },
+  {
+    "slug": "reference/glossary",
+    "issues": [
+      {
+        "severity": "minor",
+        "type": "contradiction",
+        "offendingText": "blocked ITC: food and beverages, rent-a-cab, club/fitness, LTC vacation travel",
+        "problem": "THESIS-V2 carries the Section 17(5) blocked list as \"food & beverages, outdoor catering, rent-a-cab, club/fitness, LTC vacation travel benefits\". The glossary drops \"outdoor catering\", an incomplete rendering of a canonical regulatory invariant on the page most likely to be quoted.",
+        "fix": "Add \"outdoor catering\" to the Section 17(5) row: \"food and beverages, outdoor catering, rent-a-cab, club/fitness, LTC vacation travel\"."
+      },
+      {
+        "severity": "minor",
+        "type": "thin-coverage",
+        "offendingText": "| IMPS | Immediate Payment Service",
+        "problem": "The table defines IMPS, NEFT, RTGS, UPI and UTR but omits IFSC (load-bearing in /reference/bank-files/ routing), paise (the canonical money unit for every API field), and PAN (Phase 2 KYC, referenced under MSME/Udyam and TDS). The description promises \"every term of art in the dossier\".",
+        "fix": "Add three rows: IFSC (11-character bank-branch routing code, e.g. `HDFC0001234`, drives NEFT/RTGS/IMPS routing in bulk files); paise (all API money is integer `amount_paise` with `currency`, INR default; rupee decimals appear only at serialization); PAN (10-character income-tax id; Phase 2 vendor KYC alongside GSTIN/Udyam)."
+      },
+      {
+        "severity": "minor",
+        "type": "voice",
+        "offendingText": "the Tally JV export closes deals",
+        "problem": "Stated as fact, but THESIS only establishes \"no clean Tally JV export\" as an India gap (medium-high). \"Closes deals\" is a sales assertion with no provenance, in a definitions page that elsewhere is careful about laundering.",
+        "fix": "Rephrase to match the canon: \"a clean Tally JV export is a category gap the dossier treats as a wedge\" or \"the missing export every Indian finance team asks about\"."
+      }
+    ]
+  },
+  {
+    "slug": "reference/sources",
+    "issues": [
+      {
+        "severity": "major",
+        "type": "contradiction",
+        "offendingText": "a v2 build-deep pass (7 fresh studies plus 3 adversarial checks, June 2026)",
+        "problem": "THESIS-V2 states the v2 pass as \"10 fresh studies + 3 adversarial checks, Jun 2026\". The page says 7 in three places: the intro sentence, the pass table row (\"7: software pain points; ...\"), and the v2 bibliography header (\"Seven fresh studies and three adversarial verification passes\"). THESIS wins every conflict on canonical figures.",
+        "fix": "Align the count with THESIS (\"10 fresh studies plus 3 adversarial checks\") in all three locations, and reconcile the study enumeration in the table cell with the thesis's count (or, if the bibliography genuinely groups 10 studies into 7 headings, say so explicitly: \"10 studies, grouped under 7 headings below\")."
+      },
+      {
+        "severity": "major",
+        "type": "formatting",
+        "offendingText": "- [How to Prevent Employee Expense Fraud and Cash Pilferage in India (2026)",
+        "problem": "Nine bibliography entries are unclosed markdown links with no URL, rendering as literal bracketed text: lines 200, 206 (\"[Fyle (Sage Expense Management)\"), 213 (\"[GST Input Tax Credit (ITC)\"), 228 (\"[Accounting software integrations (Tally)\"), 323 (\"[Protean (NSDL)\"), 561 (\"[Prepaid Payment Instruments (PPIs)\"), 562 (\"[Master Direction on Regulation of Payment Aggregators (15 Sept 2025)\"), 619 (\"[TallyConnector (C#/.NET library)\"), 957 (\"[Infrequently Noted (Alex Russell)\"). This breaks the page's own promise of \"every link preserved from the research corpus\".",
+        "fix": "For each of the nine stub entries, restore the full `[title](url)` from the research corpus, or delete the stub if the URL is unrecoverable."
+      },
+      {
+        "severity": "minor",
+        "type": "formatting",
+        "offendingText": "## Sources\n\nThe most load-bearing references",
+        "problem": "A trailing \"Sources\" H2 on the sources page itself, re-listing ten links that already appear in the grouped bibliography above. Redundant structure that also reads oddly in the sidebar TOC (Sources and Methodology > Sources).",
+        "fix": "Rename the section to \"The ten most load-bearing references\" (or fold it into the intro as a short table) so the page does not end with a duplicate Sources heading."
+      },
+      {
+        "severity": "minor",
+        "type": "other",
+        "offendingText": "https://corp.sbi.bank.in/corporate/sbi/corp_fileupload.html",
+        "problem": "Mangled bank domains in the payouts bibliography: `corp.sbi.bank.in` is not an SBI domain and `www.icici.bank.in` (two entries, including the corporate-card link) is not ICICI's. Same defect as in /reference/bank-files/.",
+        "fix": "Correct to the official domains (onlinesbi.sbi / sbi.co.in; icicibank.com) or annotate the entries as unverified mirrors."
+      }
+    ]
+  },
+  {
+    "slug": "cross-page",
+    "issues": [
+      {
+        "severity": "blocker",
+        "type": "inconsistent-contract",
+        "offendingText": "PayoutInstruction.status runs `pending` (batch building), `issued` (in an exported file or accepted by the partner), then `succeeded` or `failed` (payouts.mdx)",
+        "problem": "Three incompatible PayoutInstruction status enums: phase-1/payouts.mdx uses pending → issued → succeeded|failed; spec/state-machines.mdx (which says 'the states below are derived here and are canonical') uses pending → dispatched → paid|failed|cancelled; spec/data-model.mdx CHECK-pins a third set ('pending','exported','executing','paid','failed','returned','cancelled') and marks it 'Defined here'. THESIS defines only the pin_ prefix, not the states, so the spec pages must agree and they do not.",
+        "fix": "Adopt state-machines' enum (pending, dispatched, paid, failed, cancelled) as canon. In payouts.mdx replace `issued`→`dispatched` and `succeeded`→`paid` everywhere (truth table, repair loop, Done means). In data-model.mdx rewrite the payout_instructions CHECK to ('pending','dispatched','paid','failed','cancelled') and drop 'exported','executing','returned'; update the partial-index WHERE clause accordingly."
+      },
+      {
+        "severity": "blocker",
+        "type": "inconsistent-contract",
+        "offendingText": "An instruction keeps its id across retries, incrementing `attempt` and re-pointing `batch_id` (state-machines.mdx)",
+        "problem": "Contradictory instruction-identity semantics: spec/state-machines.mdx says a failed instruction is re-queued (failed → pending, same pin_ id, attempt++); phase-1/payouts.mdx says 'Instructions are immutable attempts: repair creates a new instruction on the same claim'; spec/api.mdx /payout-instructions/{pin_id}/reissue says 'a new instruction on the same claim in the next batch'; spec/data-model.mdx's partial unique index ('A failed or returned instruction releases the partial unique index, so a later batch can cut a fresh instruction') also assumes new rows. An implementer cannot satisfy both audit models.",
+        "fix": "Pick the immutable-attempt model (3 of 4 pages, and it matches the data-model index design): in state-machines.mdx delete the failed→pending re-queue transition and the attempt/batch_id re-pointing sentence; replace with 'reissue creates a new PayoutInstruction (new pin_) on the same claim in a new building batch, audit instruction.reissued linking both'."
+      },
+      {
+        "severity": "blocker",
+        "type": "inconsistent-contract",
+        "offendingText": "`building` | both | Finance adds approved claims; instructions `pending`; member claims remain `approved` (state-machines.mdx)",
+        "problem": "When does a claim become in_payout? phase-1/payouts.mdx: 'Adding a claim to a `building` batch moves it from `approved` to `in_payout`' (and its truth table shows building/pending/in_payout); end-to-end-flow.mdx step 11 agrees ('each claim flips to `in_payout`' at batch build). spec/state-machines.mdx says claims remain `approved` while building and only move at export/execute ('A batch leaves `building` | Member claims move to `in_payout`'). Opposite transitions on the same edge.",
+        "fix": "Decide once: recommend the state-machines version (in_payout only when the batch leaves building; while building the claim is reserved-but-approved). Then fix payouts.mdx ('Adding a claim... reserves it; it moves to in_payout when the batch is exported/executed; removing while building releases the reservation') and e2e step 11 plus its master-table `approved`/`in_payout` rows to match. Alternatively flip state-machines; either way all three pages must name the same edge."
+      },
+      {
+        "severity": "blocker",
+        "type": "inconsistent-contract",
+        "offendingText": "Breach | 48h | 24h | step `escalated`; successor for backup or delegate ... Second breach ... step `expired` (approval-engine.mdx)",
+        "problem": "ApprovalStep escalated/expired semantics are reversed between pages. phase-1/web/approval-engine.mdx: first SLA breach → `escalated` (successor created), `expired` = 'escalation ladder exhausted without a decision' (parks in admin queue); end-to-end-flow echoes this ladder. spec/state-machines.mdx: SLA breach → `expired`, then `expired` --escalate--> `escalated` with successor. THESIS lists both statuses without ordering, so the two pages define opposite machines for the same enum values.",
+        "fix": "Align state-machines.mdx to the approval-engine/e2e semantics: active --SLA breach--> `escalated` (successor step for backup/delegate/admin, fresh clock); `escalated`-chain exhausted --> `expired` (terminal marker, claim parks in admin queue). Update the ApprovalStep ASCII diagram and the two transition rows accordingly, and keep approval-engine's status table as-is."
+      },
+      {
+        "severity": "blocker",
+        "type": "inconsistent-contract",
+        "offendingText": "`GET /api/v1/company-config` returns the current document; `PUT /api/v1/company-config` replaces it whole (config-schema.mdx)",
+        "problem": "Two incompatible configuration APIs. spec/config-schema.mdx specifies GET/PUT /company-config (whole-document replace) plus POST /company-config/validate, with 409 CFG_VERSION_STALE. spec/api.mdx (the 'binding endpoint catalog') specifies GET /company and PATCH /company/config/{domain} with domains 'org, categories, approval-matrix, policies, gst, payouts, notifications' — domain names that don't even match config-schema's domains (org, categories, policy_tables, approval, credits, payouts, notifications, locale; no 'gst' or 'policies' domain exists). Paths, verbs, granularity, and domain vocabulary all disagree.",
+        "fix": "Make spec/api.mdx defer to config-schema: replace the PATCH /company/config/{domain} row with PUT /company-config (full document, client-supplied version, 409 CFG_VERSION_STALE) and POST /company-config/validate; fix the domain list to org, categories, policy_tables, approval, credits, payouts, notifications, locale; rename GET /company/config/versions to match (e.g. GET /company-config/versions) in both pages and in config-schema's prose."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "Failed payout repair | ... claim returns to the `approved` pool flagged `payout_failed` (end-to-end-flow.mdx)",
+        "problem": "Claim status after an instruction failure disagrees. end-to-end-flow.mdx (three-loops table and master-table `in_payout` row: 'back to `approved` ... on instruction failure') returns the claim to `approved` flagged `payout_failed`. spec/state-machines.mdx: 'the claim HOLDS at `in_payout`' on instruction failure; only an explicit write-off returns it to `approved`. phase-1/payouts.mdx truth table also keeps the claim at `in_payout` (repair). The `payout_failed` flag exists nowhere else.",
+        "fix": "Fix end-to-end-flow.mdx to match state-machines/payouts: on instruction failure the claim holds at `in_payout` in the repair queue; it returns to `approved` only on explicit finance write-off or batch cancel while building. Drop or define the `payout_failed` flag consistently (payouts.mdx calls it the 'repair queue')."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "Capture, upload, pre-submission OCR (fair-use capped at `max(20, 3 × remaining credits)` scans a month), and field review all work at zero balance (end-to-end-flow.mdx)",
+        "problem": "Zero-balance OCR behavior contradicts. end-to-end-flow.mdx says pre-submission OCR works at zero balance. credits-and-metering.mdx: 'at zero balance, pre-submission OCR pauses entirely and receipts hold in `queued`' and lists 'Pre-submission scans' under 'Pauses at zero balance'; state-machines.mdx receipt pickup guard requires 'balance above zero OR receipt belongs to a submitted claim'; THESIS says processing pauses at balance 0. e2e is the outlier (and its reading of the max(20,…) formula implies 20 scans/month even at zero).",
+        "fix": "Amend end-to-end-flow.mdx gate-one paragraph: capture, upload, drafting and field review work at zero balance; pre-submission OCR pauses (receipts hold in `queued`); the max(20, 3 × remaining credits) fair-use cap applies only while the balance is positive — mirroring credits-and-metering's sentence."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "the claim re-enters at the querying step, earlier approvals stand, the original policy snapshot still governs (end-to-end-flow.mdx)",
+        "problem": "Resubmission-after-sent_back routing disagrees. end-to-end-flow.mdx and state-machines.mdx ('earlier approved steps stand; a fresh step activates for the approver who sent it back') make resume-with-original-snapshot unconditional. approval-engine.mdx adds a condition that contradicts both: 'if `claimed_amount_paise` increased or category, cost center, or branch changed, the engine re-resolves against current policy and all steps reset.'",
+        "fix": "Decide the contract (the approval-engine conditional rule is the safer product behavior — 'an approval given for ₹9,000 is not an approval for ₹90,000'). Then propagate it: add the changed-inputs re-resolve branch to the state-machines `sent_back`→`submitted` transition guard and soften e2e's 'the original policy snapshot still governs' to 'unless amount increased or routing inputs changed, in which case the chain re-resolves'."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "Re-evaluation happens on every entry into `submitted`: a resubmission after `sent_back` ... runs against the rules effective at that instant (rule-schema.mdx)",
+        "problem": "Which rule versions govern a resubmission? spec/rule-schema.mdx says resubmission re-runs rules effective at the resubmission instant (both traces retained). end-to-end-flow.mdx's send-back loop says 'the original policy snapshot still governs'. These give different outcomes whenever a rule changed between submit and resubmit.",
+        "fix": "Make rule-schema's behavior canonical (it is the spec page and matches 'Rule selection uses the evaluation instant'); reword e2e's loop row to: 'rules re-evaluate at resubmission; the routing chain resumes per the approval-engine rules'. Keep snapshot language scoped to chain/config, not rule evaluation."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "\"type\": \"expiry\", \"credits\": -19 ... \"drawn_from\": \"cre_01JX5GQ9...\" (credits-and-metering.mdx ledger example)",
+        "problem": "The CreditEntry ledger example in credits-and-metering.mdx does not match the credit_entries DDL in spec/data-model.mdx: the example uses field `credits` where the column is `amount`; `drawn_from` where the column is `grant_id`; and includes `pack`, `amount_paise`, `currency`, and `actor_id` fields that have no columns in the table (data-model has only id, company_id, type, amount, claim_id, grant_id, expires_at, note, created_at).",
+        "fix": "Rewrite the JSON example to the DDL field names (`amount`, `grant_id`) and either drop `pack`/`amount_paise`/`actor_id` (fold purchase metadata and actor into `note` or the AuditEvent) or add those columns to the data-model table — pick one and apply to both pages."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "\"payout_batch_id\": \"pob_...\", \"beneficiary_account_id\": \"bene_...\", \"source_bank_account_id\": \"ba_...\", \"rail\": \"NEFT\", \"status\": \"succeeded\" (payouts.mdx routing example)",
+        "problem": "The payout_instruction JSON in phase-1/payouts.mdx disagrees with the payout_instructions DDL in spec/data-model.mdx: field names `payout_batch_id` vs column `batch_id`, `beneficiary_account_id` vs `beneficiary_id`, a `source_bank_account_id` column that does not exist in the table (source account hangs off the batch), uppercase `\"NEFT\"` vs the lowercase CHECK ('neft','imps','rtgs','upi'), and status `succeeded` vs the data-model/state-machines enums.",
+        "fix": "Regenerate the example against the DDL: batch_id, beneficiary_id, lowercase rail 'neft', and the canonical status (see the instruction-enum blocker). If per-instruction source routing is intended, add source_bank_account_id to the data-model table instead; do not leave it example-only."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "Partial match (initials, order swap, honorifics) | Flag finance review | `review` (payouts.mdx)",
+        "problem": "BeneficiaryAccount status vocabulary mismatch: phase-1/payouts.mdx uses `verified`/`review`/`failed` for penny-drop outcomes; spec/data-model.mdx pins verification_status to ('unverified','pending','verified','failed') — there is no `review` value, and payouts never mentions `unverified`/`pending` although both pages describe demotion on edit.",
+        "fix": "Align to one enum. Either map payouts' partial-match outcome to `pending` (finance review) and say so, or extend the data-model CHECK with 'review'. Recommend changing payouts.mdx `review` → `pending` and adding a parenthetical '(finance review)' since data-model is the normative schema."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "Outbound webhooks reuse the same names (state-machines.mdx)",
+        "problem": "Webhook event names disagree. spec/state-machines.mdx says webhooks reuse dotted audit names and emits `claim.awaiting_credits`, `batch.exported`, `batch.partially_failed`, `instruction.failed` 'webhook same'. spec/api.mdx's binding event catalog has none of these: it uses `credits.exhausted`, `payout.batch.completed`, `payout.instruction.paid`, and `approval.escalated` (not `step.escalated`). Consumers built from one page will never see the other page's events.",
+        "fix": "Make api.mdx's catalog the webhook contract. In state-machines.mdx, replace 'Outbound webhooks reuse the same names' with 'audit names are internal; outbound webhook types are the api.mdx catalog' and fix each 'webhook same' side-effect to name the catalog event (or extend the api catalog with batch.exported / instruction.failed if those are real)."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "`credits.alert_thresholds` | `[80, 100]` | THESIS canon; 50 and 95 ship as one-tap presets (config-schema.mdx)",
+        "problem": "Default alert thresholds disagree: spec/config-schema.mdx defaults to [80, 100], but credits-and-metering.mdx presents 50/80/95/100 as the shipped behavior, including a testable Done-means ('Alerts fire once per cycle at 50/80/95/100 on the configured channels'); strategy/pricing.mdx cites both ('80% and 100%' in the loop, '50/80/95/100% alerts' in the risk table). THESIS itself carries 80/100 in the credits contract and 50/80/95/100 in the pricing canon, so the pages must pick one default.",
+        "fix": "Pick one default and state the other as opt-in everywhere: simplest is config-schema default [50, 80, 95, 100] to match the credits page's channel table and Done-means; otherwise rewrite the credits table to label 50 and 95 as presets, and fix its Done-means line to 'at the configured thresholds (default 80/100)'."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "routing to the submitter's manager. If even that cannot produce a human (no manager on record), the claim routes to the admin queue (approval-engine.mdx)",
+        "problem": "Fallback-rule target disagrees: phase-1/web/approval-engine.mdx says the undeletable fallback routes to the submitter's manager, with the admin queue only as the floor. spec/config-schema.mdx defines rule_fallback as `\"chain\": [\"admin\"], \"flag\": \"rule_gap\"` and says it routes 'to the admin queue flagged rule_gap' whenever it fires. Same rule, two different default targets.",
+        "fix": "Make config-schema's seeded rule_fallback chain [\"manager\"] with admin-queue-on-no-manager handled by the resolver floor (matching approval-engine and the THESIS Fyle-invariant framing), or change approval-engine step 6 to say the fallback routes directly to the admin queue. Recommend the former: update the worked-example rule_fallback params and the note in config-schema."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "\"approver_id\": \"usr_01JXF2Q3D5F7H9K1M3N5P7R9TV\" ... \"level\": 1 ... \"sla_hours\": 24 (approval-engine.mdx persisted resolution)",
+        "problem": "The 'persisted resolution' JSON in phase-1/web/approval-engine.mdx does not match the approval_steps schema in spec/data-model.mdx: approver_id carries a `usr_` ULID where the column is an FK to memberships (`mem_`, as rule-schema's chain_preview correctly uses); fields `level`/`slot`/`sla_hours` have no columns (data-model has `step_index`, `sla_due_at`, no slot).",
+        "fix": "Rewrite the example with mem_ approver ids and either rename to the DDL fields (step_index, sla_due_at) or explicitly label the block as the resolver's trace payload (not approval_steps rows) and remove the 'persisted' claim; the simplest fix is mem_ prefixes + step_index."
+      },
+      {
+        "severity": "major",
+        "type": "inconsistent-contract",
+        "offendingText": "Reject list | SVG, GIF, BMP, TIFF, PDF, and anything else | 415 (capture-pipeline.mdx)",
+        "problem": "PDF handling contradicts: spec/capture-pipeline.mdx's server `normalize` (step 1 of worker processing for 'each Receipt') rejects PDF outright, but spec/data-model.mdx receipts.mime_type CHECK includes 'application/pdf' with the note 'pdf via email-in', and THESIS/OCR canon make email-in (which delivers PDFs) a launch intake path. As written, every email-in PDF Receipt is 415-rejected by its own pipeline.",
+        "fix": "Scope the reject list to the client upload endpoint: in capture-pipeline.mdx add 'PDF is rejected on POST /receipts (camera/library paths) but accepted on the server-to-server email-in path, where normalize rasterizes the first N pages to JPEG' — or remove application/pdf from the data-model CHECK if PDFs are truly unsupported. The two pages must name the same rule."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "The schema caps chains at 5 levels; templates never generate more than 3 (approval-engine.mdx)",
+        "problem": "approval-engine.mdx asserts a 5-level schema cap, but spec/config-schema.mdx contains no maxItems on `params.chain` (or add_steps) anywhere, so the cap exists in prose only.",
+        "fix": "Add `\"maxItems\": 5` to the chain/add_steps arrays in the config-schema (and a matching save-time error code), or delete the 'schema caps' sentence from approval-engine."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "the monthly plans (`Starter`, `Growth`, `Scale` as auto-pack subscriptions with bonus credits, `Scale` custom) ship only after cohort burn data (credits-and-metering.mdx)",
+        "problem": "Garbled plan naming: `Scale` appears twice with two meanings, and THESIS's plan names (Free, Starter, Growth, Scale-custom) are conflated with the pack names (Top-up…Enterprise). pricing.mdx describes the same future as 'the optional monthly auto-pack (subscribe to Growth, +10% bonus credits)' without re-using plan names.",
+        "fix": "Rewrite the parenthetical to match pricing.mdx: 'the optional monthly auto-pack subscriptions (e.g. subscribe to Growth, +10% bonus credits; custom Enterprise terms) ship only after cohort burn data' — dropping the duplicate Scale and the plan/pack conflation."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "`flag` and `warn` annotate steps for the exceptions-first queue (approval-engine.mdx)",
+        "problem": "`warn` semantics drift: spec/rule-schema.mdx defines `warn` as gating submission on a typed reason from the employee (the reason then rides to the approver); approval-engine.mdx describes it as merely annotating approver steps, indistinguishable from `flag`.",
+        "fix": "In approval-engine.mdx change to: '`flag` annotates steps for the exceptions-first queue; `warn` gates submission on a typed employee reason that rides to the approver' — one clause, matching rule-schema."
+      },
+      {
+        "severity": "minor",
+        "type": "inconsistent-contract",
+        "offendingText": "Recommended default: a weekly run on Friday with a Thursday 18:00 IST cut-off (payouts.mdx)",
+        "problem": "payouts.mdx calls weekly-Friday the 'recommended default' while spec/config-schema.mdx ships payout_calendar.frequency default 'manual' ('No calendar should fire before a bank account exists'). Not contradictory in intent, but two pages both use the word 'default' for different values.",
+        "fix": "In payouts.mdx say 'shipped default is manual (no calendar until a bank account exists); the recommended cadence once payouts are live is weekly Friday with a Thursday 18:00 IST cut-off'."
+      }
+    ]
+  }
+]

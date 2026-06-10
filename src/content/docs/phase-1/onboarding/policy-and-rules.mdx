@@ -1,0 +1,197 @@
+---
+title: Policies and Rules
+description: "The employee-claim policy catalog: what ships on by default, what each rule does, and how admins shape spend without writing code."
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Kharcha ships with policy already on. The onboarding wizard leaves behind an India template: per-category caps, evidence thresholds, a default non-reimbursable set with the statute attached as an informational echo, and GST/ITC tagging for finance. Every policy is data in the same six-verb language (allow, flag, warn, cap, block, route), togglable per company, never code. This page is the admin-facing catalog: what each rule checks, its default state, and the words each audience sees when it fires. The formal engine (condition trees, operators, evaluation order, schemas) lives at [the rule schema](/spec/rule-schema/); the objects rules reference (categories, grades, city tiers) live in [the configuration model](/phase-1/onboarding/configuration-model/).
+
+## Six verbs, two hardnesses
+
+Every policy compiles to a Rule with exactly one action verb and an explicit `hardness` field. The verb decides what happens; hardness decides whether an approver can bend it. Hard rules short-circuit at submission. Soft rules accumulate as exceptions an approver can override with a logged reason. `warn` is the one soft verb with a submission-time side effect: the employee must type a reason before the claim moves.
+
+| Verb | Default hardness | What happens | Who sees it |
+| --- | --- | --- | --- |
+| `allow` <span class="pill pill--allow">Allow</span> | soft | Explicit pass; may attach informational tags such as `itc_blocked` | Nobody in the claim flow; tags surface to finance |
+| `flag` <span class="pill pill--flag">Flag</span> | soft | Claim submits; the line carries an exception badge | Approver, in the exceptions-first inbox |
+| `warn` <span class="pill pill--flag">Warn</span> | soft | Submission gated on a typed reason | Employee at submit; the reason rides to the approver |
+| `cap` <span class="pill pill--flag">Cap</span> | soft | Line `approved_amount_paise = min(claimed, cap)` | Employee at submit; approver sees a cap badge |
+| `block` <span class="pill pill--block">Block</span> | hard | Line zeroed at `line_item` scope; claim stopped at `claim` scope | Employee at submit, in plain words |
+| `route` <span class="pill pill--info">Route</span> | soft | The approval chain gains or swaps a step | Employee in the chain preview; the routed approver |
+
+:::danger[Never bounce a whole claim for one bad line]
+A hard `block` at `line_item` scope zeroes that line (it ends `rejected`, `approved_amount_paise` 0) and the claim proceeds with every clean line. Only if every line is blocked is there nothing to submit, and the employee is told exactly why. The whole-report bounce that punishes one bad line is a documented top-3 incumbent complaint; Kharcha treats partial coverage as the normal case, not an error.
+:::
+
+Policy rules never gate capture or upload. A bill photo always lands; the only thing that parks a submission outside policy is credit exhaustion (`awaiting_credits`), which is a billing state, not a policy verdict.
+
+## The catalog
+
+Defaults below come from the wizard template and are togglable per company. Amounts marked template are our suggested starting values (our derivation, illustrative); they are not benchmarks, and admins edit them in place.
+
+### Spend limits
+
+| Rule | What it checks | Verb, hardness | Default | Copy when it fires |
+| --- | --- | --- | --- | --- |
+| Per-claim category cap | Category sum within a claim vs cap times grade multiplier (template: Meals ₹2,000, Lodging ₹6,000 per night, Local Conveyance ₹1,500) | `cap`, soft | ON via template | Employee: "Meals are covered up to ₹3,000 for your grade. ₹560 of this claim will not be reimbursed." |
+| Monthly category ceiling | Employee's running monthly total in a category vs ceiling | `flag`, soft | OFF until amounts set | Approver: "Fourth Fuel claim this month: ₹6,800 against a ₹5,000 ceiling." |
+| Grade multiplier | Scales every cap by the claimant's Grade (template: 1.0 staff, 1.5 manager, 2.0 leadership) | parameter on `cap` rules | ON, neutral 1.0 until edited | Folded into cap copy ("for your grade") |
+
+<p class="source-note">Template amounts are our derivation, editable per company; the cap-to-limit verb itself follows Fyle and Zoho precedent (vendor docs, medium confidence).</p>
+
+### Evidence
+
+| Rule | What it checks | Verb, hardness | Default | Copy when it fires |
+| --- | --- | --- | --- | --- |
+| RECEIPT_REQUIRED_ABOVE | Lines above ₹500 (template) without an attached Receipt | `warn`, soft | ON | Employee: "Claims above ₹500 need a bill. Attach a photo, or tell us why you cannot." |
+| GSTIN_REQUIRED_ABOVE | Bills above ₹5,000 (template) missing a supplier GSTIN | `flag`, soft | ON once the company GSTIN is set | Finance: "No supplier GSTIN on this ₹8,200 bill; ITC cannot be assessed." |
+| GSTIN_FORMAT | Luhn-mod-36 checksum on any captured GSTIN | `flag`, soft | ON | Employee at `review_items`: "This GSTIN does not look right. Tap to check it against the bill." |
+| Backdate window | `expense_date` older than 90 days (template) at submit | `warn`, soft | ON | Employee: "This bill is 114 days old; policy expects 90. Add a reason." |
+| Future-date block | `expense_date` after today | `block`, hard | ON | Employee: "This bill is dated tomorrow. Fix the date to continue." |
+
+Receipt-required defaults to `warn`, not `block`: lost receipts are a field reality, and a typed reason plus an approver's judgment beats a dead end. A one-tap toggle promotes it to a hard `block` for companies that want receipts absolute. GSTIN format failures are usually OCR misreads, which is why the fix lives in the tap-to-fix review screen described in [OCR and itemisation](/phase-1/capture/ocr-itemisation/), not in a rejection.
+
+### Per-diem
+
+PER_DIEM_CAP is a matrix, not a number: city tier crossed with Grade, applied per travel day with a partial-day fraction (template 0.5 for departure and return days, our derivation). The verb is `cap`, soft. The group ships OFF because no statutory per-diem rate exists in India to default to; enabling it preloads the illustrative matrix below for the admin to edit before activation. A company-level toggle picks the mode: actuals (default; itemised meal and lodging caps apply) or per-diem (the matrix cap governs travel days and itemised meal caps yield).
+
+| Grade | Tier 1 cities | Tier 2 | Tier 3 |
+| --- | --- | --- | --- |
+| Staff | ₹2,500 | ₹2,000 | ₹1,500 |
+| Manager | ₹3,500 | ₹2,800 | ₹2,100 |
+| Leadership | ₹5,000 | ₹4,000 | ₹3,000 |
+
+<p class="source-note">Illustrative template matrix, our derivation. India has no statutory per-diem rate (HR-vendor corroborated, medium confidence). Keep the city-tier table separate from the HRA metro list; they are different policy axes.</p>
+
+:::caution[Per-diem caps are policy, not tax]
+Sec 10(14) read with Rule 2BB exempts a daily allowance only to the extent actually spent on duty; the unspent balance is taxable salary (govt, high confidence). Never present the cap as a tax computation. Kharcha surfaces the unspent balance as a payroll-facing figure instead of pretending the cap settles the tax question.
+:::
+
+### Mileage
+
+Per-km rates by vehicle class (two-wheeler, car) are category configuration on the Fuel/Mileage category, set by the admin; there is no statutory per-km reimbursement rate to inherit, so the template ships rates empty. Two rules sit on top:
+
+| Rule | What it checks | Verb, hardness | Default | Copy when it fires |
+| --- | --- | --- | --- | --- |
+| Logbook completeness | Required fields on a mileage line: date, origin and destination, distance in km, purpose | `warn`, soft | ON | Employee: "Add where you went and why; mileage claims need a logbook entry." |
+| Distance sanity cap | Claimed distance above 300 km/day (template) | `flag`, soft | ON, severity low | Approver: "412 km claimed in one day; template ceiling is 300." |
+
+The logbook fields are not bureaucracy for its own sake. Under Rule 3, employer-reimbursed car running costs are a perquisite valued at ₹1,800/month (engine up to 1.6 litres) or ₹2,400/month above that, plus ₹900/month for a driver, unless use is wholly official and evidenced by a maintained logbook and employer certificate, in which case the perquisite is nil (govt, high confidence). Flat fuel allowances of about ₹7,000/month being tax-free is practitioner interpretation, not statute <span class="pill pill--low">Low</span>; reimbursement against actual bills and kilometres is the defensible default.
+
+### Behavioral flags
+
+| Rule | What it checks | Verb, hardness | Default | Copy when it fires |
+| --- | --- | --- | --- | --- |
+| Weekend/holiday expense | `expense_date` on a weekend or company holiday | `flag`, soft, severity low | ON in office-profile templates, OFF in field-team templates | Approver: "Dated Sunday, 14 Jun." |
+| Round-number pattern | Repeated line amounts at exact multiples of ₹500 | `flag`, soft | OFF | Approver: "Three round-amount claims in 30 days." |
+| DUPLICATE_SUSPECT | Two-of-three match on merchant, date, amount across the company; perceptual-hash match at capture | `flag`, soft | ON | Employee at submit: "Looks like a duplicate of CLM-0412 (₹850, 12 Jun). Keep both, or keep one?" |
+| Frequency anomaly | More than N same-category claims in a rolling window | `flag`, soft | OFF until baselined | Approver: "Five Fuel claims in 7 days; this employee's typical is one." |
+| Random audit | A configurable share of claims routed to a manual audit queue | `route`, soft | OFF; defaults to 5% when the auto-approve tier is enabled (Expensify precedent) | Approver: "Selected for random audit." |
+
+Round-number and frequency detectors ship OFF deliberately. In a cash-heavy economy, round amounts are ordinary (autos, dhabas, per-diem advances), and anomaly thresholds with no baseline data flood the exceptions queue. A noisy flag is worse than no flag: it breaks the zero-flag bulk-approve contract and trains approvers to rubber-stamp. The duplicate rule is published to employees in plain words (Brex's two-of-three contract is the precedent), and its dismissal verbs are Keep both / Keep one (Expensify pattern), never a silent merge.
+
+Amount-threshold routing (who must approve at what value) belongs to the approval matrix, not this catalog; see [the approval engine](/phase-1/web/approval-engine/). The `route` verb here covers exceptions the matrix cannot see, such as random audit or category-specialist review.
+
+### Category governance: the default non-reimbursable set
+
+These ship as enabled `block` rules on dedicated subcategories rather than as deleted categories, because the OCR classifier must be able to name a line "alcohol" for the rule to catch it on a mixed bill. The statutory echo attaches as an informational tag on the policy screen and in finance exports; it is context, not legal advice.
+
+| Rule | Verb, hardness | Default | Statutory echo | Employee copy |
+| --- | --- | --- | --- | --- |
+| Alcohol | `block`, hard | ON | Sec 37(1) personal expense; Sec 17(5)(b) blocks ITC on food and beverages | "Alcohol is not reimbursable under company policy." |
+| Fines and challans | `block`, hard | ON | Sec 37(1): penalties for breaking the law are not deductible | "Traffic fines and penalties are not reimbursable." |
+| Donations | `block`, hard | ON | Sec 37(1) not wholly and exclusively for business; CSR carve-out (Explanation 2) | "Donations cannot be claimed as business expenses." |
+| Gifts above ₹5,000 per FY | `block` above the aggregate, hard | ON | Rule 3(7)(iv): gift value above ₹5,000/year is a taxable perquisite | "Gift claims above ₹5,000 this financial year are not reimbursable under company policy." |
+| Personal entertainment (minibar, in-room movies, spa, grooming) | `block`, hard | ON | Sec 37(1) personal; Sec 17(5)(b) beauty and health services | "Personal entertainment on travel is not covered." |
+
+<p class="source-note">Policy defaults, not statutory bans. Statute echoes corroborated via ClearTax, Taxmann, IndianKanoon; the primary CBIC and incometaxindia.gov.in pages were intermittently un-fetchable at research time, so re-verify clause wording before hard-coding (primary-corroborated, high confidence on substance).</p>
+
+:::tip[Toggles, not bans]
+Every entry above is a toggle with its rationale attached. A company that reimburses controlled client-entertainment alcohol flips the verb to `cap` or `warn` without forking the product. Over-blocking is the failure mode that erodes finance trust; the defaults are opinionated, the engine is not dogmatic.
+:::
+
+### GST and ITC tagging
+
+ITC_ELIGIBLE runs as an `allow` rule that attaches an `itc_eligible` or `itc_blocked` tag to every line, from a category map plus invoice checks (supplier GSTIN present, company GSTIN on the bill). Severity is info. The tags surface only in [the finance console](/phase-1/web/finance-console/) and Tally-bound exports; the employee never sees them, and they never gate submission.
+
+| Category | Default tag | Basis |
+| --- | --- | --- |
+| Meals, outdoor catering | `itc_blocked` | Sec 17(5)(b)(i), food and beverages |
+| Local Conveyance (cab hire, rent-a-cab) | `itc_blocked` | Sec 17(5)(b)(i); exception only where obligatory under law (since 1 Feb 2019) |
+| Club, health, fitness | `itc_blocked` | Sec 17(5)(b)(ii) |
+| LTC, vacation travel benefits | `itc_blocked` | Sec 17(5)(b)(iii) |
+| Travel Air/Rail (business) | `itc_eligible` | Ordinary business travel is not blocked by Sec 17(5) |
+| Lodging, Telecom, Office Supplies, Software | `itc_eligible`, conditional | Not in the blocked list; requires a tax invoice bearing the company GSTIN |
+
+<p class="source-note">Category map derived from the Sec 17(5) catalogue (primary-corroborated, high confidence); eligible rows are our reading of what the statute does not block, conditional on invoice discipline.</p>
+
+:::danger[The travel-benefits trap]
+Clause (b)(iii) blocks ITC on vacation travel benefits (LTC, home travel concession) only. It does not touch ordinary business travel. An engine that tags all employee travel `itc_blocked` silently discards recoverable credit on the largest T&E category. Block LTC; pass business air and rail.
+:::
+
+Why bother in Phase 1, when nothing here blocks anyone? Because wrongly claimed ITC attracts interest and reversal under Sec 50(3) (ClearTax cites 24%, but Finance Act 2022 revised the rate for ITC wrongly availed and utilised to 18%, retrospective to July 2017; re-verify clause wording before publication), and vendors claim up to 60% of T&E ITC goes unclaimed for want of compliant capture (vendor marketing, directional only). The line-level GST split already exists from extraction, so the tag costs one lookup and gives finance a defensible starting position.
+
+## One dinner bill, line by line
+
+A mixed bill is the canonical hard case, and line-item evaluation makes it boring. Team dinner, one Receipt, three extracted lines confirmed by the employee:
+
+```text
+Receipt rcp_01JD9... "Barbeque Nation, Koramangala", 14 Jun 2026, bill total ₹3,560
+
+  li_1  Veg starters and mains    category: meals     claimed 214000 paise (₹2,140)
+  li_2  Soft beverages            category: meals     claimed  22000 paise (₹220)
+  li_3  Beer, 2 pitchers          category: alcohol   claimed 120000 paise (₹1,200)
+
+line_item rules (priority order):
+  li_1, li_2  meals cap: category sum ₹2,360 vs ₹3,000 (₹2,000 x 1.5 grade)  -> within cap -> approved
+  li_3        block_alcohol (hard, ON)                                       -> rejected, 0 paise
+  all lines   ITC_ELIGIBLE: tag itc_blocked (Sec 17(5)(b), F&B)              -> informational
+
+claim rollup:
+  claimed_amount_paise   356000
+  approved_amount_paise  236000
+  status: submitted -> in_review, one line blocked and recorded, claim proceeds
+```
+
+The employee sees at submit: "1 of 3 lines is not covered: alcohol is not reimbursable under company policy. ₹2,360 of ₹3,560 will go for approval." Nobody bounces the food because of the beer. If the company instead allows client-entertainment alcohol capped at ₹750, `li_3` ends `capped` with `approved_amount_paise = min(120000, 75000) = 75000` and the approver sees a cap badge instead of a zeroed line. Same engine, one toggle.
+
+## Overrides on soft rules
+
+Soft outcomes are the approver's to bend, deliberately and on the record:
+
+- An approver can approve a flagged line as-is, restore a capped line up to the claimed amount, trim it further, or accept a warned line with the employee's reason attached. Every override requires a typed reason; there is no silent override path.
+- Each override writes an AuditEvent: actor, role at decision time, rule id and version, before and after amounts, reason, and channel (web, email link, WhatsApp). It is retained with the rest of the trail for 8 financial years, the binding longest period; see [the regulatory map](/compliance/regulatory-map/).
+- Hard rules are not overridable at decision time, by design. If a hard block is wrong, the admin fixes the policy as a new version and the fix applies to future submissions; in-flight claims keep the policy snapshot they were submitted under.
+- Bulk approve stays restricted to zero-flag claims, so an override is always a single-claim act, never a side effect of clearing a queue.
+- When the right answer is neither approve nor override, the approver sends the claim back with a required comment; resubmission after `sent_back` consumes no new credit.
+
+## Lifecycle: draft, simulate, schedule, monitor, revise
+
+<Steps>
+
+1. **Draft.** Pick a template or compose from parts: scope (`line_item` or `claim`), condition, verb, hardness, and the message copy each audience will read. Drafts are disabled by default.
+
+2. **Simulate.** Run the simulate-a-claim tester (pick an employee, category, amount; see which rules fire and the rendered chain) and a dry run against recent claims: "would have fired 41 times in the last 90 days, capping ₹18,400 in total." Nothing ships blind.
+
+3. **Schedule.** Enable with `effective_from`, FY-aligned (April to March by default), with an optional `effective_to`. A Budget-driven threshold change is a dated row edit, not a release.
+
+4. **Monitor.** Every firing is an AuditEvent carrying rule id, version, and an input snapshot. The admin dashboard shows firing counts and override rates; a rule that gets overridden more often than it sticks is a tuning candidate, not a virtue.
+
+5. **Revise.** Edits create a new version. In-flight claims keep their submission-time snapshot; an explicit, audited re-evaluate action exists for admins who want a change applied to pending claims.
+
+</Steps>
+
+Done means: the wizard's India template leaves a working policy set on (caps, evidence thresholds, the non-reimbursable block set, ITC tagging once a GSTIN exists); a mixed bill never bounces whole; every firing, override, and version change is an AuditEvent; an admin can answer "why was this trimmed" from the rule trace without filing a ticket; and no policy rule ever stops a bill photo from landing.
+
+## Sources
+
+- [Section 17(5) of the CGST Act, CBIC Tax Information Portal](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/acts/2017_CGST_act/active/chapter5/section17_v1.00.html) (primary; intermittently un-fetchable at research time, re-verify live)
+- [Section 17(5) of CGST Act, blocked credit, ClearTax](https://cleartax.in/s/section-175-of-cgst-act) (analyst, corroborating primary)
+- [Ineligible ITC and 24% interest on wrongful claims, ClearTax](https://cleartax.in/s/gst-cases-where-input-tax-credit-is-unavailable) (analyst; carries the pre-Finance Act 2022 rate, see the 18% note above)
+- [Section 37 of Income Tax Act, ClearTax](https://cleartax.in/s/section-37-of-income-tax) (analyst)
+- [Rule 3 perquisite valuation, Income Tax Department](https://incometaxindia.gov.in/Rules/Income-Tax%20Rules/103120000000007059.htm) (govt)
+- [Rule 2BB prescribed allowances, Income Tax Department](https://incometaxindia.gov.in/rules/income-tax%20rules/103120000000006985.htm) (govt)
+- [Rule 3(7)(iv), gifts and vouchers, Tax Management India](https://www.taxmanagementindia.com/visitor/detail_manual.asp?ID=887) (govt)
+- [Configure Company Policies, Fyle (Sage)](https://help.fylehq.com/en/articles/1203330-configure-company-policies) (vendor; verb and override precedent)
+- [Rules user guide, Zoho Expense](https://www.zoho.com/us/expense/help/managing-policies/rules/) (vendor)

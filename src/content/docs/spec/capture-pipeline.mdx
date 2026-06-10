@@ -1,0 +1,304 @@
+---
+title: Capture Pipeline Spec
+description: "The client-to-server capture contract: feature detection, processing stages, image requirements, the outbox, and telemetry."
+---
+
+import { LinkCard, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+This page is the implementing agent's contract for the canonical pipeline `intake` → `frame_analysis` → `capture` → `quality_gate` → `crop_correct` → `review` → `compress` → `queue_upload` → `upload` → `extract` → `review_items` (the `review_items` field-review UX and attachment to the Claim are specified in [OCR and itemisation](/phase-1/capture/ocr-itemisation/)). The UX, microcopy, and platform argument live in [Camera and Document Capture](/phase-1/capture/camera/); this page fixes parameters, schemas, failure handling, and events so client and server can be built independently and meet exactly at the `POST /api/v1/receipts` presigned handshake. Three properties hold end to end: nothing is lost (outbox before network), nothing is distorted (stream-pixel capture, asserted in CI), nothing duplicates (one `Idempotency-Key` per page).
+
+## Feature detection
+
+Rung selection runs once per capture session and is cached until `visibilitychange`. Capability comes from feature detection, never UA sniffing; the UA regex below exists only because some webviews expose `getUserMedia` but make it prompt-hostile, and it errs toward rung 1, which always works.
+
+```ts
+// stage: intake. Decide the capture rung for this session.
+type CaptureRung = 'file_input' | 'viewfinder';
+type StillMethod = 'image_capture' | 'canvas_grab';
+
+const isIOS = (): boolean =>
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS desktop UA
+
+const isStandalone = (): boolean =>
+  window.matchMedia('(display-mode: standalone)').matches ||
+  (navigator as { standalone?: boolean }).standalone === true;
+
+// Advisory only: in-app browsers (WhatsApp, Slack, Gmail/GSA, Facebook family)
+// either lack mediaDevices (WKWebView pre-iOS 14.5) or re-prompt per call.
+const IN_APP_UA = /WhatsApp|Slack|GSA|FBAN|FBAV|Instagram|Line|MicroMessenger/i;
+
+export function selectCaptureRung(): CaptureRung {
+  if (!navigator.mediaDevices?.getUserMedia) return 'file_input'; // gate 1: API absent
+  if (isIOS() && isStandalone()) return 'file_input';             // gate 2: WebKit bug 252465
+  if (IN_APP_UA.test(navigator.userAgent)) return 'file_input';   // gate 3: webview heuristic
+  return 'viewfinder';                                            // progressive enhancement
+}
+
+export function selectStillMethod(): StillMethod {
+  // Chrome 59+; Safari/iOS 18.4+ (Mar 31, 2025). Never version-sniff this.
+  return 'ImageCapture' in window ? 'image_capture' : 'canvas_grab';
+}
+
+// Future client-side CV (slim single-threaded SIMD OpenCV.js) loads ONLY
+// behind this gate. deviceMemory is Chromium-only; undefined (Safari) fails
+// the gate, which is correct: iOS stays on server-side correction.
+export function cvEligible(): boolean {
+  const mem = (navigator as { deviceMemory?: number }).deviceMemory;
+  return mem !== undefined && mem >= 4 && selectCaptureRung() === 'viewfinder';
+}
+```
+
+`cvEligible()` gates nothing in v1: `crop_correct` is server-side and the client ships zero CV WASM. It exists so a later client build can never reach 3 GB-RAM devices, where threaded OpenCV.js OOM-crashes on refresh (opencv/opencv issue 24986, primary, high confidence).
+
+On the viewfinder rung, the constraint object is fixed. Only `exact`, `min`, and `max` bind (`exact` throws `OverconstrainedError`); `ideal` lets the browser pick the closest mode, and the delivered stream is read back from `getSettings()` and `videoWidth`/`videoHeight`, never assumed.
+
+```ts
+// stage: capture (viewfinder rung). The only constraint object we ship.
+export const CAPTURE_CONSTRAINTS: MediaStreamConstraints = {
+  audio: false,
+  video: {
+    facingMode: { ideal: 'environment' },
+    width: { ideal: 4096 },
+    height: { ideal: 2160 },
+  },
+};
+```
+
+## Stage contracts
+
+| Stage | Runs | Input | Output | Failure handling |
+| --- | --- | --- | --- | --- |
+| `intake` | Client (PWA, Console, email webhook) | User gesture, library pick, share, email attachment | Source Blob + `source` tag: `camera`, `library`, `share_target`, `email`, `console` | Unsupported type rejected pre-pipeline with plain copy; file input always rendered, so no dead end |
+| `frame_analysis` | Client, viewfinder rung only | ~720p downscaled frames, max 10 fps | Edge, steadiness, glare, blur hints; auto-capture trigger | Degrades to manual shutter silently; hints never block |
+| `capture` | Client | Live stream (rungs 2-3) or native camera return (rung 1) | Full-resolution bitmap, hard-capped 12 MP | `NotAllowedError` or `OverconstrainedError` falls to rung 1 in the same tap |
+| `quality_gate` | Client, verdict under 1s | Grayscale downscale of the capture | `pass`, `warn`, or `block` with reasons | `block` prompts retake; keep-anyway on `warn` flags the Receipt for tighter extraction thresholds |
+| `crop_correct` | Server worker (v1); client 4-corner rescue editor | Stored original JPEG | Corrected image (perspective + de-skew) stored beside the original | Low-confidence quad keeps the original and flags for the rescue editor; never destructive |
+| `review` | Client | Captured pages | Ordered page tray under the draft Claim | Abandoned sessions persist in IndexedDB; nothing discarded without user action |
+| `compress` | Client (Web Worker) | Bitmap, max 12 MP, one page at a time | JPEG 2048 px long edge, q 0.8, typically 200-500 KB | Encode failure retries at a lower pixel cap; final fallback uploads the original JPEG for server normalization |
+| `queue_upload` | Client | Compressed Blob + metadata | Outbox record, local status `queued` | Written before any network attempt; storage pressure raises the eviction warning |
+| `upload` | Client to server | Outbox record | Presigned three-step handshake: `rcp_` ULID, storage PUT, `complete` ack; Receipt `uploaded` | Classified retry policy below; terminal failures show a reasoned `failed` chip |
+| `extract` | Server worker | Stored corrected image | Extraction payload with field confidences; Receipt `extracted` | `extraction_failed` routes to [manual entry](/phase-1/capture/manual-entry/), image attached, no extra credit |
+
+:::danger[Hard invariant: no shippable path produces a stretched image]
+Stream frames are undistorted at their intrinsic `videoWidth` by `videoHeight`; a stretched bill is always presentation or capture code. Capture canvases are sized only from stream pixels, never CSS pixels or `devicePixelRatio`; previews use `object-fit: cover` (`fill` is lint-banned); CI device tests assert capture aspect equals stream aspect. The full executable pattern, including the WYSIWYG cover-crop math, lives in [Camera and Document Capture](/phase-1/capture/camera/).
+:::
+
+## Image requirements
+
+### Quality gate thresholds
+
+Two cheap signals on a grayscale downscale: variance of Laplacian (blur) and an 8-bit luma histogram (lighting). The values below are starter defaults, our derivation, shipped via remote config so tuning on our thermal bilingual receipt corpus never needs a client release <span class="pill pill--info">Tunable</span> <span class="pill pill--med">Medium</span>.
+
+```json
+{
+  "quality_gate": {
+    "analysis_long_edge_px": 1024,
+    "blur": { "metric": "variance_of_laplacian", "block_below": 100, "warn_below": 180 },
+    "brightness": {
+      "metric": "luma_histogram_8bit",
+      "dark_block": { "mean_luma_below": 60 },
+      "blowout_warn": { "share_above_luma_250": 0.05, "region": "guide_frame" }
+    },
+    "delivery": "remote_config",
+    "tunable": true
+  }
+}
+```
+
+<p class="source-note">Metric choice follows the Scanbot Document Quality Analyzer precedent (vendor docs, high); the numeric cutoffs are engineering starting points pending A/B on our own corpus (our derivation, medium). Published blog thresholds are unsourced and not shipped.</p>
+
+Mapping: blur and dark verdicts `block` (retake prompt); blowout inside the guide frame is `warn` (keep allowed, Receipt flagged). Bad cropping is not reliably detectable at this gate; the rescue editor downstream owns it.
+
+### Compression
+
+```ts
+// stage: compress. browser-image-compression v2.0.2 (MIT), in a Web Worker.
+export const COMPRESS_OPTIONS = {
+  maxWidthOrHeight: 2048,  // long edge; an 80 mm thermal bill at 300 DPI needs ~945 px
+  initialQuality: 0.8,
+  fileType: 'image/jpeg',
+  useWebWorker: true,
+} as const;
+```
+
+- Output lands at 200-500 KB/page typically (our derivation from these settings, medium); it over-satisfies Google Vision's floor of 1024 by 768 and sits far under its 20 MB ceiling (vendor docs, high), with headroom for the server re-warp in `crop_correct`.
+- iOS canvas-area guard: pre-iOS 18 the cap is 16,777,216 px of area (about 16.7 MP), so the 12 MP guard (4032 by 3024 = 12,192,768 px) leaves about 27% headroom, and anything at or above roughly 17 MP fails; iOS 18 raised the cap to 67,108,864 px. The pipeline therefore caps every bitmap at 12 MP and processes pages strictly one at a time, releasing references between pages.
+
+### EXIF and HEIC normalization
+
+Client rule: every intake image is re-encoded through a canvas (`createImageBitmap`, draw, `toBlob`). That bakes EXIF orientation into pixels and strips the tag (including GPS, a DPDP bonus), so a Samsung landscape-sensor photo can never render rotated downstream. getUserMedia captures never carry EXIF; the re-encode runs anyway for uniformity.
+
+Server rules, applied in `normalize` before anything else; Content-Type headers and filenames are never trusted:
+
+| Check | Rule | On failure |
+| --- | --- | --- |
+| Magic bytes | Accept JPEG (`FF D8 FF`) and PNG (`89 50 4E 47`) only as-is | Continue to HEIC check |
+| HEIC/HEIF | `ftyp` brand `heic`, `heif`, `mif1` at offset 4: transcode to JPEG via a heic-decode fallback (Files-app and AirDrop leaks; iOS transcodes Photos picks itself) | Transcode failure rejects with reason `image_undecodable` |
+| Reject list (client `POST /receipts` paths: camera, library) | SVG, GIF, BMP, TIFF, PDF, and anything else | 415 `application/problem+json`, type `unsupported_media_type`, human-readable `detail` |
+| Email-in PDF | PDF is accepted on the server-side email-in path only; `normalize` rasterizes the first 5 pages to JPEG (matching the 5-images-per-claim credit guard) before the rest of the pipeline | Rasterization failure rejects with reason `image_undecodable`, loud bounce-back to the sender |
+| Sanity | Decodable, at least 512 px long edge, at most 75 MP | 422 `image_unusable` with retake guidance |
+
+## The outbox
+
+`queue_upload` writes to an IndexedDB store before any network attempt. One record per page; the idempotency key is generated at capture time and is the primary key.
+
+```json
+{
+  "store": "outbox",
+  "keyPath": "idempotency_key",
+  "record": {
+    "idempotency_key": "9f8a3c1e-0d42-4f6b-bb1a-7c2d5e9a4f10",
+    "company_id": "co_01JXFZY3N8Q5T2W7KD4BP9MRHV",
+    "submission_id": "clm_01JXG5K2W7Q9T4N6XD8BP3MRHV",
+    "page_index": 0,
+    "blob": "(Blob, image/jpeg, 281402 bytes)",
+    "source": "camera",
+    "captured_at": "2026-06-10T09:41:22Z",
+    "status": "queued",
+    "attempts": 2,
+    "next_attempt_at": "2026-06-10T09:43:10Z",
+    "last_error": "TypeError: Failed to fetch",
+    "synced_receipt_id": null
+  }
+}
+```
+
+Local `status` is the sync state machine `queued` → `syncing` → `synced` or `failed`; it is client-only and distinct from the server-side `Receipt.status`. Uploads run sequentially, one in flight per submission, ordered by `page_index`; each upload is the three-step presigned handshake in the protocol section below. Retry classification:
+
+| Outcome | Class | Action |
+| --- | --- | --- |
+| Network exception (any step, API or storage PUT) | Retryable | Exponential backoff: 1s base, factor 2, ±25% jitter, 300s cap, 8 attempts per trigger window (tunable, our derivation) |
+| 429 or 5xx (API or storage PUT; storage PUT failures are network-class) | Retryable | Honor `Retry-After` when present, else backoff as above |
+| 403 on the storage PUT (expired presign) | Retryable | Re-request a fresh URL via the same `POST /receipts` `Idempotency-Key`, then retry the PUT |
+| 401 (API calls only) | Auth | Silent token refresh once, retry; on refresh failure pause the queue, keep records, show "Sign in to finish syncing", resume after magic-link re-auth |
+| Other 4xx | Terminal | `failed` chip with the problem `detail` in plain language; manual retry only |
+| `complete` ack (201) | Success | Set `synced` and `synced_receipt_id`; prune the Blob only after this ack; keep the slim record 7 days for diagnostics |
+
+Replay triggers are platform-split:
+
+<Tabs>
+<TabItem label="Android / Chromium">
+
+Workbox `BackgroundSyncPlugin` registers the queue with the Background Sync API (Chrome 49+, Edge, Samsung Internet; caniuse, high), so the service worker drains it even after the tab closes; Workbox also replays on every service worker startup.
+
+</TabItem>
+<TabItem label="iOS / Safari">
+
+Zero Background Sync support through Safari 26.x. Replay fires on `online`, on `visibilitychange` to visible, on app launch, and on service worker startup. UI copy never promises background upload: "3 pages waiting. Open Kharcha on network to finish."
+
+</TabItem>
+</Tabs>
+
+Persistence and eviction: after the first successful capture the client calls `navigator.storage.persist()`. Safari 17+ grants up to 60% of disk per origin without prompting, installed apps included; the residual risk is the 7-day script-storage eviction, and installed apps are exempt, so it applies to browser-tab usage where the origin goes untouched across seven days of Safari use (WebKit storage policy, high). Warning rule, targeting those non-installed sessions: surface the eviction warning when `storage.persisted()` is false and the oldest `queued` record is older than 48 hours, or when `storage.estimate()` usage exceeds 80% of quota (thresholds tunable).
+
+:::caution[Two queues that must never be confused]
+The outbox retries only on network exceptions; Workbox never queues 4xx or 5xx responses. Credit exhaustion is not a network failure: the upload returns 201, the server stores the image, the Receipt enters `queued`, and processing pauses. That is an application-layer state with its own UI (queue position, one-tap "remind your admin"), never an outbox retry. Conflate them and paused uploads retry forever. Semantics in [credits and metering](/phase-1/credits-and-metering/).
+:::
+
+## Upload protocol
+
+One page per upload, in the presigned three-step handshake from the [architecture](/spec/architecture/) hot path:
+
+<Steps>
+
+1. **`POST /api/v1/receipts`** with JSON metadata (`page_index`, `captured_at`, `source`, `content_type`, `bytes`), the outbox record's key sent as the `Idempotency-Key` header. The server replies 201 with the `rcp_` ULID and a short-lived presigned storage PUT URL.
+
+2. **The client PUTs the compressed JPEG** directly to object storage at the presigned URL; image bytes never transit the API.
+
+3. **`POST /api/v1/receipts/{receipt_id}/complete`** confirms the bytes landed; the Receipt is `uploaded` and extraction is async.
+
+</Steps>
+
+Same key with the same body on step 1 is replay-safe: it returns the same `rcp_` ULID and a fresh presigned URL, which is also how the client recovers from an expired presign (a 403 on the storage PUT re-requests via the same `Idempotency-Key`). Same key with a different body is 409 `idempotency_key_reuse`. The worked HTTP example and the route's 60/min per-user rate limit live in the [API spec](/spec/api/).
+
+Resumable upload is deliberately absent: pages are 200-500 KB after `compress`, and even the original-JPEG fallback is a sub-12 MP phone photo. Whole-body retry plus idempotency beats tus-style chunking at these sizes; revisit only if this path ever accepts multi-megabyte originals (it does not; email-in arrives server-to-server).
+
+Auth: the PWA holds a session JWT, but replays can fire days after capture (a field-sales phone reconnecting). The 401 row in the retry table is load-bearing: refresh silently once, never drop records, resume automatically after re-auth.
+
+## Server processing
+
+The worker (see [architecture](/spec/architecture/) for queues and adapters) processes each Receipt:
+
+<Steps>
+
+1. **`normalize`.** Magic-byte validation, HEIC transcode fallback, the path-scoped reject list (email-in PDFs rasterized to JPEG, not rejected), metadata strip, original persisted to S3 (Mumbai).
+
+2. **`crop_correct`.** Perspective correction and de-skew on the full-resolution JPEG; corrected image stored beside the original; low-confidence quads flag the Receipt for the client rescue editor.
+
+3. **`extract`.** The `OCRProvider` adapter (Gemini Flash family or Claude Haiku class) returns merchant, `bill_date`, GSTIN if present, line items, tax split, and `total_paise`, each as a value-plus-confidence field.
+
+4. **Deterministic validation.** GSTIN checksum (Luhn-mod-36, e.g. `29ABCDE1234F1Z5`); arithmetic: line totals plus tax components must equal `total_paise` within Section 170 normal rounding per tax component; CGST must equal SGST intrastate (flag, never silently fix); date sanity. All money in integer paise.
+
+5. **Payload persisted.** Receipt becomes `extracted` and the payload feeds the `review_items` UX in [OCR and itemisation](/phase-1/capture/ocr-itemisation/); `extraction_failed` opens manual entry with whatever was extracted pre-filled.
+
+</Steps>
+
+Latency SLO: P50 under 5 seconds from upload ack to `extracted` (our target; vendor comparators such as Klippa's 0.5-4s are marketing claims, medium). Past 10 seconds the client switches to determinate progress plus notify-on-completion; extraction never blocks the form. Queue priority within `extract`: (1) interactive captures on an open draft, (2) email-in, (3) manual retries and `/ops/requeue-extraction` re-drives, (4) post-top-up backlog drain, which processes FIFO by original upload time.
+
+:::note[Credits are checked at submit, not upload]
+`POST /receipts` never fails for credit reasons. At zero balance the upload still returns 201, the Receipt waits in `queued`, and the credit check runs when the Claim is submitted: submission lands in `awaiting_credits`, and a top-up drains the queue FIFO. Capture is never punished for the admin's billing state.
+:::
+
+## Telemetry
+
+Capture quality is the wedge (incumbents visibly fail it: Expensify bug #45904, Concur's iPhone 15 regression), so these are product KPIs, not ops plumbing. Events carry ids and metrics only: never image bytes, merchant names, or amounts.
+
+| Event | Fired when | Required fields |
+| --- | --- | --- |
+| `capture_started` | Capture session opens | `rung`, `still_method`, `ios_standalone`, `in_app_ua`, `device_memory_bucket` |
+| `quality_retake` | Gate blocks, or user retakes | `reason` (`blur`, `dark`, `glare`, `manual`), `vol_score`, `luma_mean` |
+| `quality_keep_anyway` | User keeps a `warn` page | `reason`, `vol_score` |
+| `page_added` | Page lands in the tray | `page_index`, `bytes`, `ms_capture_to_tray` |
+| `upload_queued` | Outbox write | `bytes`, `online` |
+| `upload_failed` | Terminal failure or attempt budget spent | `classification`, `http_status`, `attempts` |
+| `upload_recovered` | Success after at least one failure | `attempts`, `queue_age_ms`, `trigger` (`online`, `visibility`, `app_open`, `bg_sync`) |
+| `extract_latency` | Receipt reaches `extracted` or `extraction_failed` | `ms_upload_ack_to_done`, `provider`, `outcome` |
+| `extract_confidence` | With every extraction payload | Bucketed confidences (edges 0.5, 0.8, 0.95) for `merchant`, `bill_date`, `total_paise`, `line_items_mean` |
+| `crop_rescue_opened` | Manual 4-corner editor opens | `trigger` (`auto_flag`, `user`) |
+
+Dashboards derived from these: first-shot gate pass rate and retake rate by reason (the capture-quality KPI), P95 outbox queue age by platform, extract latency P50/P95 by provider, and the share of fields at or above 0.80 confidence, the auto-accept threshold. A rising `quality_keep_anyway` rate says retune the gate; a rising `crop_rescue_opened` rate is the trigger to reconsider client-side detection behind `cvEligible()`.
+
+## Device test matrix
+
+| Device / context | Proves | Critical checks |
+| --- | --- | --- |
+| Android Chrome flagship (8 GB) | Rungs 2-3 happy path | `ImageCapture` full-sensor still; torch/zoom render only via `getCapabilities()`; Background Sync drains after tab close |
+| 3-4 GB RAM Android (Redmi/Realme class) | Low-end budget | Viewfinder analysis at 10 fps without jank; gate verdict under 1s; no OOM |
+| Samsung mid-range | EXIF/orientation | Landscape-sensor file-input photo never renders rotated after re-encode |
+| iOS 17.x device (pre-18) | Canvas caps, older fleet | 12 MP guard holds; zoom present, focus absent; torch works (17.5.1+) |
+| iOS installed PWA, current iOS | Standalone posture | Never calls `getUserMedia` (WebKit bug 252465); file input first-class; replay on app open |
+| WhatsApp, Gmail, Slack in-app browsers, both platforms | Rung 1 universality | Capture, gate, outbox, upload all work; zero permission prompts |
+| Airplane mode on any two above | Outbox semantics | 3 pages show `queued`, sync on reconnect, exactly 3 Receipts created |
+
+<p class="source-note">Matrix derived from the capture-tech research and WebKit bug evidence (primary docs, high); India fleet weighting per StatCounter/IMARC figures carried in THESIS-V2.</p>
+
+## Acceptance criteria
+
+- `selectCaptureRung()` returns `file_input` on iOS standalone, on missing `mediaDevices`, and in the listed in-app UAs; capability is never inferred upward from a UA string.
+- CI device tests assert capture aspect equals stream aspect on every shippable path; `object-fit: fill` on the preview fails lint.
+- Compressed output measures 2048 px long edge, q 0.8, P95 at or under 500 KB on the test corpus; no path exceeds Vision's 20 MB ceiling.
+- Gate thresholds change via remote config with no client release; verdicts render in under 1 second on the 4 GB Android row.
+- A retry storm replaying one outbox record 50 times creates exactly one Receipt; same key, different body returns 409.
+- A 401 mid-queue refreshes once and resumes with zero record loss; refresh failure pauses, never drops.
+- A spoofed `.jpg` PDF is rejected by magic bytes; a Files-app HEIC is transcoded, not bounced.
+- Local blobs are pruned only after the `complete` ack records `synced_receipt_id`; the eviction warning fires per the 48-hour/80% rule.
+- A zero-balance upload returns 201 with the Receipt in `queued`; submitting the Claim yields `awaiting_credits`; top-up drains FIFO.
+- Every telemetry event fires with its required fields in one end-to-end capture on each matrix row; `extract_latency` feeds an alarmed P50 under 5s SLO.
+
+<LinkCard title="OCR and itemisation" href="/phase-1/capture/ocr-itemisation/" description="What happens to the extraction payload: confidence routing, tap-to-fix review, failure as a recoverable queue." />
+
+<LinkCard title="State machines" href="/spec/state-machines/" description="Receipt, Claim, and credit lifecycles with guards and side effects, including queued and awaiting_credits." />
+
+## Sources
+
+- [MDN: Taking still photos with getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Taking_still_photos): canonical stream-pixel capture pattern; ideal-versus-exact constraint semantics.
+- [WebKit: Features in Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/): Image Capture API on iOS; torch `getSettings()` fix.
+- [WebKit bug 252465](https://bugs.webkit.org/show_bug.cgi?id=252465): black or frozen getUserMedia streams in iOS standalone web apps.
+- [caniuse: Background Sync API](https://caniuse.com/background-sync): Chromium-only; zero Safari support.
+- [Chrome Developers: workbox-background-sync](https://developer.chrome.com/docs/workbox/modules/workbox-background-sync): IndexedDB queue, SW-startup replay, exception-only queueing.
+- [WebKit: Updates to Storage Policy](https://webkit.org/blog/14403/updates-to-storage-policy/): 60%-of-disk origin quota; the 7-day eviction rule.
+- [PQINA: Canvas area exceeds the maximum limit](https://pqina.nl/blog/canvas-area-exceeds-the-maximum-limit/): the pre-iOS 18 16,777,216 px area cap.
+- [lionpuro: Canvas is finally usable on Safari](https://lionpuro.com/posts/canvas-is-finally-usable-on-safari/): iOS 18 raises the cap to 67,108,864 px.
+- [Google Cloud Vision: Supported files](https://docs.cloud.google.com/vision/docs/supported-files): 20 MB ceiling; 1024 by 768 OCR recommendation.
+- [shkspr.mobi: Coping with HEIC in the browser](https://shkspr.mobi/blog/2020/12/coping-with-heic-in-the-browser/): iOS Photos transcoding and the Files-app HEIC leak.

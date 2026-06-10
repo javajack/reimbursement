@@ -1,0 +1,162 @@
+---
+title: The Configuration Model
+description: "Every knob in one model: what defaults, what must be set, how changes behave mid-flight, and how one product fits many companies."
+---
+
+import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
+
+One product has to fit a 20-person agency and a 500-person field force without a consultant in between; that is a configuration problem before it is a feature problem. Configuration is one model with four properties on every key: a working default, a precise binding moment, a who-changed-what version history, and a deterministic `branch > company > system default` resolution order. The [onboarding wizard](/phase-1/onboarding/company-onboarding/) covers the highest-leverage slice in under 15 minutes; this page maps all nine domains and how changes behave mid-flight.
+
+## The nine domains
+
+Defaults carry the weight, because admins do not finish setup chores: onboarding checklists complete at 19.2% average, 10.1% median (Userpilot 2024, vendor benchmark, directional) <span class="pill pill--med">Medium</span>. So the model hard-requires exactly three things before the first real claim (one admin, the undeletable fallback approval rule, one active category) and ships everything else already working.
+
+| Domain | What it controls | Day-one default | When it binds |
+| --- | --- | --- | --- |
+| Org structure | Departments, CostCenters, Grades, Branches; each Branch carries its own GSTIN, an optional own BankAccount, an optional matrix override | One implicit head-office branch; everything else optional | Routing fields snapshot at Claim submission; branch GSTIN tags LineItems at review |
+| People and roles | Users, Memberships, `roles` array (`owner`, `admin`, `finance`, `approver`, `employee`, `auditor`), manager pointers | Signup user holds `owner` + `admin`; seats unlimited and free on every plan, including Free | Permission checks at action time; manager edges read into the submission snapshot |
+| Categories | System set of 10 India categories plus custom; per-category GST hints (ITC-eligible vs blocked under Sec 17(5)) | All 10 preloaded and active; hints prewired (Meals blocked, business travel generally eligible) | Category pick at capture review; rule evaluation |
+| Policies | Limits, per-diem tables (city-tier × grade), mileage rates by vehicle type, receipt thresholds | Wizard template on: category caps, evidence warns (receipt threshold, backdate), GSTIN_FORMAT, DUPLICATE_SUSPECT, future-date block, the non-reimbursable block set; per-diem, monthly ceilings, and behavioral detectors opt-in | Per LineItem, then per Claim, against the submission snapshot |
+| Approval matrix | Role-abstracted rule stack, optional DoA grid (approver × max amount), priority numbers, the fallback rule | Wizard size template (under 50: manager-only; 50-250: manager → finance above ₹25,000; 250+ adds department head) plus the undeletable fallback | Chain resolved and frozen at submission |
+| Credits | Alert thresholds, burn-rate forecast, optional auto-top-up with a monthly spend cap | Free `plan_grant` of 20 submissions/month; alerts at 50/80/95/100%; auto-top-up off | Balance check at submit decides `submitted` vs `awaiting_credits` |
+| Payout | Source BankAccounts, payout calendar, default rail, bulk-file format per bank | Empty; required before the first payout run, never before the first claim | At PayoutBatch building |
+| Notifications | Channel per event (email, web push, WhatsApp later), digests, IST quiet hours | Email on for every event class; push opt-in after PWA install | At event emission |
+| Locale | Display languages, fiscal year, currency | INR; Apr-Mar FY; English + Hindi, state languages toggleable | Language at render time; FY anchors reporting periods and rate versions |
+
+<p class="source-note">Defaults and bounds per THESIS-V2 contracts; category set and size templates from the onboarding canon (our derivation over vendor precedents).</p>
+
+Deep dives: rule semantics and the six actions on [policy and rules](/phase-1/onboarding/policy-and-rules/), chain mechanics and SLAs on [the approval engine](/phase-1/web/approval-engine/), ledger and soft paywall in [credits and metering](/phase-1/credits-and-metering/), calendars and bank formats in [payouts](/phase-1/payouts/). One policy fact shapes the model: India has no statutory per-km mileage rate, so mileage is a configurable rate per vehicle type with mandatory logbook fields (date, route, purpose, distance) to defend the Sec 10(14) exemption <span class="pill pill--high">High</span>.
+
+## Branches and the resolution order
+
+GST registration is per state, and branches under one PAN are distinct tax persons, so a clinic chain with units in Bengaluru and Chennai needs two GSTINs at 40 employees. Branch is a Phase 1 entity (defined here, carried into [the data model](/spec/data-model/)), not an enterprise upsell. Each Branch carries its own GSTIN, an optional dedicated BankAccount (payout files generate per branch), and an optional whole-matrix approval override, created by copying an existing branch's configuration and editing it (the ApprovalMax copy pattern). Complexity is bounded: 200 branches maximum, the ceiling Zoho publishes <span class="pill pill--high">High</span>.
+
+Resolution is identical for every branch-scopable key, evaluated at snapshot time:
+
+```ts
+// Exactly one rule. No per-rule patching, no inheritance chains.
+function effective<K extends ConfigKey>(key: K, branch: Branch): ConfigValue<K> {
+  return branch.overrides[key]   // 1. branch value, if explicitly set
+      ?? company.config[key]     // 2. else company value, if explicitly set
+      ?? SYSTEM_DEFAULTS[key];   // 3. else system default
+}
+```
+
+| Key | Branch-scopable | Notes |
+| --- | --- | --- |
+| GSTIN | Branch-owned | Not an override; each branch holds its own registration |
+| Payout source account, file format | Yes | Enables separate files per branch bank |
+| Approval matrix | Yes, whole-matrix swap | Per-rule branch scoping belongs in rule conditions, not overrides |
+| Categories, policies, locale | No | Company-wide; vary by branch through rule conditions |
+| Credits | Never | The meter is submissions per Company; branches share one balance |
+
+An employee's branch comes from their Membership; the claim snapshot records each resolved value and its source layer, so an auditor sees not just what applied but why.
+
+## Change management: mid-flight semantics
+
+Configuration models rot when edits have implicit side effects on live claims. Ours has one mutation contract:
+
+| You change | In-flight claims | New claims |
+| --- | --- | --- |
+| Approval matrix | Untouched; the frozen chain continues | Resolve against the new matrix version |
+| Per-diem or mileage rate | Untouched; the snapshot rate stands | New snapshot; rate row selected by spend date |
+| Deactivate a category | Untouched; old claims keep the label | Removed from the picker |
+| Deactivate an approver | Their `pending` and `active` steps re-route via delegation, then the company fallback approver; surfaced on the admin dashboard | Resolve against the updated matrix; rules still referencing the deactivated approver fail save-time validation until fixed |
+| Bank file format | No effect until the next batch | Next PayoutBatch builds in the new format |
+| Buy credits | `awaiting_credits` drains FIFO immediately | Submit normally |
+
+:::note[Snapshot at submission]
+Approval chains and policy versions are set when a Claim is submitted; configuration changes apply only to new claims, never to claims already in progress. This is the converged industry semantic (Ramp states it verbatim; ApprovalMax requires an explicit restart; Fyle scopes edits to unreported expenses). The one deliberate exception: deactivating an approver re-routes their open steps; a frozen chain pointing at nobody is worse than a re-route.
+:::
+
+When an admin genuinely wants new rules to govern in-flight claims (a fraud response, a reorg), there is one explicit action, never a side effect:
+
+<Steps>
+
+1. Open the matrix version history and choose **Re-route in-flight claims**.
+
+2. Review the affected list: old chain vs new chain, side by side, per claim.
+
+3. Confirm. Granted approvals on re-routed claims reset, approvers are notified with the reason, and every touched Claim gets an AuditEvent linking both matrix versions.
+
+</Steps>
+
+Every edit in every domain writes an AuditEvent (actor, role at the time, before and after, timestamp) and bumps the domain version; the claim snapshot stores the version vector, so "which config approved this claim" is a query, not an investigation. Rates and limits are also effective-dated: per-diem rows, mileage rates and DoA limits carry `effective_from`/`effective_to`, store money as integer `amount_paise`, and version against the Apr-Mar FY. Stage next year's per-diem table in March; it activates on 1 April; a claim submitted 3 April for a 28 March hotel night still prices on the spend date's row. Submission picks the config version; spend date picks the row inside it.
+
+## Validation: the save-time gate and the simulator
+
+Two layers keep configuration from breaking claims. The first is the save-time gate: every user or rule save runs graph validation (cycle detection, orphan approver slots, references to deactivated users or categories, self-approval paths) and fails inline with a one-click fix. The cautionary tales are documented: SAP KB 1944022's self-approval deadlock needs a support ticket, and Expensify paid a $500 bounty on a Prevent Self-Approval bypass. So prevent-self-approval defaults ON with automatic skip-up, enforced server-side, never only in the UI.
+
+| Save-time error | Inline message |
+| --- | --- |
+| Cycle | "Priya and Arjun approve each other's claims. Change the approver for one of them." |
+| Orphan slot | "Rule 4 routes to Department head (South), but nobody holds that slot. Assign a user or disable the rule." |
+| Deactivated reference | "Two rules still route to Kavita, deactivated 2 Jun. Replace her, or her steps fall to the fallback approver." |
+
+:::danger[Product invariant]
+A Claim is never blocked at submission for routing reasons. The fallback approval rule always matches, cannot be deleted (the Fyle invariant), and at worst routes to the admin queue flagged `rule_gap`. Zoho's "does not match your organization's approval criteria" hard block is the documented anti-pattern we ship against.
+:::
+
+The second layer is **Simulate a claim**, built into the matrix editor: pick employee, amount, category and branch; it renders the exact chain, the fired rule with its priority number, and what every policy rule would do, all six actions (`allow`, `flag`, `warn`, `cap`, `block`, `route`) with parameters. Example: Asha, Field Sales, Pune branch, Lodging, ₹31,000 → Manager (Rohit) → Finance (Meena); fired rule "manager → finance above ₹25,000", priority 1; GSTIN_FORMAT <span class="pill pill--allow">allow</span>, DUPLICATE_SUSPECT <span class="pill pill--flag">flag</span>, RECEIPT_REQUIRED_ABOVE would <span class="pill pill--flag">warn</span> without an image, gating submission on a typed reason that rides to the approver. Oracle Fusion gates the same idea behind Test Rules and Simulate; ours is one click. The chain preview on the employee submission screen (the Fyle pattern) makes every submitter a continuous validator, and the wizard's demo claim is the first simulation a tenant runs.
+
+## Templates: four companies, one model
+
+Templates prove the domains compose: each preloads the wizard and post-wizard checklist; everything stays editable.
+
+| Template | Org structure | Categories emphasised | Matrix | Notable defaults |
+| --- | --- | --- | --- | --- |
+| Agency (20-60, project work) | No branches; departments optional | Meals, Local Conveyance, Software, Travel Air/Rail | Manager-only (under-50 template) | Receipt threshold on; per-diem off; weekly payout calendar |
+| Field sales (250+) | Branches per region, each with its own GSTIN | Fuel/Mileage, Local Conveyance, Lodging, Telecom | Manager → department head over threshold → finance | Per-diem city-tier × grade on; vehicle-type mileage rates; offline capture assumed |
+| Clinic chain (50-250) | Branch per clinic, own GSTIN, optional own bank account | Medical, Office Supplies, Local Conveyance | Manager → finance above ₹25,000 | Per-branch payout files; `auditor` role pre-enabled for the CA |
+| School or trust | Single branch | Office Supplies, Local Conveyance, Telecom, Misc | Manager-only plus a DoA grid for the trust's finance signatory | Monthly payout calendar; `cap` rule on Misc at a configurable limit |
+
+:::tip[Templates beat blank canvas]
+Concur's consultant-dependent configuration is the foil; every screen must pass "could an Indian SMB office manager do this without a consultant or a support ticket". Templates are how a 15-minute wizard and a nine-domain model coexist.
+:::
+
+## Export, import, clone
+
+The whole model exports as one versioned JSON document: backup before bulk edits, clone to a sister company under the same group, diff during support calls. Import runs the identical save-time validation plus a dry-run diff before anything activates. The schema, every domain, key, type and default enumerated, lives at [config schema](/spec/config-schema/).
+
+```json
+{
+  "schema": "kharcha.config/v1",
+  "company_id": "co_01J9V3D8X2J4Q6R8T0V2X4Z6A8",
+  "exported_at": "2026-06-10T09:30:00Z",
+  "domains": {
+    "categories": {
+      "version": 7,
+      "items": [
+        { "key": "meals", "name": "Meals", "active": true, "gst_hint": "itc_blocked_17_5" }
+      ]
+    },
+    "approval_matrix": { "version": 12, "rules": ["..."] },
+    "payout": { "version": 3, "default_rail": "neft", "file_format": "hdfc_corporate_csv" }
+  }
+}
+```
+
+## Done means
+
+- A tenant that finishes only the wizard can run claim → approval → payout file without opening settings, except a bank account before the first payout run.
+- No configuration state can make submission fail for routing reasons; the gate sits at save time, with inline errors.
+- Claim snapshots store resolved values, source layers and the version vector; re-route is the only way edits touch in-flight claims, and it is audit-evented.
+- Simulate a claim renders the chain and fired rules for any employee, amount, category and branch tuple in one click.
+- Config export and import round-trip losslessly; import always dry-runs the diff.
+
+<CardGrid>
+  <LinkCard title="Policy and rules" href="/phase-1/onboarding/policy-and-rules/" description="Limits, per-diem, mileage and the six-action rule engine." />
+  <LinkCard title="Config schema" href="/spec/config-schema/" description="The JSON schema behind export, import and every domain here." />
+</CardGrid>
+
+## Sources
+
+- [Zoho Expense: Branches](https://www.zoho.com/us/expense/help/setting-up-organization/branches/) (vendor): 200-branch cap; GSTIN per branch or shared.
+- [Ramp: Setting up spend request approvals](https://support.ramp.com/hc/en-us/articles/20843280013459-Setting-up-spend-request-approvals) (vendor): snapshot-at-submission; role-abstracted slots.
+- [ApprovalMax: Workflows and approvals](https://support.approvalmax.com/en/collections/1028070-workflows-approvals) (vendor): explicit restart, version history, cross-org copy.
+- [Oracle Fusion HCM: How You Simulate Approval Rules](https://docs.oracle.com/en/cloud/saas/human-resources/faucf/how-you-simulate-approval-rules.html) (primary docs): the Test Rules and Simulate precedent.
+- [SAP KB 1944022: self-approval not allowed](https://userapps.support.sap.com/sap/support/knowledge/en/1944022) (primary docs): the self-approval routing deadlock.
+- [Expensify/App issue #36425](https://github.com/Expensify/App/issues/36425) (primary docs): the Prevent Self-Approval bypass bounty.
+- [Zoho Expense KB: approval criteria error](https://www.zoho.com/us/expense/kb/reports/approval-criteria-error/) (vendor): the orphan-claim hard block we design against.
+- [Fyle: Approval workflows](https://www.fylehq.com/help/en/articles/11129811-approval-workflows-on-fyle) (vendor): the undeletable fallback rule; edits scoped to unreported expenses.
+- [Userpilot: Onboarding checklist completion benchmarks](https://userpilot.com/blog/onboarding-checklist-completion-rate-benchmarks/) (vendor benchmark): 19.2% average, 10.1% median.

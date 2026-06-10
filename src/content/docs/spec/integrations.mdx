@@ -1,0 +1,266 @@
+---
+title: Integrations
+description: "Accounting export (Tally first), payroll hand-off, email-in, WhatsApp BSP, the optional payout partner, and webhooks."
+---
+
+import { LinkCard, Steps } from '@astrojs/starlight/components';
+
+Phase 1 integrates by file, mail, and signed webhook. Nothing on this page moves money (that discipline lives in [payouts](/phase-1/payouts/)) and nothing creates a second system of record: the customer's books stay in Tally, salaries stay in payroll, and we hand both a clean importable artifact. The one genuinely hard connector, live Tally sync, ships honestly as a file export with the bridge agent designed and deferred. Everything else is either commodity plumbing (email, webhooks) or an adapter behind an interface (WhatsApp BSP, payout partner).
+
+## The v1 surface at a glance
+
+| Integration | v1 ships | Auth | Failure posture |
+| --- | --- | --- | --- |
+| Tally | XML JV file per PayoutBatch or period | `finance` session | Validate before render; unmapped categories flagged, never dropped |
+| Zoho Books | Claims CSV for journal import | `finance` session | Same async export-job rules |
+| Payroll | Generic CSV keyed `employee_id` | `finance` session | Re-export until run confirmed; dedupe on batch id |
+| Email-in | Per-company receipts address | SPF/DKIM plus membership match | Loud bounce-back with reason, never a silent drop |
+| WhatsApp | BSP adapter, four utility templates | BSP API key; per-user opt-in | Delivery webhooks; fallback to email |
+| Payout partner | Optional adapter, opt-in per customer | Customer's partner keys, tenant-encrypted | Idempotent execution; signed webhooks |
+| Webhooks out | HMAC-signed events | Per-endpoint signing secret | Backoff 24h, then DLQ and admin alert |
+
+## Tally first: the moat, shipped as a file
+
+Three facts converge. Tally runs the accounting for roughly 70-80% of Indian SMBs <span class="pill pill--med">Medium</span> (vendor-claimed and trade-press repeated, not independently audited; treat the magnitude as directionally dominant, the percentage as marketing). Killing dual data entry into the books is the most cited buying requirement among Indian finance teams (research synthesis, medium). And Tally's architecture makes a robust live connector genuinely hard, which is why globally built rivals keep shipping without one: Fyle, now Sage Expense Management, lists Sage Intacct, QuickBooks, NetSuite and Xero on its integrations page, and no Tally (primary docs, high).
+
+:::tip[The wedge]
+A bulletproof Tally hand-off is the single highest-leverage integration in this market. v1 wins it with a file that imports cleanly on the first try; the on-prem bridge is a v2 of the connector, not a launch gate.
+:::
+
+### The v1 export contract
+
+`POST /exports/tally-jv` (async job, per the [API spec](/spec/api/)) renders one Journal voucher per PayoutBatch by default, or one per period; a per-claim voucher mode is configurable for companies that want claim-level drill-down. Lines aggregate per expense ledger. The `ITC_ELIGIBLE` rule tags (`itc_eligible` / `itc_blocked` under Sec 17(5)) decide whether GST components post to input-tax ledgers or fold into the expense ledger. We store `amount_paise`; the exporter converts integer paise to Tally's decimal rupee strings and asserts the voucher balances in paise before render.
+
+```xml
+<ENVELOPE>
+  <HEADER>
+    <TALLYREQUEST>Import Data</TALLYREQUEST>
+  </HEADER>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDESC>
+        <REPORTNAME>Vouchers</REPORTNAME>
+        <STATICVARIABLES>
+          <SVCURRENTCOMPANY>Acme Marketing Private Limited</SVCURRENTCOMPANY>
+        </STATICVARIABLES>
+      </REQUESTDESC>
+      <REQUESTDATA>
+        <TALLYMESSAGE>
+          <VOUCHER VCHTYPE="Journal" ACTION="Create">
+            <DATE>20260605</DATE>
+            <VOUCHERTYPENAME>Journal</VOUCHERTYPENAME>
+            <NARRATION>Kharcha batch pob_01JXG7Q2W9KH3M5P7R9T1V3X5Z | 12 claims | May 2026</NARRATION>
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>Office Supplies</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+              <AMOUNT>-1800.00</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>Input CGST</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+              <AMOUNT>-162.00</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>Input SGST</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+              <AMOUNT>-162.00</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>Employee Reimbursements Payable</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+              <AMOUNT>2124.00</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+          </VOUCHER>
+        </TALLYMESSAGE>
+      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>
+```
+
+Structure sketch only: debit lines carry `ISDEEMEDPOSITIVE` Yes with negative amounts, credits the inverse, per Tally's documented import convention (primary docs); exact sign and UDF details get pinned against TallyPrime import validation during implementation.
+
+| Kharcha field | Tally target | Convention |
+| --- | --- | --- |
+| LineItem category | Debit expense ledger | Per-company ledger map, e.g. `office_supplies` → "Office Supplies"; unmapped categories post to a configured default ledger and are flagged in the export summary |
+| CGST/SGST/IGST on `itc_eligible` lines | Debit "Input CGST" / "Input SGST" / "Input IGST" | From the rule-engine tag; `itc_blocked` lines fold tax into the expense ledger |
+| PayoutBatch total | Credit ledger | "Employee Reimbursements Payable" or the bank ledger, per company choice |
+| CostCenter | Tally cost centre allocation | Emitted only when the company enables cost centres in Tally |
+| Voucher date | `DATE` | Batch execution date: customer confirmation on the file path, partner completion on the API path |
+| Narration | `NARRATION` | `pob_` id, claim count, period; claim ids and employee names in per-claim mode |
+| Merchant GSTIN | Narration suffix | Carried for audit; GST classification in the books remains the accountant's call |
+
+Failure handling is front-loaded: the job validates that every category resolves to a ledger (explicit map or the configured default; the job fails only when no default ledger is set), that debits equal credits in paise, and that the voucher date falls in an open period, then ships the XML alongside a `README.txt` listing the Gateway of Tally import steps and every ledger name the file references, because "ledger does not exist" is the number-one import error. Posting the export is what rolls claims `paid` → `closed` in the [finance console](/phase-1/web/finance-console/).
+
+### The bridge agent: designed, deferred
+
+Direct XML-over-HTTP sync means POSTing TDL-formatted XML to Tally's local HTTP server on port 9000. Tally is desktop, on-prem software with no official cloud REST API; ODBC is read-only and deprecated from TallyPrime 4.0 (primary docs). <span class="pill pill--high">High</span> Reaching port 9000 from our cloud requires an installable on-prem agent:
+
+```text
+Kharcha cloud ⇄ outbound-only HTTPS/WebSocket ⇄ bridge agent (small Windows service)
+                                                  → signed JSON job → TDL XML
+                                                  → http://localhost:9000 → TallyPrime
+                                                  → parse response XML for errors → ack job
+```
+
+The agent must survive the operational reality that breaks naive connectors (vendor and community sources, medium-high):
+
+| Constraint | Agent behaviour |
+| --- | --- |
+| Tally must be running with the gateway up | Health pings; queue jobs while unreachable; surface staleness in the Console |
+| HTTP 200 even when an import fails | Always parse the response XML for the buried error; never trust status codes |
+| No concurrent writes | Single-writer queue, serialized voucher posts, retry with backoff |
+| Dynamic IPs, firewalls, antivirus | Agent dials out only; no inbound ports, no static-IP demand |
+| Per-company data folders | Per-company registration and routing in the agent config |
+
+The community TallyConnector library (C#/.NET, open source) documents the protocol well; our agent would be a small TypeScript or Go service speaking the same XML. Flip condition: we build it when two or more paying customers at Growth or above make push-sync a renewal condition, or when design partners show that the monthly file import is a churn driver rather than a two-minute ritual. Until then the agent stays a design doc, not a backlog item.
+
+### Zoho Books: CSV now, API later
+
+Zoho Books is the leading cloud challenger to Tally (analyst-cited, medium) and has a clean OAuth2 REST API. v1 covers it with the claims CSV (`POST /exports/claims-csv`) shaped for journal import; a native connector is the first post-launch accounting integration if the design-partner cohort sits in the Zoho ecosystem.
+
+## Payroll hand-off
+
+Reimburse-via-payroll is the third payout mode and a dominant Indian pattern (Zoho Payroll ships exactly this loop; vendor docs, high). The contract is a deliberately generic CSV that GreytHR, Keka, Zoho Payroll, or a spreadsheet can ingest, one row per employee per batch:
+
+```csv
+employee_id,employee_name,amount_paise,amount_inr,narration,claim_ids
+EMP-0412,Priya Nair,1284500,12845.00,"Kharcha reimbursement May 2026, 3 claims",clm_01JXG5K2W7E8R2T6Y9W3Q5Z7X1;clm_01JXG5M8Q1K4N7P2R5T8V1X4Z7;clm_01JXG5P3T9M2Q5S8V1X4Z7B3D6
+```
+
+`employee_id` is the key, sourced from the Membership record imported at [company onboarding](/phase-1/onboarding/company-onboarding/); `amount_paise` is authoritative and `amount_inr` is a derived convenience column. Bank-account custody stays with the payroll system; we never carry account numbers on this path. Claims in the batch sit `in_payout` after export. When finance confirms the salary run in the Console, they move to `paid` with `payment_mode: paid_via_payroll`, and `claim.paid` fires carrying the payroll reference in place of a UTR. Re-export is allowed while the run is unconfirmed; the batch id is the dedupe key.
+
+## Email-in
+
+Every company gets `receipts+<token>@in.kharcha.app`; the token is system-assigned and a vanity alias can be claimed when free. Email-in is a secondary intake path: attachments become Receipts, OCR runs, and drafts await review in the PWA.
+
+<Steps>
+
+1. Inbound MX accepts the message (25 MB cap) on the dedicated intake subdomain.
+
+2. Loop guard: mail from our own sending domains, or carrying `Auto-Submitted` / our own `List-Id` headers, is dropped and alerted on, never processed.
+
+3. Sender verification: SPF and DKIM must pass and align, and the From address must match an active Membership in the company that owns the token. Anything else bounces loudly.
+
+4. Dedupe layer one: an exact `Message-ID` replay gets a "already received" reply and no new Receipts.
+
+5. Attachments extract per the rules below; each becomes a Receipt in `uploaded` (a multi-page PDF becomes one Receipt with pages). Dedupe layer two: a perceptual-hash (pHash) match against the company's recent receipts marks the new Receipt duplicate-suspect so the submission-time warning fires.
+
+6. OCR runs under the free pre-submission fair-use cap (max of 20 or 3 × remaining credits scans per month, which applies only while the balance is positive). The reply confirms how many receipts were created, with links. If credits are exhausted, receipts park in `queued` per [credits and metering](/phase-1/credits-and-metering/) and the reply says exactly that.
+
+</Steps>
+
+Attachment rules: `image/jpeg`, `image/png`, `application/pdf`; at most 10 attachments per message, 10 MB per file, 10 pages per PDF; inline images under 20 KB (signatures, logos) are ignored; the subject line becomes the draft note.
+
+| Bounce reason | Reply copy |
+| --- | --- |
+| SPF or DKIM failed | "We could not verify the sender; nothing was saved. Resend from your registered work address." |
+| Sender not a member | "This address is not registered with your company on Kharcha. Ask your admin to invite you." |
+| No usable attachment | "No receipt image or PDF found. Attach JPEG, PNG, or PDF and resend." |
+| Over size or count limits | "This email exceeded 25 MB / 10 attachments. Split it and resend; nothing was saved." |
+| Unsupported attachment type | "We read JPEG, PNG, and PDF only. The file `report.docx` was skipped." |
+
+:::danger[Never ingest our own mail]
+The intake pipeline must structurally refuse system-generated mail: our notification domain is distinct from the intake subdomain, and the loop guard runs before any other rule. Expensify's public tracker logs this exact failure mode (issue #71911), where system mail re-entering intake produced junk expenses. A bounced human email is recoverable; a mail loop is an incident.
+:::
+
+## WhatsApp via a BSP adapter
+
+WhatsApp messaging runs through a Business Solution Provider (Gupshup or Interakt class) behind a provider-agnostic adapter: `sendTemplate`, `sendSessionMessage`, `syncTemplateStatus`, plus an inbound webhook for delivery receipts and replies. Swapping BSPs is a config change, not a rewrite. Opt-in is explicit and per user: OTP-verified number, timestamped consent stored on the User, one-tap opt-out, and automatic fallback to email whenever a user is not opted in or delivery fails. Notification cadence and quiet hours follow the [approver experience](/phase-1/web/approver-experience/) rules: IST-aware, max two reminders per item, digest batching.
+
+The full v1 template catalog is four utility templates. Copy is strictly transactional; variables use Meta's numbered placeholders; every URL button deep-links to the specific record, never a generic page.
+
+| Template | To | Trigger | Copy | Button |
+| --- | --- | --- | --- | --- |
+| `approval_nudge` | Approver | ApprovalStep `active`, mid-SLA reminder | `Claim {{1}} for ₹{{2}} from {{3}} is awaiting your approval. Respond by {{4}}.` | Review claim (deep link) |
+| `sent_back_notice` | Employee | Claim moves to `sent_back` | `Your claim {{1}} for ₹{{2}} was sent back by {{3}}: "{{4}}". Edit and resubmit; resubmission uses no extra credit.` | Open claim (deep link) |
+| `credits_low_admin` | Admin | `credits.low` at each configured burn threshold (default 50/80/95/100) | `{{1}} of {{2}} submission credits used this period. Estimated {{3}} days remaining. At zero, new claims queue instead of processing.` | View credits (deep link) |
+| `payout_paid_notice` | Employee | Claim moves to `paid` | `₹{{1}} for claim {{2}} was paid on {{3}}. Bank reference (UTR): {{4}}.` | View payment (deep link) |
+
+Each delivered utility message costs about ₹0.115-0.145 plus 18% GST outside the 24-hour service window, and is free inside it, under Meta's per-message billing in force since 1 Jul 2025; BSPs add a 10-30% markup (vendor pricing pages, re-verify at build time). <span class="pill pill--med">Medium</span> An inbound reply opens that free window: the adapter answers with a session message carrying the claim summary and link, and the decision itself still happens on the signed magic link or the web, never by chat text.
+
+:::caution[Recategorization is the cost cliff]
+Since 16 Apr 2025 Meta recategorizes utility templates to marketing without notice, and marketing costs ₹0.8631 per message from 1 Jan 2026, roughly 6-7x the utility rate (vendor, medium). One promotional phrase ("upgrade now", a discount code) can reprice the whole channel. Every template change gets a compliance read against Meta's utility criteria before submission, and the adapter alerts ops if `syncTemplateStatus` reports a category change or pause.
+:::
+
+## The payout partner adapter
+
+Payout-API mode is per-customer opt-in; the modes, beneficiary gate, and reconciliation flow live in [payouts](/phase-1/payouts/). This is the adapter contract every partner implementation (RazorpayX or Cashfree class) must satisfy:
+
+```ts
+interface PayoutPartnerAdapter {
+  // Penny-drop name verification, about ₹3 per check (Setu, high)
+  verifyBeneficiary(req: { account_number: string; ifsc: string; registered_name: string })
+    : Promise<{ status: 'verified' | 'failed'; name_at_bank?: string }>;
+
+  // Idempotent: the partner-side idempotency key is our pin_ ULID
+  executeInstruction(req: {
+    instruction_id: string;            // pin_01JXH2M4K8F6H9J2M5P8R1T4V7
+    amount_paise: number;
+    currency: 'INR';
+    beneficiary_id: string;            // bene_...
+    rail: 'NEFT' | 'RTGS' | 'IMPS' | 'UPI';
+    narration: string;
+  }): Promise<{ partner_ref: string; status: 'accepted' | 'rejected' }>;
+
+  getInstructionStatus(partner_ref: string)
+    : Promise<{ status: 'processing' | 'paid' | 'failed'; utr?: string; failure_reason?: string }>;
+
+  // Throws on bad signature; replay-safe on partner event id
+  verifyAndParseWebhook(headers: Record<string, string>, raw_body: Uint8Array): PartnerEvent[];
+}
+```
+
+Three rules make it safe. Execution is idempotent: `instruction_id` is the idempotency key on every partner call, and a PayoutInstruction with a terminal partner status is never re-executed; repair means a new `pin_` on the same claim. Webhooks are verified before parsing: each partner signs differently, the adapter checks the signature and a timestamp tolerance, and dedupes on the partner event id. Reconciliation is webhook-first with a polling sweep as backstop: partner events normalize into the payouts reason taxonomy and emit `payout.instruction.paid`, `payout.instruction.failed`, and `payout.batch.completed` on our own webhook stream. Credentials are the customer's own partner-account keys, stored tenant-encrypted; we are the API caller, never the fund holder.
+
+## Outbound webhooks
+
+Customer systems subscribe via WebhookEndpoint records (CRUD on `/webhook-endpoints`); the signing secret is shown once at creation. Every delivery is signed:
+
+```http
+POST /kharcha-events HTTP/1.1
+Host: erp.acme.example.in
+Content-Type: application/json
+X-Kharcha-Signature: t=1781088131,v1=6f3a1c9e0b2d...
+```
+
+```ts
+// Verification: HMAC-SHA256 over "<t>.<raw_body>" with the endpoint secret.
+const expected = hmacSha256(secret, `${t}.${rawBody}`);
+// Constant-time compare against v1; reject if |now - t| > 300 seconds.
+```
+
+Delivery is at-least-once with exponential backoff and jitter across 24 hours; after that the endpoint is disabled and the admin alerted. Undelivered events persist in a dead-letter queue for 30 days, replayable with `POST /ops/replay-webhooks`. Consumers must respond 2xx within 10 seconds and do real work async, dedupe on the `evt_` id, tolerate out-of-order delivery, and ignore unknown event types. The full event catalog (`claim.submitted` through `beneficiary.verified`) lives in the [API spec](/spec/api/).
+
+## Deferred, with flip conditions
+
+| Capability | v1 status | Flip condition |
+| --- | --- | --- |
+| Tally bridge agent | Designed, not built | Two Growth-or-above customers condition renewal on push-sync, or file import proves to be churn |
+| Zoho Books REST connector | CSV import path | Design-partner cohort sits in the Zoho ecosystem |
+| HRMS sync (GreytHR, Keka, Zoho People, RazorpayX Payroll) | CSV import in onboarding | Roster-drift pain repeats at 200-plus-employee customers |
+| SSO (SAML/OIDC) plus SCIM | Email OTP and magic-link sign-in only (passwordless, per the [security spec](/spec/security-and-compliance/)) | First mid-market deal naming SSO in procurement |
+| Outlook Actionable Messages | Magic-link email only | An M365-heavy customer asks; target Action.Execute, legacy tokens end 8 Jun 2026 (primary docs, high) |
+| Gmail AMP | Skipped | The 100-plus-emails-per-day whitelisting bar fits a later, larger sender |
+| Slack / Teams approval cards | Not in v1 | Chat-ops approval named in mid-market deals; email plus WhatsApp covers SMB |
+
+## Secrets and rotation
+
+Per-tenant integration secrets (payout-partner keys, webhook signing secrets, email tokens) and the platform BSP token are envelope-encrypted: AES-256-GCM per secret, data keys wrapped by a KMS master key, decrypted only inside the worker that needs them, never logged, masked to the last four characters in the Console. Secrets are shown in full exactly once, at creation. Webhook signing secrets rotate with a 24-hour overlap during which deliveries carry signatures under both old and new secrets, so consumers switch without a gap; partner keys rotate by re-entry. Create, rotate, and delete each write an AuditEvent. The wider encryption, DPDP, and retention posture is in the security and compliance spec.
+
+<LinkCard title="Security and compliance" description="Tenant isolation, encryption, DPDP processor duties, and the 8-financial-year retention clock." href="/spec/security-and-compliance/" />
+
+<LinkCard title="Ops runbooks" description="What ops does when OCR stalls, webhooks back up, or an export fails at month-end." href="/phase-1/ops-runbooks/" />
+
+## Sources
+
+- [Integration with TallyPrime, Tally official](https://help.tallysolutions.com/integrate-with-tallyprime/) (primary; port 9000, HTTP/ODBC surface)
+- [XML Integration, Tally official](https://help.tallysolutions.com/xml-integration/) (primary; ENVELOPE import structure)
+- [TallyPrime reconciliation automation, Terra Insight](https://www.terra-insight.com/insights/tally-prime-reconciliation-automation-india/) (vendor; HTTP 200 on failure, no concurrent writes)
+- [TallyConnector, community C#/.NET wrapper](https://github.com/Accounting-Companion/TallyConnector) (primary, open source protocol documentation)
+- [Tally Software India 2025, dataman.in](https://dataman.in/tally-software-india-2025/) (vendor/SEO republishing analyst share figures; treat percentages as marketing)
+- [Sage Expense Management (Fyle) integrations page](https://www.fylehq.com/product/integrations) (primary; lists no Tally connector)
+- [Zoho Payroll expense integration docs](https://www.zoho.com/in/payroll/help/employer/integrations/integrations-expense.html) (primary vendor; the reimburse-via-payroll loop)
+- [WhatsApp Business API pricing India, Whautomate](https://whautomate.com/whatsapp-business-api-pricing-india) (vendor; per-message rates, 18% GST, BSP markup)
+- [Interakt WhatsApp pricing structure](https://www.interakt.shop/resource-center/whatsapp-business-api-pricing-structure/) (vendor; ₹0.145 utility figure, Jul 2025 per-message billing)
+- [WhatsApp template category guidelines update, YCloud](https://www.ycloud.com/blog/whatsapp-api-message-template-category-guidelines-update) (vendor; 16 Apr 2025 no-notice recategorization)

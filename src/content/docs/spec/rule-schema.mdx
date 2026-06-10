@@ -1,0 +1,494 @@
+---
+title: Rule Schema
+description: "The rule object, the built-in rule types, the evaluation algorithm, and a worked example set."
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+A rule is one JSON document: a condition tree over a closed field catalog, exactly one of six action verbs, an explicit hardness, a validity window, and a version that only increments. Policy ships as data so a fiscal-year policy change is a dated edit, never a deploy. The admin-facing catalog of what ships on by default lives in [policies and rules](/phase-1/onboarding/policy-and-rules/); this page is the normative contract an implementing agent codes against: the `kharcha.rule/v1` schema, the field and operator catalogs, the eleven built-in rule types, the evaluation algorithm, the rule-trace format, and twelve worked rules. Phase 1 scopes are `line_item`, `claim`, and `advance`; `vendor_invoice` arrives with [Phase 2](/phase-2/overview/) alongside TDS and RCM.
+
+The shape is consolidated, not invented: SAP Concur, Fyle (Sage), Zoho Expense, and Brex/Ramp all converge on condition plus action plus severity plus scope (vendor docs) <span class="pill pill--med">Med-High</span>. What none of them share, and what we build natively, is the India layer: GSTIN checksums, per-diem matrices, Sec 17(5) ITC tagging.
+
+## The rule object
+
+```json
+{
+  "id": "rule_meals_cap",
+  "name": "Meals cap, ₹2,000 by grade",
+  "description": "Caps the Meals category per claim at ₹2,000 times the claimant's grade multiplier.",
+  "scope": "line_item",
+  "enabled": true,
+  "priority": 60,
+  "condition": { "all": [ { "field": "category_id", "operator": "eq", "value": "meals" } ] },
+  "action": "cap",
+  "severity": "low",
+  "hardness": "soft",
+  "params": {
+    "compute": "category_cap",
+    "cap_paise": 200000,
+    "grade_multipliers": { "staff": 1.0, "manager": 1.5, "leadership": 2.0 },
+    "trim": "largest_first"
+  },
+  "message": "Meals are covered up to your grade cap. The excess will not be reimbursed.",
+  "effective_from": "2026-04-01",
+  "effective_to": null,
+  "version": 2
+}
+```
+
+| Field | Type | Semantics |
+| --- | --- | --- |
+| `id` | string | Stable, never reused. Tenant-authored rules get `rule_` ULIDs; template-seeded rules use readable ids (`rule_meals_cap`); `rule_fallback` is the one system constant, defined in the [configuration schema](/spec/config-schema/). |
+| `name`, `description` | string | Admin UI labels and the rule-trace caption. |
+| `scope` | enum | `line_item`, `claim`, `advance`. Drives what the condition sees and when the rule runs. |
+| `enabled` | boolean | Off is retained, never deleted; history must keep resolving. |
+| `priority` | integer | Lower evaluates earlier within a scope. Order affects trace listing and the short-circuit point, never money (see evaluation). |
+| `condition` | tree | Recursive `all`/`any` tree of field-operator-value leaves. `all: []` matches everything (the fallback idiom). |
+| `action` | enum | Exactly one of `allow`, `flag`, `warn`, `cap`, `block`, `route`. |
+| `severity` | enum | `info`, `low`, `medium`, `high`, `critical`. Sorts exceptions in the approver inbox. Defaults to `medium`; tagging rules conventionally `info`. |
+| `hardness` | enum | `hard` or `soft`. Defaults to `soft`; `block` must be `hard`, and `block` submitted with `hardness: soft` is rejected at save (`RULE_BLOCK_NOT_HARD`). Per-verb meaning below. |
+| `params` | object | Action-specific contract, validated server-side per `compute` routine. |
+| `message` | string | Plain words for the audience that sees the firing. Computed amounts (cap applied, excess trimmed) are appended by the UI from the firing record, so copy never hand-maintains numbers. |
+| `effective_from`, `effective_to` | date or null | Validity window, FY-aligned by convention. Null means open. |
+| `version` | integer | Server-maintained, bumped on every edit, immutable in history. |
+
+The JSON Schema, published at `$id` `kharcha.rule/v1` and referenced by the company configuration document's `approval.rules`:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kharcha.rule/v1",
+  "title": "Rule",
+  "$ref": "#/$defs/Rule",
+  "$defs": {
+    "Rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "scope", "enabled", "priority", "condition", "action"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^rule_[A-Za-z0-9_]{1,40}$" },
+        "name": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 500 },
+        "scope": { "enum": ["line_item", "claim", "advance"] },
+        "enabled": { "type": "boolean" },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "condition": { "$ref": "#/$defs/Condition" },
+        "action": { "enum": ["allow", "flag", "warn", "cap", "block", "route"] },
+        "severity": { "enum": ["info", "low", "medium", "high", "critical"] },
+        "hardness": { "enum": ["hard", "soft"] },
+        "params": { "type": "object" },
+        "message": { "type": "string", "maxLength": 240 },
+        "effective_from": { "anyOf": [{ "type": "null" }, { "type": "string", "format": "date" }] },
+        "effective_to": { "anyOf": [{ "type": "null" }, { "type": "string", "format": "date" }] },
+        "version": { "type": "integer", "minimum": 1, "readOnly": true }
+      }
+    },
+    "Condition": {
+      "oneOf": [
+        { "$ref": "#/$defs/Leaf" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["all"],
+          "properties": {
+            "all": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/Condition" } }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["any"],
+          "properties": {
+            "any": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/Condition" } }
+          }
+        }
+      ]
+    },
+    "Leaf": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "operator", "value"],
+      "properties": {
+        "field": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+        "operator": {
+          "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "between", "in", "not_in", "contains", "matches"]
+        },
+        "value": {}
+      }
+    }
+  }
+}
+```
+
+Storage mirrors the object one-to-one: the `rules` table in the [data model](/spec/data-model/) carries the same columns with a six-verb CHECK, and `vendor_invoice` joins the `scope` enum only when Phase 2 ships, as a schema version bump.
+
+### Actions: engine effect and params contract
+
+| Action | Engine effect | `params` | `hardness` meaning |
+| --- | --- | --- | --- |
+| `allow` <span class="pill pill--allow">allow</span> | Explicit pass; attaches `params.tags` to the line. Never suppresses a harder outcome. | `tags` (string array), optional `compute` for taggers | Ignored; always soft |
+| `flag` <span class="pill pill--flag">flag</span> | Exception recorded on the line or claim; approver may override with a typed reason. | optional `compute` | Ignored; always soft |
+| `warn` | Submission gated on a typed reason from the employee; the reason rides to the approver and the audit trail. | none | Ignored; the reason is mandatory either way |
+| `cap` | Line `approved_amount_paise = min(claimed, cap)`. Multiple caps compose by `min`. | `cap_paise`, or `compute` plus a `policy_tables` reference | `hard` cap: the approver cannot restore above the cap |
+| `block` <span class="pill pill--block">block</span> | At `line_item` scope: the line ends `rejected` at 0 paise and the claim proceeds. At `claim` scope: the claim is not submittable. | none | Always `hard`; soft is rejected at save (`RULE_BLOCK_NOT_HARD`) |
+| `route` | Adds or swaps ApprovalSteps through the chain resolver; a `line_item`-scope route still acts on the claim's chain. | `chain` (matrix rules), `add_steps`, optional `sample` for random audit | `hard` step is immune to dedupe and skip-up |
+
+Exemptions are written as narrower conditions on the harder rule, never as an `allow` that outranks a `block`. The allow-beats-block precedence hole is the classic configurable-engine bug; we close it by construction.
+
+## Conditions and operators
+
+A condition node is a leaf or a combinator: `all` is AND, `any` is OR, both nest. Save-time guards keep the language small: maximum nesting depth 4, maximum 32 leaves per rule, `matches` patterns compile under RE2 (no backtracking) and full-match against the field.
+
+| Operator | Operand types | Notes |
+| --- | --- | --- |
+| `eq`, `neq` | any scalar | Strict type equality; no coercion |
+| `gt`, `gte`, `lt`, `lte` | integer, number, date | Dates compare as ISO 8601 |
+| `between` | integer, number, date | Two-element array, inclusive both ends |
+| `in`, `not_in` | scalar vs array | Membership |
+| `contains` | set or string | Set membership (`line_categories`) or substring (`merchant`) |
+| `matches` | string | Anchored RE2, max 200 chars |
+
+Null semantics are explicit: a leaf whose field value is null never matches, under any operator including `neq`; the trace records it as `not_applicable`. Presence is tested through the boolean presence fields (`gstin_present`, `has_receipt`), so polarity bugs cannot hide in null handling.
+
+## The field catalog
+
+Conditions reference only this closed catalog; an unknown field fails the save, not the evaluation. Snapshot fields come from the Claim and LineItem records at evaluation; computed fields are produced by built-in code paths.
+
+| Field | Type | Scopes | Source |
+| --- | --- | --- | --- |
+| `amount_paise` | integer (paise) | line_item, claim, advance | Line claimed amount; claim claimed total; advance requested amount |
+| `category_id` | string | line_item | Validated against the company's category set |
+| `line_categories` | set of string | claim | Category ids across all lines (same name as the config routing rules) |
+| `expense_date` | date | line_item | Bill date as confirmed at `review_items` |
+| `days_since_spend` | integer | line_item | Evaluation date minus `expense_date`; negative means future-dated |
+| `is_weekend` | boolean | line_item | Computed from `expense_date` |
+| `is_holiday` | boolean | line_item | Company holiday calendar |
+| `has_receipt` | boolean | line_item | A Receipt is attached to the line |
+| `image_count` | integer | claim | Receipt images attached; the credit fair-use guard reads the same number |
+| `gstin_present` | boolean | line_item | A supplier GSTIN was captured |
+| `gstin_valid` | boolean or null | line_item | Luhn-mod-36 verdict; null when no GSTIN |
+| `merchant` | string | line_item | Normalized (trimmed, casefolded) merchant from extraction or manual entry |
+| `city_tier` | enum or null | line_item, claim | `tier_1`, `tier_2`, `tier_3` via the city-tier table; null when unresolved |
+| `grade` | string | line_item, claim, advance | Claimant's `grade_code` at evaluation |
+| `duplicate_score` | number 0 to 1 | line_item | Computed; see DUPLICATE_SUSPECT |
+| `manual_entry` | boolean | line_item, claim | Line typed without extraction; claim-level true if any line is manual |
+| `is_personal` | boolean | line_item | Employee-marked personal line |
+| `distance_km`, `vehicle_type` | number, enum | line_item | Mileage lines only; null elsewhere <span class="pill pill--info">Defined here</span> |
+| `advance_balance_paise` | integer (paise) | advance, claim | Claimant's outstanding advance total |
+| `advance_age_days` | integer | advance | Days since the oldest open Advance |
+
+Aggregates (monthly totals, category sums) are deliberately absent from the condition language. They live inside built-in `compute` routines with declared windows, which keeps conditions cheap, deterministic, and impossible to mis-window.
+
+## Built-in rule types
+
+Eleven behaviours need code, so they ship as engine-owned computations behind seeded rules. The admin tunes verbs, thresholds, and hardness; the computation is ours. Defaults below match the wizard template in the policy catalog.
+
+| Type | What it computes | Params | Default |
+| --- | --- | --- | --- |
+| `GSTIN_FORMAT` | `gstin_valid`: 15-char structure (state 2, PAN 10, entity 1, literal Z, checksum) plus Luhn mod 36, fully offline <span class="pill pill--high">High</span> | none | `flag` soft, ON |
+| `RECEIPT_REQUIRED_ABOVE` | `has_receipt` against a threshold | `threshold_paise` (template 50000) | `warn` soft, ON; one-tap promotable to `block` |
+| `CATEGORY_CAP` | Per-claim category sum vs cap times grade multiplier; trims the overage largest line first | `cap_paise`, `grade_multipliers`, `trim` | `cap` soft, ON via template amounts |
+| `MONTHLY_CAP` | Claimant's calendar-month category aggregate across claims | `category_id`, `ceiling_paise`, `window` | `flag` soft, OFF until ceilings set |
+| `PER_DIEM_CAP` | Per-travel-day cap from `policy_tables.per_diem_matrix` keyed `city_tier` by `grade_code`, partial-day fraction applied | `compute: per_diem_cap`, `table`, `partial_day_fraction` (template 0.5) | `cap` soft, OFF until the matrix is filled |
+| `MILEAGE_RATE` | `distance_km` times `rate_paise_per_km` from `policy_tables.mileage_rates` by `vehicle_type` | `compute: mileage_rate`, `table` | `cap` soft, inert until rates exist |
+| `DUPLICATE_SUSPECT` | `duplicate_score`: max of image signal (sha256 equal 1.0; pHash Hamming distance 8 or less of 64 scores 0.9) and field signal (merchant, date, amount all equal 0.9; two of three 0.7) (our derivation) | `threshold` (default 0.7) | `flag` soft, ON |
+| `BACKDATE_WINDOW` | `days_since_spend` vs a maximum age | `max_age_days` (template 90) | `warn` soft, ON |
+| `FUTURE_DATE_BLOCK` | `days_since_spend` below zero | none | `block` hard, ON |
+| `WEEKEND_FLAG` | `is_weekend` or `is_holiday` | none | `flag` soft low; ON in office templates, OFF in field-team templates |
+| `ITC_ELIGIBLE` | Tags `itc_eligible` or `itc_blocked` from the category `gst_hint` map plus invoice checks (supplier GSTIN present, company GSTIN on the bill); writes `line_items.itc_eligible` | `compute: itc_tag`, `source` | `allow` info, ON once a company or branch GSTIN exists; informational for finance in Phase 1, never gates |
+
+<p class="source-note">Verb and threshold precedents: Fyle, Zoho, Concur, Brex help docs (vendor, medium confidence). GSTIN structure and checksum: ClearTax and GSTIN validator references (high). Template amounts are our derivation, editable per company.</p>
+
+`GSTIN_FORMAT` fires on a FAILED checksum: its condition is `gstin_present eq true` and `gstin_valid eq false`. A valid GSTIN produces no firing and no badge. Most failures are OCR misreads, so the fix is the tap-to-fix review screen, not a rejection.
+
+:::danger[A format pass is not an ITC claim]
+Luhn mod 36 proves a GSTIN is well-formed, not that it is active, not that the invoice sits in GSTR-2B, and not that Sec 17(5) leaves the credit unblocked. `GSTIN_FORMAT` and `ITC_ELIGIBLE` stay separate rules with separate confidence; live-status verification is a Phase 2 concern. And per-diem caps are policy, not law: India has no statutory per-diem rate (HR-vendor corroborated, medium confidence), and Sec 10(14) with Rule 2BB exempts only what is actually spent.
+:::
+
+`DUPLICATE_SUSPECT` carries suppressions from the edge-case contract: a resubmission after `sent_back` is the same Claim and never scores; a receipt whose prior claim was rejected surfaces as lineage, not a fraud flag. The matching rule is published to employees in plain words, Brex-style.
+
+## Evaluation algorithm
+
+One function serves four callers: the binding run at submit, the free policy pre-check on the [submit screen](/phase-1/capture/submit-and-track/), the admin `rules/test` dry run, and the simulate-a-claim tester. They can never disagree because they are one code path behind a dry-run flag.
+
+```text
+evaluate(claim, at):                              # at = submission instant; pre-check passes now()
+  rules = enabled rules whose [effective_from, effective_to) covers at
+  rules = sort(rules, key = (scope_rank, priority, id))    # line_item=1, claim=2, advance=3
+  trace = { lines: [], claim_firings: [], summary: {} }
+
+  # Pass 1: line_item rules, each line independently
+  for line in claim.line_items:
+    caps = []
+    for r in rules where r.scope == "line_item":
+      if not matches(r.condition, view(line, claim)): continue
+      record(trace, r, line)
+      emit_audit("rule.fired", rule_id = r.id, rule_version = r.version,
+                 input = snapshot(view(line, claim)))      # every match, even effect "none"
+      switch r.action:
+        "allow": line.tags += r.params.tags
+        "flag":  line.exceptions += exception(r)
+        "warn":  reasons_required += (line, r)             # submit gated on a typed reason
+        "cap":   caps += resolve_cap(r, line)              # paise; params or policy_tables lookup
+        "route": chain_requests += r.params                # applied by the chain resolver
+        "block": line.approved_amount_paise = 0
+                 line.outcome = "rejected"
+                 break                                     # short-circuits THIS LINE only
+    if line.outcome != "rejected":
+      cap = min(caps) if caps else infinity                # caps compose by min, never by order
+      line.approved_amount_paise = min(line.claimed_amount_paise, cap)
+      line.outcome = "capped" if cap < line.claimed_amount_paise else "approved"
+
+  # Pass 2: claim rules over the aggregate view (post-line amounts)
+  for r in rules where r.scope == "claim":
+    if matches(r.condition, claim_view(claim)):
+      record + emit_audit
+      if r.action == "block": claim.submittable = false    # block is always hard
+
+  # Pass 3: advance rules (also run standalone when an Advance is requested)
+  for r in rules where r.scope == "advance": same pattern
+
+  # Rollup. Advance netting is arithmetic, never a rule.
+  claim.approved_amount_paise = sum(line.approved_amount_paise for line in claim.line_items)
+  payable = claim.approved_amount_paise
+            - min(advance_balance_paise, claim.approved_amount_paise)
+  claim.submittable = claim.submittable and any(line.outcome != "rejected")
+  return trace
+```
+
+Invariants, regardless of rule order or count:
+
+- `0 <= approved_amount_paise <= claimed_amount_paise` per line; the database CHECK in the data model backs the engine.
+- A hard `block` dominates its scope. A line-scope block zeroes one line and the claim proceeds with clean lines; only a claim-scope block, or every line rejected, stops submission. Never bounce a whole claim for one bad line.
+- Caps compose by `min`. Reordering rules can change the trace listing and where a line short-circuits, never the money.
+- Soft outcomes accumulate as exceptions the approver overrides with a typed reason; nothing soft is silently dropped.
+- Every condition match emits one AuditEvent (`rule.fired`) with rule id, rule version, and the input snapshot, even when the effect is none.
+- Rule selection uses the evaluation instant; rate lookups inside `policy_tables` use the line's `expense_date`, so an FY rate change applies to spends from its effective date.
+- Rules never touch the meter: `awaiting_credits` is a billing state, and no policy outcome can park a claim there or stop a Receipt upload.
+
+Re-evaluation happens on every entry into `submitted`: a resubmission after `sent_back` (same claim, same credit, free) runs against the rules effective at that instant, and both traces stay in the trail. Mid-flight rule edits never touch an evaluated claim; the explicit admin re-evaluate action is the only path.
+
+:::caution[We rejected last-match-wins]
+Brex orders conflicting rules by "last matching rule wins"; the v1 research flagged that model as the top source of surprising reimbursements in the hands of non-technical admins. v2 composes outcomes instead: precedence on a line is `block` over `cap` over `warn` over `flag` over `allow`, caps merge by `min`, and everything is recorded. What flips it: if design partners genuinely need rule-level exemptions, we add an explicit `supersedes` list of rule ids, never implicit ordering.
+:::
+
+## The rule trace
+
+The trace is the explain output: which rules fired, per-line outcomes, final amounts. It is the response body of `POST /api/v1/claims/{clm_id}/policy-precheck`, the payload behind the simulate tester and `POST /api/v1/rules/test` (which also dry-runs candidates against recent history: "would have fired 41 times in the last 90 days"), and the source of approver-facing badges; endpoints and auth live in the [API reference](/spec/api/). Unlike `line_items.flags`, which persists only consequential outcomes, the trace records every match, including `effect: "none"`.
+
+The same dinner bill the policy catalog walks through, as a pre-check response. This tenant's admin has created an `alcohol` category and enabled the seeded alcohol block, which ships disabled (see the worked rules below); the claimant's grade multiplier is 1.5:
+
+```json
+{
+  "claim_id": "clm_01JXB3V2N8R5T7W9XA1CD3EF45",
+  "evaluated_at": "2026-06-15T09:12:40Z",
+  "mode": "precheck",
+  "ruleset": { "config_version": 12, "rules_evaluated": 14 },
+  "submittable": true,
+  "lines": [
+    {
+      "line_item_id": "li_01JXB3V4A2C4E6G8J0K2M4N6P8",
+      "category_id": "meals",
+      "claimed_amount_paise": 214000,
+      "approved_amount_paise": 214000,
+      "outcome": "approved",
+      "firings": [
+        { "rule_id": "rule_meals_cap", "rule_version": 2, "action": "cap", "effect": "none",
+          "computed": { "effective_cap_paise": 300000, "category_sum_paise": 236000 } },
+        { "rule_id": "rule_itc_tag", "rule_version": 1, "action": "allow", "effect": "tagged",
+          "tags": ["itc_blocked"] }
+      ]
+    },
+    {
+      "line_item_id": "li_01JXB3V5B3D5F7H9K1M3P5Q7R9",
+      "category_id": "meals",
+      "claimed_amount_paise": 22000,
+      "approved_amount_paise": 22000,
+      "outcome": "approved",
+      "firings": [
+        { "rule_id": "rule_meals_cap", "rule_version": 2, "action": "cap", "effect": "none" },
+        { "rule_id": "rule_itc_tag", "rule_version": 1, "action": "allow", "effect": "tagged",
+          "tags": ["itc_blocked"] }
+      ]
+    },
+    {
+      "line_item_id": "li_01JXB3V6C4E6G8J0K2M4N6P8Q0",
+      "category_id": "alcohol",
+      "claimed_amount_paise": 120000,
+      "approved_amount_paise": 0,
+      "outcome": "rejected",
+      "firings": [
+        { "rule_id": "rule_block_alcohol", "rule_version": 1, "action": "block", "hardness": "hard",
+          "effect": "line_rejected",
+          "message": "Alcohol is not reimbursable under company policy.",
+          "input_snapshot": { "category_id": "alcohol", "amount_paise": 120000,
+                              "expense_date": "2026-06-14" } }
+      ]
+    }
+  ],
+  "claim_firings": [],
+  "chain_preview": [
+    { "slot": "manager", "resolves_to": "mem_01JXB3V7D5F7H9K1M3P5Q7R9S1" }
+  ],
+  "summary": {
+    "claimed_amount_paise": 356000,
+    "approved_amount_paise": 236000,
+    "lines_rejected": 1,
+    "caps_applied": 0,
+    "reasons_required": 0,
+    "exceptions_for_approver": 0
+  }
+}
+```
+
+The employee reads this as one sentence on the pre-submit screen: 1 of 3 lines is not covered, ₹2,360 of ₹3,560 goes for approval. The engine outcome is a preview until submit; blocked lines finalize at submission, while `approved` and `capped` previews finalize with the approver's decision (a soft cap can be restored, with a reason, up to the claimed amount).
+
+## Twelve worked rules
+
+The seeded template, end to end: every verb, all three Phase 1 scopes, the mixed-bill alcohol case (the alcohol block, the meals cap, and the ITC tagger produced the trace above), and a route-to-finance rule. Conditions are full trees as stored; `BACKDATE_WINDOW` and `WEEKEND_FLAG` follow the same shapes and live in the built-ins table.
+
+```json
+[
+  { "id": "rule_future_date", "name": "Future-dated bills stop here",
+    "scope": "line_item", "enabled": true, "priority": 10,
+    "condition": { "all": [ { "field": "days_since_spend", "operator": "lt", "value": 0 } ] },
+    "action": "block", "hardness": "hard", "severity": "high",
+    "message": "This bill is dated in the future. Fix the date to continue.", "version": 1 },
+
+  { "id": "rule_receipt_500", "name": "Receipt expected above ₹500",
+    "scope": "line_item", "enabled": true, "priority": 20,
+    "condition": { "all": [
+      { "field": "amount_paise", "operator": "gt", "value": 50000 },
+      { "field": "has_receipt", "operator": "eq", "value": false } ] },
+    "action": "warn", "hardness": "soft", "severity": "medium",
+    "params": { "compute": "receipt_required_above", "threshold_paise": 50000 },
+    "message": "Claims above ₹500 need a bill. Attach a photo, or tell us why you cannot.", "version": 1 },
+
+  { "id": "rule_gstin_format", "name": "GSTIN checksum",
+    "scope": "line_item", "enabled": true, "priority": 40,
+    "condition": { "all": [
+      { "field": "gstin_present", "operator": "eq", "value": true },
+      { "field": "gstin_valid", "operator": "eq", "value": false } ] },
+    "action": "flag", "hardness": "soft", "severity": "medium",
+    "message": "This GSTIN does not look right. Tap to check it against the bill.", "version": 1 },
+
+  { "id": "rule_block_alcohol", "name": "Alcohol is not reimbursable",
+    "scope": "line_item", "enabled": false, "priority": 50,
+    "condition": { "all": [ { "field": "category_id", "operator": "eq", "value": "alcohol" } ] },
+    "action": "block", "hardness": "hard", "severity": "high",
+    "message": "Alcohol is not reimbursable under company policy.", "version": 1 },
+
+  { "id": "rule_meals_cap", "name": "Meals cap, ₹2,000 by grade",
+    "scope": "line_item", "enabled": true, "priority": 60,
+    "condition": { "all": [ { "field": "category_id", "operator": "eq", "value": "meals" } ] },
+    "action": "cap", "hardness": "soft", "severity": "low",
+    "params": { "compute": "category_cap", "cap_paise": 200000,
+                "grade_multipliers": { "staff": 1.0, "manager": 1.5, "leadership": 2.0 },
+                "trim": "largest_first" },
+    "message": "Meals are covered up to your grade cap. The excess will not be reimbursed.",
+    "effective_from": "2026-04-01", "effective_to": null, "version": 2 },
+
+  { "id": "rule_per_diem", "name": "Per-diem matrix cap",
+    "scope": "line_item", "enabled": false, "priority": 70,
+    "condition": { "all": [
+      { "field": "category_id", "operator": "in", "value": ["meals", "lodging"] } ] },
+    "action": "cap", "hardness": "soft", "severity": "medium",
+    "params": { "compute": "per_diem_cap", "table": "per_diem_matrix",
+                "partial_day_fraction": 0.5 },
+    "message": "Travel days are covered by your per-diem for this city and grade.", "version": 1 },
+
+  { "id": "rule_mileage", "name": "Mileage at the company per-km rate",
+    "scope": "line_item", "enabled": true, "priority": 80,
+    "condition": { "all": [
+      { "field": "category_id", "operator": "eq", "value": "fuel_mileage" },
+      { "field": "distance_km", "operator": "gt", "value": 0 } ] },
+    "action": "cap", "hardness": "soft", "severity": "low",
+    "params": { "compute": "mileage_rate", "table": "mileage_rates" },
+    "message": "Mileage reimburses at the per-km rate for your vehicle class.", "version": 1 },
+
+  { "id": "rule_duplicate", "name": "Possible duplicate",
+    "scope": "line_item", "enabled": true, "priority": 90,
+    "condition": { "all": [ { "field": "duplicate_score", "operator": "gte", "value": 0.7 } ] },
+    "action": "flag", "hardness": "soft", "severity": "high",
+    "message": "Looks like a duplicate of an earlier bill. Keep both, or keep one?", "version": 1 },
+
+  { "id": "rule_itc_tag", "name": "ITC eligibility tag",
+    "scope": "line_item", "enabled": true, "priority": 200,
+    "condition": { "all": [] },
+    "action": "allow", "hardness": "soft", "severity": "info",
+    "params": { "compute": "itc_tag", "source": "category_gst_hint" }, "version": 1 },
+
+  { "id": "rule_fuel_monthly", "name": "Fuel monthly ceiling ₹5,000",
+    "scope": "claim", "enabled": true, "priority": 210,
+    "condition": { "all": [
+      { "field": "line_categories", "operator": "contains", "value": "fuel_mileage" } ] },
+    "action": "flag", "hardness": "soft", "severity": "medium",
+    "params": { "compute": "monthly_cap", "category_id": "fuel_mileage",
+                "ceiling_paise": 500000, "window": "calendar_month" },
+    "message": "Fuel claims this month are over the monthly ceiling for this employee.", "version": 1 },
+
+  { "id": "rule_route_manual_review", "name": "Manual entries above ₹10,000 add finance",
+    "scope": "claim", "enabled": true, "priority": 220,
+    "condition": { "all": [
+      { "field": "manual_entry", "operator": "eq", "value": true },
+      { "field": "amount_paise", "operator": "gt", "value": 1000000 } ] },
+    "action": "route", "hardness": "soft", "severity": "medium",
+    "params": { "add_steps": ["finance"] }, "version": 1 },
+
+  { "id": "rule_advance_single_open", "name": "One open advance at a time",
+    "scope": "advance", "enabled": true, "priority": 300,
+    "condition": { "all": [ { "field": "advance_balance_paise", "operator": "gt", "value": 0 } ] },
+    "action": "block", "hardness": "hard", "severity": "medium",
+    "message": "Settle the outstanding advance before requesting a new one.", "version": 1 }
+]
+```
+
+Twelve documents, ten active: `rule_per_diem` ships disabled because the per-diem company toggle swaps `enabled` between it and `rule_meals_cap` (matrix governs travel days, itemised caps yield), and `rule_block_alcohol` ships disabled because the default category set has no `alcohol` category; it activates only after an admin creates that category, at which point the enable passes the `REF_UNKNOWN_CATEGORY` check (the trace above shows exactly such a tenant). Three readings worth pinning. First, `rule_route_manual_review` shows where policy routing belongs: amount-threshold routing lives in the approval matrix in the configuration document; the `route` verb here covers what the matrix cannot see, like manual-entry risk and random audit (`sample: 0.05` on an `add_steps` rule). Second, `rule_itc_tag` matches every line (`all: []`) yet gates nothing: food-and-beverage lines stay reimbursable to the employee even though Sec 17(5)(b) blocks the company's credit; the tag and the money are tracked separately, deliberately. Third, `rule_advance_single_open` runs when an Advance is requested, not at claim submit; netting an advance against an approved claim is rollup arithmetic, never a rule an admin could break.
+
+## Versioning and save-time validation
+
+Past firings are immutable. The AuditEvent row stores rule id, rule version, and the input snapshot; `line_items.flags` keeps the rendered copy; the trail is retained for 8 financial years. Editing a rule can therefore never rewrite history, only the future:
+
+- `PATCH /api/v1/rules/{rule_id}` creates version n+1; the before and after documents land in `audit_events`, which is what `GET /api/v1/rules/{rule_id}` renders as version history.
+- Evaluated claims keep their outcomes; only the explicit, audited admin re-evaluate action applies a change to pending claims.
+- Disabling retains the rule and its history; deletion does not exist.
+- Scheduled change is a pair of dated documents: close the old rule with `effective_to`, open the successor with `effective_from`. An FY rate change is two field edits.
+
+The save gate mirrors the configuration document's style: schema errors short-circuit, semantic checks return the full list as RFC 7807 `application/problem+json`.
+
+| Code | Catches | Severity |
+| --- | --- | --- |
+| `RULE_SCHEMA_INVALID` | Shape, enum, pattern, or unknown-key violation against `kharcha.rule/v1` | error |
+| `RULE_UNKNOWN_FIELD` | Condition references a field outside the catalog for the rule's scope | error |
+| `REF_UNKNOWN_CATEGORY` | An enabled rule's value references a category id not in the company config; re-checked when a disabled rule is enabled, which is how the seeded `rule_block_alcohol` ships before its category exists (shared code with config validation) | error |
+| `RULE_PARAMS_INVALID` | Params fail the per-action contract: `cap` without a cap source, `route` without `chain` or `add_steps`, unknown `compute` | error |
+| `RULE_CAP_SCOPE` | `cap` at any scope other than `line_item` | error |
+| `RULE_BLOCK_NOT_HARD` | `block` submitted with `hardness: soft` | error |
+| `RULE_CONDITION_TOO_DEEP` | Nesting beyond depth 4 or more than 32 leaves | error |
+| `RULE_REGEX_INVALID` | `matches` pattern fails RE2 compile or exceeds 200 chars | error |
+| `RULE_TABLE_GAP` | A referenced policy table has no row effective today | warning |
+
+## Done means
+
+- The published `kharcha.rule/v1` schema validates all twelve worked rules byte for byte and rejects each validation-table scenario with that exact code.
+- One `evaluate()` function serves policy-precheck, submit, `rules/test`, and simulate, behind a dry-run flag, with contract tests pinning identical output for identical input.
+- The dinner-bill trace reproduces exactly: 236000 of 356000 paise approved, one line rejected, claim submittable, two ITC tags.
+- Every condition match writes one `audit_events` row with rule id, version, and input snapshot; editing or disabling a rule changes no historical trace.
+- A line-scope hard block never prevents submission of the remaining clean lines, and no rule evaluation can move a Claim into `awaiting_credits` or stop a Receipt upload.
+- Reordering rule priorities changes no `approved_amount_paise` anywhere (property test: shuffle priorities, assert amounts stable).
+
+## Sources
+
+- [Fyle Help, Configure Company Policies](https://help.fylehq.com/en/articles/1203330-configure-company-policies) (vendor): action taxonomy, cap-to-limit, aggregation windows.
+- [Fyle Help, Configuring a policy to mandate receipts](https://www.fylehq.com/help/en/articles/8523314-configuring-a-policy-to-mandate-receipts) (vendor): the flag / warn-with-reason / hard-block tier precedent.
+- [SAP Learning, Configuring Audit Rules (Concur)](https://learning.sap.com/learning-journeys/getting-started-with-concur-expense-standard-for-administrators/configuring-audit-rules) (vendor): if/then model, red versus yellow hardness.
+- [Zoho Expense, Rules user guide](https://www.zoho.com/us/expense/help/managing-policies/rules/) (vendor): warn versus block, INR-native limit types.
+- [Brex, Policy Engine](https://www.brex.com/support/policy-engine) (vendor): AND-combinable conditions and the last-rule-wins ordering we rejected.
+- [ClearTax, Know your GSTIN](https://cleartax.in/s/know-your-gstin) (analyst): the 15-character GSTIN structure.
+- [The GST Calculator India, GSTIN Validator](https://thegstcalculator.in/tools/gst-number-validator) (vendor): Luhn-mod-36 checksum detail.
+- [ClearTax, GST Input Tax Credit](https://cleartax.in/s/gst-input-tax-credit) (analyst): GSTR-2B and company-GSTIN preconditions behind ITC_ELIGIBLE.
+
+<CardGrid>
+  <LinkCard title="Approval engine" href="/phase-1/web/approval-engine/" description="Where route lands: chain resolution, DoA walks, and the simulate-a-claim tester that renders this trace." />
+  <LinkCard title="State machines" href="/spec/state-machines/" description="How engine outcomes bind to Claim, LineItem, and ApprovalStep transitions." />
+</CardGrid>

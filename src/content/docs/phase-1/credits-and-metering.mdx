@@ -1,0 +1,224 @@
+---
+title: Credits and Metering
+description: "The pricing system as product: the meter, the ledger, the soft paywall that never loses a bill, and the nudge loop that sells upgrades."
+---
+
+import { LinkCard, Steps } from '@astrojs/starlight/components';
+
+Kharcha meters exactly one thing: claims submitted into the approval workflow, pooled per company. Users, approvers, and viewers are unlimited and free on every plan, forever. When the balance hits zero the product queues work instead of blocking it: capture keeps capturing, uploads keep landing, and nothing is ever lost. This page is the product specification of that system: the meter and its fairness rules, the CreditEntry ledger, the soft paywall, the recharge drain, and the admin console that sells the next pack. The strategic case for metering submissions instead of seats, and the full competitive arithmetic against Zoho's ₹99/user anchor, lives in [pricing strategy](/strategy/pricing/).
+
+## The meter
+
+One credit buys one outcome: a Claim submitted into approval, with everything that submission needs downstream. The rules below are the published contract; they appear in the pricing FAQ in this exact spirit, because an opaque unit definition is the fastest way to lose trust in usage pricing (Intercom's "what counts as a resolution" complaints are the cautionary tale).
+
+| Rule | Behaviour | Why |
+| --- | --- | --- |
+| The unit | 1 credit = 1 Claim submitted into the approval workflow. OCR on up to 5 receipt images, storage, the full approval chain, payout-file generation, and exports are all inside that credit. | The meter is the outcome, not the keystrokes. Intercom Fin's charge-once-per-conversation rule is the template. |
+| Image fair-use | Beyond 5 images on one claim: +1 credit per additional 5. Live counter before submit. | DocuSign's envelope-stuffing loophole proves batching is certain; we bound it without per-image anxiety. |
+| Resubmission after `sent_back` | Free. Same claim, same credit, however many round trips. | Fin charges nothing on failure or handoff; billing rework would make employees resent their admin. |
+| Manual entry | A manually entered submission consumes 1 credit like any other. | The meter is the submission and its workflow, not the OCR; otherwise manual-only companies ride free forever. |
+| Failed OCR | Never double-charges. A claim whose scans failed and was finished by hand still costs exactly 1 credit. | Extraction failure is our problem, not the customer's. |
+| Cancelled claims | Not auto-refunded. Admins can compensate via a ledger `adjustment`. | Auto-refunds invite cancel-and-retry gaming; a human adjustment keeps goodwill cheap and auditable. |
+| Pre-submission scans | Free, fair-use capped at `max(20, 3 × remaining_credits)` scans per month. | Bounds free-tier OCR COGS without metering curiosity. |
+| Who is debited | The company pool, always. No per-user quotas, no employee charges. | Seat math and allocation politics are the resented incumbent patterns this model exists to delete. |
+
+Credits are debited at company level only. The employee sees the meter at the exact moment it ticks, in the submit footer ("Uses 1 credit · company balance: 14"), specified in [submit and track](/phase-1/capture/submit-and-track/). The fair-use scan cap governs companies with a positive balance; at zero balance, pre-submission OCR pauses entirely and receipts hold in `queued`. Scan-failure recovery and the retry queue are specified in [OCR and itemisation](/phase-1/capture/ocr-itemisation/).
+
+## The ladder: one free grant plus prepaid packs
+
+The Free plan grants every company 20 submissions per month, resetting monthly with no rollover, alongside unlimited seats. Paid capacity is prepaid Credit Packs (the ladder is canonical from the thesis; the rationale and exemplar curves are argued in [pricing strategy](/strategy/pricing/)):
+
+| Pack | Price (ex-GST) | Credits | Effective ₹/credit |
+| --- | --- | --- | --- |
+| Top-up | ₹499 | 50 | ₹9.98 |
+| Starter | ₹1,999 | 250 | ₹8.00 |
+| Growth | ₹6,999 | 1,000 | ₹7.00 |
+| Scale | ₹24,999 | 4,500 | ₹5.56 |
+| Enterprise | ₹74,999 | 15,000 | ₹5.00, plus invoice billing and priority support |
+
+<p class="source-note">Source: THESIS v2 canonical ladder (our pricing); the roughly 2x top-to-bottom unit-price decline follows the Clay and Postmark curves (vendor pricing pages, high confidence).</p>
+
+All prices exclude GST; 18% is added at checkout and invoiced. Packs are paid by UPI, netbanking, or card, are non-refundable, carry 12-month validity from purchase, and drain FIFO oldest-first. At launch the packs are the entire paid offer: the optional monthly auto-pack subscriptions (e.g. subscribe to Growth, +10% bonus credits; custom Enterprise terms) ship only after cohort burn data exists, so we run one billing system on day one.
+
+Unit economics, for context: COGS is roughly ₹1.0-2.5 per submission (Document AI expense parsing about ₹0.85 per page, or OCR plus LLM at ₹0.2-0.8; storage under ₹0.05; compute ₹0.2-0.5), giving 67-75% gross margin at ₹5 per credit and 80-90% at ₹8-10 (our derivation from vendor price lists) <span class="pill pill--med">Medium</span>. The floor is ₹4 per credit even in enterprise deals. A 25-employee company at 4 submissions per employee per month (an unbenchmarked estimate to validate with design partners <span class="pill pill--low">Low</span>) burns about 100 credits monthly: roughly ₹700 on Growth against ₹2,475 for 25 Zoho Standard seats (vendor page, high confidence).
+
+## The CreditEntry ledger
+
+Balance is never a stored column; it is the sum of an append-only ledger. Every grant, purchase, burn, write-off, and correction is a CreditEntry, so the balance is reproducible, auditable, and disputable line by line.
+
+| `CreditEntry.type` | Sign | Written when | Expiry behaviour |
+| --- | --- | --- | --- |
+| `plan_grant` | + | Monthly on the plan cycle (Free: 20 credits) | Dies at period end, no rollover; the unused remainder is written off by an `expiry` entry |
+| `pack_purchase` | + | Payment captured | 12 months from purchase date |
+| `promo_grant` | + | Campaigns, design-partner goodwill | Carries its own `expires_at` |
+| `consumption` | minus | A claim transitions to `submitted`, or an extra-image increment applies | Not applicable |
+| `expiry` | minus | A lot's `expires_at` passes with balance remaining | Not applicable |
+| `adjustment` | + or minus | Admin or support action, always with a note; the actor is recorded on the AuditEvent | As issued; fully audit-logged |
+
+Consumption draws from the expiring-soonest lot first. Monthly plan grants die at period end, so they always burn before packs; among packs, uniform 12-month validity makes oldest-purchased also expiring-soonest, which is exactly the FIFO the pricing page promises. No negative balance exists: at zero, the submit path forks to `awaiting_credits` instead of writing `consumption`. Submission and consumption commit in one transaction keyed by the request's `Idempotency-Key`, so a double tap cannot double-charge.
+
+```json
+[
+  {
+    "id": "cre_01JX53W8PB6T2J5N0QXH4D7RM9",
+    "company_id": "co_01JX6Q4Y2M8KQ3VT6W9XEB5NA2",
+    "type": "expiry",
+    "amount": -19,
+    "note": "May plan grant: 19 unused of 20 expired",
+    "created_at": "2026-05-31T18:30:00Z"
+  },
+  {
+    "id": "cre_01JX5GQ9RB4KC8VYW3H6TS2XQ7",
+    "company_id": "co_01JX6Q4Y2M8KQ3VT6W9XEB5NA2",
+    "type": "plan_grant",
+    "amount": 20,
+    "expires_at": "2026-06-30T18:29:59Z",
+    "note": "Free plan monthly grant, June 2026",
+    "created_at": "2026-05-31T18:30:00Z"
+  },
+  {
+    "id": "cre_01JX7E2XQ9RB4KC8VYW3H6TSM5",
+    "company_id": "co_01JX6Q4Y2M8KQ3VT6W9XEB5NA2",
+    "type": "pack_purchase",
+    "amount": 250,
+    "expires_at": "2027-06-03T05:11:42Z",
+    "note": "Starter pack, ₹1,999 ex-GST; payment and invoice details on the AuditEvent",
+    "created_at": "2026-06-03T05:11:42Z"
+  },
+  {
+    "id": "cre_01JXG8D1TQ0V9KE2RHB4S6MZN3",
+    "company_id": "co_01JX6Q4Y2M8KQ3VT6W9XEB5NA2",
+    "type": "consumption",
+    "amount": -1,
+    "claim_id": "clm_01JXFD7RM9PB6T2J5N0QXH4W83",
+    "grant_id": "cre_01JX5GQ9RB4KC8VYW3H6TS2XQ7",
+    "created_at": "2026-06-09T09:24:18Z"
+  },
+  {
+    "id": "cre_01JXHB7C3W6ZDFN4S2KQ9RV8TE",
+    "company_id": "co_01JX6Q4Y2M8KQ3VT6W9XEB5NA2",
+    "type": "adjustment",
+    "amount": 1,
+    "note": "Goodwill: claim cancelled before review; actor on the AuditEvent",
+    "created_at": "2026-06-10T04:02:51Z"
+  }
+]
+```
+
+A fragment, not a full ledger: balance is the sum over all entries. Note the India-first cycle boundary (grants roll at midnight IST, hence the 18:30 UTC timestamps) and `grant_id` on the consumption row: the expiring-soonest rule picked the June grant (dies 30 June) over the Starter pack (dies June 2027). The full table DDL and invariants live in the [data model](/spec/data-model/); transition guards in [state machines](/spec/state-machines/).
+
+## The soft paywall
+
+At balance zero, exactly two states absorb new work. Receipts upload normally and hold at Receipt.status `queued`; submissions are accepted and land at Claim.status `awaiting_credits`. Both are application-layer states on the server: the upload succeeded and the data is durable. Implementers must never conflate this queue with the device's offline `queue_upload` outbox, which exists only for network failures.
+
+:::danger[Product invariant: zero balance never costs data or access]
+Nothing is rejected, deleted, or hidden at exhaustion. Capture and upload keep working; queued work never expires; history stays readable. The paywall withholds new value (processing and workflow entry), never access. A bill lost to a paywall would be a story told about us forever.
+:::
+
+| Surface | State | Copy |
+| --- | --- | --- |
+| Employee banner (PWA and portal) | Company balance 0 | "Your bills are safe. Processing resumes when credits are added." One tap: **Notify admin** |
+| Receipt tray chip | Receipt `queued` | "Saved · scans when credits are added" |
+| Submit confirmation | Claim `awaiting_credits` | "Submitted and queued. It enters approval the moment credits are added." |
+| Notify admin, after tap | Nudge recorded | "Your admin has been notified." Button rests as "Notified today" for 24 hours |
+| Finance console banner | Balance 0 | "Processing paused: 9 claims and 14 receipts waiting. Add credits to resume instantly." |
+
+**Notify admin** is the member-requests-upgrade pattern (Figma seat requests, Notion's plan-request button), tuned to never be spam. Each tap records a nudge with a 24-hour per-employee cooldown; admins receive at most one aggregated notification per channel per day while exhausted ("4 employees waiting · 9 claims queued", with a deep link to the purchase screen); the in-app badge updates in real time. Nudges are aggregated and rate-limited by design: one email per tap would train admins to filter us out.
+
+| Keeps working at zero balance | Pauses at zero balance |
+| --- | --- |
+| Capture, upload, offline outbox; receipts land as `queued` | OCR and itemisation of new receipts |
+| Drafts: create, edit, enter lines manually | Workflow entry: new submissions hold in `awaiting_credits` |
+| Approvals, payouts, exports for claims already `submitted` (their credit was consumed at submission) | Pre-submission scans |
+| Viewing everything: history, reports, audit trail | |
+
+The precedents are deliberate. Zapier holds over-limit task runs "held, not lost" for replay; Slack retains free-plan history and reveals it on upgrade (cite carefully: since 26 Aug 2024 Slack deletes free-plan data older than one year, so we copy the value-withheld pressure, not the retention policy; our queue never deletes); Tally keeps working when the TSS value layer lapses, which is the contract Indian SMBs already accept (vendor docs, high confidence).
+
+:::caution[Month-end is the incident window]
+`awaiting_credits` claims and `queued` receipts are NOT in the approval flow: finance cannot see them in the verification queue and they will not make a payout cut. A balance that zeroes during close week silently strands exactly the claims everyone is chasing. So the product gets loud near close: the burn forecast pins against the company's close calendar, the console banner appears from 80% consumption instead of 95%, and close-week alert copy says explicitly that queued items are outside approval until credits are added.
+:::
+
+## Recharge: the drain
+
+<Steps>
+
+1. **Payment lands.** UPI, netbanking, or card; the `pack_purchase` entry is written with `expires_at` twelve months out, and the GST invoice (18%, company GSTIN when on file) is emailed within a minute.
+
+2. **The drain worker wakes.** Claims leave `awaiting_credits` strictly oldest-first (FIFO by queue-entry time), each consuming one credit from the expiring-soonest lot and transitioning to `submitted`; the first ApprovalStep activates. `queued` receipts re-enter `processing` in parallel.
+
+3. **Owners hear about it.** Every drained claim pushes "Your claim is moving" to its owner; the admin gets one summary: "Growth pack active. 9 queued claims entered approval; balance 991."
+
+4. **Partial drains stop cleanly.** If the queue is deeper than the pack, the drain stops at zero, remaining claims stay queued in order, and the admin summary states exactly how many remain.
+
+</Steps>
+
+No admin action beyond payment is required. Zapier makes users replay held runs manually; we drain automatically, because what is waiting in our queue is employees' own money.
+
+## The admin credit console
+
+The console home carries a balance widget: the current balance, each lot with its expiry ("250 expire 3 Jun 2027"), and a projected exhaustion date derived from trailing 28-day burn ("At ~120 submissions/week, credits last until ~3 July"). The forecast is our derivation, labelled as an estimate, and suppressed until 14 days of usage history exist. Queue depth, when non-zero, sits beside it; the same numbers surface on the [finance console](/phase-1/web/finance-console/) home.
+
+| Threshold | Channels | Notes |
+| --- | --- | --- |
+| 50% consumed | In-app | Fires once per cycle against the cycle's grants plus unexpired packs |
+| 80% | In-app + email | Includes the forecast date |
+| 95% | In-app + email + WhatsApp utility | Strictly transactional template copy |
+| 100% (exhausted) | In-app + email + WhatsApp utility | Employee banner flips on; the nudge loop arms |
+
+A WhatsApp utility message costs ₹0.115-0.145 plus 18% GST (Meta and BSP rate cards, re-verify at build) <span class="pill pill--med">Medium</span>: alerting an admin costs paise and prevents a queue. Thresholds re-arm when a grant or purchase lifts the balance back above them.
+
+Auto-top-up exists for companies that never want to see the paywall, and it is engineered against the surprise-charge failure mode:
+
+- Default OFF; explicit opt-in by an `owner` or `admin`.
+- Configuration is a pack plus a threshold: "when balance falls below 50, buy Growth".
+- A monthly spend cap in ₹ is mandatory at opt-in; auto-top-up never fires past it.
+- It fires only when consumption crosses the threshold, never on expiry write-downs (the documented OpenAI failure mode: auto-recharge firing at credit expiry).
+- Every fire sends an email receipt with the GST invoice; disable is one click in the email and in the console.
+
+:::tip[Auto-top-up earns trust by being boring]
+OpenAI's auto-recharge generates angry threads precisely when it surprises. Opt-in, a hard monthly cap, a receipt per fire, and one-click off make the feature forgettable, which is the point.
+:::
+
+Expiry is handled before it hurts: the widget permanently shows the soonest-expiring lot, and the admin gets an email 30 days before any lot expires, with size and date. The 12-month validity exists because monthly-expiring purchased credits (HubSpot's model) are the single most resented credit mechanic in the exemplar set; our only monthly expiry is the Free grant, which is a grant, not money. Prepaid credits create deferred revenue and breakage accounting; GST invoicing on packs needs CA signoff before launch (carried caveat from the thesis).
+
+## What we refuse to meter
+
+The negative space is published in the pricing FAQ, because what is not counted is what makes a meter likeable:
+
+- Seats, approvers, viewers, auditors: unlimited and free on every plan.
+- Approval actions, send-backs, and resubmissions: free (charge-once).
+- Failed OCR and retries: free; finishing a failed scan manually never adds a credit.
+- Storage of receipts and queued work: free; queued items never expire and are never deleted.
+- Line items per claim: unmetered. An itemised hotel folio is many lines on one bill; images are the bound because images are the COGS.
+- Payout-file generation, exports, reports: inside the credit.
+- No negative balance and no overage invoice, ever: prepaid is the spend cap, so bill shock is structurally impossible (73% of bill-shocked customers churn within 90 days; Recurly-cited, directional) <span class="pill pill--med">Medium</span>.
+
+And the honest flip side: we expect gaming. DocuSign's community threads openly discuss stuffing envelopes to save allowances, and the same instinct will stuff bills into one claim. The +1 credit per extra 5 images guard, with a live counter at assembly, bounds the cost driver without reintroducing per-unit anxiety; manual entry consuming a credit closes the free-rider path. Both rules are stated plainly where they apply and in the FAQ, never discovered on an invoice.
+
+## Done means
+
+- Submitting with a positive balance writes exactly one `consumption` entry and the `submitted` transition in a single transaction; replaying the same `Idempotency-Key` cannot double-charge.
+- A claim submitted at zero balance lands `awaiting_credits`; a receipt uploaded at zero balance lands `queued`; neither path can reject or drop data.
+- Resubmission after `sent_back` writes no ledger entry (asserted in tests).
+- The 6th image on a claim adds exactly one credit and the 11th a second; the counter is visible before submit.
+- Balance always equals the ledger sum; an `expiry` entry lands within an hour of any lot's `expires_at`; balance can never go negative.
+- Consumption always draws the expiring-soonest lot; plan grants burn before packs; pack drawdown is FIFO oldest-first.
+- The employee banner shows the canonical copy verbatim; Notify admin enforces the 24-hour employee cooldown and the one-aggregate-per-channel-per-day admin limit.
+- Recharge drains the queue oldest-first with no admin action; every drained claim notifies its owner; partial drains report the remainder.
+- Alerts fire once per cycle at 50/80/95/100 on the configured channels; the forecast appears only after 14 days of history.
+- Auto-top-up cannot fire without opt-in, beyond the monthly cap, or on an expiry event; every fire produces an email receipt; a 30-day reminder precedes every lot expiry.
+
+## Sources
+
+- [Intercom: How Fin pricing works](https://www.intercom.com/help/en/articles/7837512-how-fin-pricing-works): charge-once-per-conversation and no-charge-on-failure rules.
+- [DocuSign community: multiple documents in one envelope](https://community.docusign.com/esignature-111/can-i-send-in-one-envelope-multiple-documents-that-need-to-be-signed-by-the-same-person-but-need-to-be-saved-as-separate-documents-3850): the batching loophole our image guard answers.
+- [Zapier: held Zap runs](https://help.zapier.com/hc/en-us/articles/37454233721869-How-to-troubleshoot-held-Zap-or-step-runs): queue-not-block precedent, held runs replayable after upgrade.
+- [Slack: free-plan feature limitations](https://slack.com/help/articles/27204752526611-Feature-limitations-on-the-free-version-of-Slack): value-withheld history, revealed on upgrade; deletion of year-old data since Aug 2024.
+- [Figma: approve or decline seat upgrade requests](https://help.figma.com/hc/en-us/articles/1500003870721-Approve-or-decline-seat-upgrade-requests): member-nudges-admin mechanics behind Notify admin.
+- [OpenAI: prepaid billing](https://help.openai.com/en/articles/8264644-how-can-i-set-up-prepaid-billing): 12-month credit expiry, auto-recharge mechanics and complaints.
+- [HubSpot: credits and billing](https://knowledge.hubspot.com/account-management/understand-hubspot-credits-and-billing): monthly-expiring credits, the anti-pattern we avoid.
+- [Zoho Expense India pricing](https://www.zoho.com/in/expense/pricing/): the ₹99/user per-seat anchor with 20 autoscans per user.
+- [Google Cloud Document AI pricing](https://cloud.google.com/document-ai/pricing): expense-parser COGS input behind the margin arithmetic.
+- [Meta: WhatsApp Business Platform pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing): per-message utility rates used for admin alerts.
+
+<LinkCard title="Payouts" description="From approved claims to money in accounts: bank bulk-payment files by default, an optional payout API per customer, funds never on our books." href="/phase-1/payouts/" />

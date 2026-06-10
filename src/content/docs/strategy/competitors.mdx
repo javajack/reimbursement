@@ -1,0 +1,89 @@
+---
+title: Competitive Landscape
+description: "India and global incumbents condensed, plus the capability table that shows the v2 wedge: capture, honesty, approvals, payout visibility, pricing."
+---
+
+The field is crowded and the crowd is looking elsewhere. India's incumbents sort into four camps, and not one of them makes money primarily from being good at employee reimbursement software: the card-led players monetise interchange and float, the benefits players monetise PPI wallets, banks monetise cards, and the pure-SaaS camp either anchors near-zero price (Zoho) or has been absorbed into bigger suites (Fyle into Sage, Happay's expense business into MakeMyTrip). That structural inattention is the opening this dossier builds into: the seven battlegrounds below are documented, unresolved, and mostly unprofitable for incumbents to fight. <span class="pill pill--build">Conditional Build</span>
+
+This page condenses the v1 India and global competitor analyses and adds the v2 capability comparison. It assumes you have read [the problem](/strategy/the-problem/) and feeds directly into [the whitespace](/strategy/whitespace/) and [pricing](/strategy/pricing/).
+
+## The four camps in India
+
+| Camp | Players | How they monetise | Can they follow us? |
+| --- | --- | --- | --- |
+| Pure expense SaaS | Zoho Expense, Fyle/Sage, SutiExpense, ExpenseOnDemand | Per-user/month seats | Yes in theory; seat revenue cannibalisation says no in practice |
+| Card-led spend management | Volopay, EnKash, Kodo, Karbon, RazorpayX | Interchange, FX, float; software given away | Reimbursement software is their cost centre, not their product |
+| Benefits / prepaid | Zaggle (listed), Pluxee (ex-Sodexo), Pazcare | PPI float, FBP tax wallets | Different job (HR benefits), different buyer |
+| Banks | ICICI, HDFC, Axis, SBI corporate cards | Card interchange | No workflow software at all; Visa/Mastercard data exports only |
+
+<p class="source-note">Source: v1 incumbent research (Crunchbase, Inc42, Screener.in, vendor pages; analyst and primary, high confidence on funding and status; camp economics our derivation).</p>
+
+Zoho Expense is the price anchor for the whole market: Free up to 3 users, Standard ₹99/user/month (₹79 annual), Premium ₹199 (₹149 annual), minimum 5 users, GST extra [vendor page, high]. Fyle lists at roughly USD 11.99 to 14.99/user/month [vendor, high]; Concur runs roughly USD 9/user/month plus roughly USD 8 to 9 per report, quote-gated [mixed, medium]. The card-led camp hides pricing because the headline is float, not the seat; Zaggle, the listed bellwether (FY25 revenue about ₹1,303 cr, up 68%; PAT about ₹87.5 cr [Screener.in, high]), earns roughly 75 to 80% of net revenue from card interchange (program fees, per its 9MFY24 disclosures) rather than SaaS fees [filing-derived, high]. EnKash holds Payment Aggregator, BBPOU, and a 2025 PPI licence: a regulatory moat we deliberately never need to climb, because our [money movement posture](/compliance/money-movement/) keeps funds off our books entirely.
+
+:::caution[Four stale facts the market still repeats]
+
+- **Happay is no longer CRED's.** CRED bought Happay in 2021 (at a ~USD 180M valuation), then sold the expense business, brand, and team to MakeMyTrip (announced 18 Nov 2024, closed early 2025). It now lives inside a corporate-travel suite.
+- **Fyle is now Sage.** Acquired July 2025, rebranded Sage Expense Management; its focus skews to the Sage and US ecosystem.
+- **Sodexo is now Pluxee**, spun off and listed on Euronext Paris on 1 Feb 2024. One business, not two players.
+- **Zaggle is listed and large** (IPO Sep 2023), the camp's bellwether, not a startup. And Volopay's widely repeated "USD 77.3M ARR" is self-reported and implausible against about USD 33.5M raised; cite funding, never that ARR. <span class="pill pill--low">Low</span>
+
+:::
+
+## The global bar and the India card constraint
+
+Ramp, Brex, Navan, Pleo, Spendesk, Payhawk, Concur, and Expensify have converged on one feature set: AI receipt OCR, real-time policy on cards, configurable approvals, touchless accounting sync. The bar is real and we must meet it. But it is built around a corporate card that funds spend up front, and that is exactly the piece that does not cross the border: INR card and PPI issuance requires an India-incorporated, RBI-authorised issuer, with FX through FEMA-licensed entities [RBI/FEMA, high]. So the global players skip India (Pleo, Spendesk, Payhawk), go reimbursement-only (Brex's INR reimbursements, early access, ₹5 crore payout cap), or partner the regulated layer (Mesh via Zaggle, May 2025). Even those that sell here are thin on India compliance: Expensify reviewers report building custom workflows for GST, and Concur's GST/ITC depth is inferred custom work, not native [secondary commentary, medium].
+
+The strategic read carries over from v1 unchanged: OCR, approvals, and sync are table-stakes; cards are someone else's business; the differentiators are India-native compliance depth, local rails, and now, under v2, the pricing model itself.
+
+## The seven battlegrounds
+
+This is the v2 addition: scoring the incumbents not on feature checklists but on the seven specific capabilities the [pain-point evidence](/strategy/pain-points/) says nobody delivers. Each row is a documented gap, with provenance and the v2 answer.
+
+| # | Battleground | Incumbent reality | Evidence | The v2 answer |
+| --- | --- | --- | --- | --- |
+| 1 | Document-scanner capture in the core flow | None of the big 7 ships edge detection, de-skew, auto-crop in its core mobile flow; they coach instead ("flat, dark surface, hold steady"); Concur shipped a months-long iPhone 15 blur regression, users switched phones | Vendor KBs + Apple forum, <span class="pill pill--high">High</span> | The capture ladder: file-input universal primary, enhanced viewfinder as progressive enhancement; see [camera capture](/phase-1/capture/camera/) |
+| 2 | Honest OCR | Expensify bug #45904 (open Jul 2024): a blurry receipt yields a confidently wrong "random amount" with no warning flag; SmartScan officially takes "a few minutes to a few hours" | Primary bug tracker + official FAQ, <span class="pill pill--high">High</span> | Field-level confidence; auto-accept at 0.80 and above, flag the doubtful, never auto-fill low-confidence amounts |
+| 3 | Per-line decisions | Whole-report bounce punishes one bad line; rejections arrive without reasons; rejected reports vanish from AP view (Concur) | Forums via snippets, <span class="pill pill--med">Medium</span> | LineItem ends `approved`, `capped`, or `rejected` individually; `sent_back` requires a comment and resubmission is free |
+| 4 | Payout-date visibility | "When do I get paid?" unanswered in-product category-wide; 43% of UK employees say slow reimbursement hurts work experience (Webexpenses 2024); about 9-day average processing | Survey relay, <span class="pill pill--med">Medium</span> | Claim timeline through `in_payout` to `paid`, expected date driven by the PayoutBatch export event; see [payouts](/phase-1/payouts/) |
+| 5 | Config without a consultant | Concur: quote-only, roughly USD 8 to 9/report, multi-country rollouts of 6 to 12 months; Zoho config is click-heavy across sub-menus | Mixed, <span class="pill pill--med">Medium</span> | 5-step wizard, demo claim approved in-session, first claim in under 15 minutes; see [company onboarding](/phase-1/onboarding/company-onboarding/) |
+| 6 | Unlimited-seats pricing | Nobody offers it. Per-user fees plus scan meters: Expensify 25 free SmartScans/month then $0.20 each; Zoho 20 autoscans; documented billing traps | Vendor pages + Trustpilot snippets, <span class="pill pill--high">High</span> | `Free`, `Starter`, `Growth`, `Scale`: unlimited seats on every plan, metered submissions, soft paywall that queues in `awaiting_credits`; see [credits and metering](/phase-1/credits-and-metering/) |
+| 7 | Indic-language OCR | Zero among incumbents: Zoho's 15 autoscan languages include no Indic script, while 9 GA Indic languages exist at the engine level (Cloud Vision) | Vendor KB, <span class="pill pill--high">High</span> | LLM-vision OCR behind deterministic validation (GSTIN checksum, arithmetic totals); Hindi plus state languages from day one |
+
+<p class="source-note">Source: research-pain-points-software.md (primary bug trackers and vendor KBs fetched directly; review-site quotes mediated by search snippets, see caveat below; our derivation for v2 answers).</p>
+
+:::note[Evidence caveat: snippet-mediated quotes]
+G2, Capterra, Trustpilot, and the app stores bot-block direct fetches; most review quotes in the pain-point corpus arrived via search-result snippets and carry paraphrase risk. The two strongest items (#45904, the Zoho language list) are primary sources fetched directly. Re-verify any verbatim quote before it appears in marketing copy.
+:::
+
+The economics of every loop the incumbents leave broken: roughly $58 and 20 minutes to process a report, 19% contain errors, plus $52 and 18 minutes per fix (GBTA, 2015-vintage but still the industry-cited baseline). First-pass-correct capture and per-line decisions attack that loop directly.
+
+## Why incumbents are slow to follow
+
+Three structural reasons, not incompetence.
+
+**Per-seat revenue cannibalisation.** Zoho cannot match unlimited seats plus metered submissions without torching its seat line: a 25-employee company at an estimated 4 submissions/employee/month pays about ₹700/month on our Growth pack pricing versus ₹2,475/month on Zoho Standard (25 × ₹99), which still caps autoscans at 20 per user [our derivation; per-employee frequency is unbenchmarked, to validate with design partners]. Break-even density against Zoho sits near 14 submissions/user/month, far above real usage. Matching us means repricing the installed base downward.
+
+**Card-led players monetise elsewhere.** When roughly three quarters of revenue is interchange and float, reimbursement software is a lead magnet. Perfecting a non-card, software-only reimbursement flow for micro-SMBs generates no interchange; the camp's incentives point at card spend, not at scan quality or payout-date visibility.
+
+**Enterprise roadmap gravity.** Concur sells implementations measured in months and monetises per report; a 15-minute self-serve wizard undermines its services motion. Fyle inside Sage now answers to the Sage and US roadmap; Happay inside MakeMyTrip optimises for travel attach. Acquired products drift toward their acquirer's economics, away from the Indian SMB reimbursement core.
+
+## The honest counter-view
+
+Incumbents are not asleep. Expensify's open-source App repository shows active fixes against the exact bugs cited here, and #45904-class issues do eventually close; Zoho iterates its autoscan limits and ships a respectable failed-scan triage queue; complaint mining over-samples angry users while these products hold broadly positive ratings (Expensify roughly 4.2 to 4.7 on app stores per secondary sources). Every battleground above is visible in public bug trackers and KBs, so nothing here is a secret.
+
+The moat is therefore not information; it is execution plus India depth plus a business model the incumbents cannot copy without self-harm. Document-scanner capture, honest confidence flags, per-line decisions, and a payout timeline are months of focused product work each; GST-grade extraction, Indic OCR, paise-level rule evaluation (`allow`, `flag`, `warn`, `cap`, `block`, `route` on every `amount_paise`), and Tally-ready exports are India depth the global players have structurally avoided; and unlimited seats with metered submissions is the one move the seat-priced camp cannot follow. Re-check the "unsolved" status of every row at build time; the wedge narrows but the pricing asymmetry does not.
+
+The next page, [the whitespace](/strategy/whitespace/), turns this table into the positioning; [unit economics](/strategy/unit-economics/) prices the wedge.
+
+## Sources
+
+- [Expensify/App GitHub issue #45904: blurry receipt shows random amount](https://github.com/Expensify/App/issues/45904) (primary): the honest-OCR counter-example, fetched directly
+- [Apple Support Communities: blurry Concur receipts on iPhone 15](https://discussions.apple.com/thread/255243765) (primary): the capture regression and switch-phones workaround
+- [Zoho Expense KB: when does auto scanning fail?](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/) (vendor): the 15-language list with zero Indic scripts, fetched directly
+- [Zoho Expense pricing, India](https://www.zoho.com/in/expense/pricing/) (vendor): the seat-price anchor
+- [MakeMyTrip to acquire Happay from CRED, BusinessWire, 18 Nov 2024](https://www.businesswire.com/news/home/20241118432629/en/MakeMyTrip-to-Acquire-Happay-Expense-Management-Platform-from-CRED) (primary): ownership change
+- [Zaggle on Screener.in](https://www.screener.in/company/ZAGGLE/) (primary): FY25 revenue and PAT, listing status
+- [SaaSPricePulse: Expensify true cost](https://www.saaspricepulse.com/tools/expensify) (analyst): SmartScan limits, overage, tier prices
+- [Corpay: employee expense reimbursement (Webexpenses 43% relay)](https://www.corpay.com/resources/blog/employee-expense-reimbursement) (secondary): slow-reimbursement impact stat
+- [Spendbase: SAP Concur pricing insights](https://www.spendbase.co/vendors/sap-concur/) (analyst): per-report pricing, quote-gated
+- [GBTA: how much do expense reports really cost a company?](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/) (industry body): the $58 / 19% / $52 baseline, 2015-vintage

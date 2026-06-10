@@ -1,0 +1,100 @@
+---
+title: "Phase 1 Overview: Employee Reimbursement"
+description: "Scope, principles, success metrics, and the explicit out-of-scope list for the employee-reimbursement core."
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+An employee photographs a bill and gets paid on a visible date, with finance in control the whole way. That sentence is the entire ambition of Phase 1; every screen, state machine, and price in this dossier exists to make it true for a 20-person agency and a 500-person field-sales company alike. The verdict behind it is <span class="pill pill--build">Conditional Build</span>: pure software, India-first, unlimited seats, submissions as the only meter, money movement never on our books. This page fixes the scope: pillars and the pains they attack, the principles binding every spec page, the metrics we accept being judged by, and what Phase 1 refuses to carry.
+
+If you arrived without the strategy trail, [Vision and scope](/start/vision-and-scope/) states the bet and [Pain points](/strategy/pain-points/) holds the complaint mining this scope stands on.
+
+## Pillars, and the pains that fund them
+
+Phase 1 is employee reimbursement end to end: a capture PWA, OCR to itemised line items, a manual-entry fallback, the Console (employee portal, approver inbox, finance console, admin), maker-checker approvals, a guided onboarding wizard, credit metering, and payout files. The hard parts are bought, not invented (OCR is a wrapped vision model; payouts are a bank file), so engineering concentrates where incumbents demonstrably fail. Those failure loops are expensive: $58 and 20 minutes to process one report, 19% with errors, $52 and 18 minutes per fix (GBTA/HRS; 2015-vintage, still the quoted benchmark).
+
+| Pillar | Documented unresolved pain it attacks | Specified in |
+| --- | --- | --- |
+| Document-scanner-grade capture: file-input primary, enhanced viewfinder as progressive enhancement | Blurry receipts produce confidently wrong amounts with no warning flag (Expensify GitHub #45904, open since Jul 2024); Concur shipped a months-long iPhone 15 blur regression; no big-7 incumbent ships edge-detection capture in its core flow <span class="pill pill--high">High</span> | [Camera](/phase-1/capture/camera/), [Capture pipeline](/spec/capture-pipeline/) |
+| Honest OCR to itemised line items with GST fields (GSTIN, CGST/SGST/IGST split) | SmartScan officially takes "a few minutes to a few hours"; misreads force re-keying; forced hotel itemisation is the most hated data-entry task <span class="pill pill--high">High</span>; Zoho autoscan reads 15 languages, zero Indic; a vendor claim puts ITC lost on travel spend at up to 60% (directional) | [OCR and itemisation](/phase-1/capture/ocr-itemisation/) |
+| Manual line-item entry as a first-class path | Failed scans dead-end into delete-or-rekey at incumbents; Zoho's scan-failed bucket is the only graceful precedent <span class="pill pill--med">Medium</span> | [Manual entry](/phase-1/capture/manual-entry/) |
+| Maker-checker approvals with default-on SLA timers, escalation, send-back, line-item partial approval | The manager inbox is the admitted #1 bottleneck; rejections arrive without reasons; one bad line bounces the whole report; rejected reports vanish from AP view <span class="pill pill--high">High</span> | [Approval engine](/phase-1/web/approval-engine/), [Approver experience](/phase-1/web/approver-experience/) |
+| Finance console and payout-date visibility | "When do I get paid?" is unanswered in-product, category-wide; 43% of employees say slow reimbursement hurts their work experience (Webexpenses UK 2024) <span class="pill pill--med">Medium</span>; finance lacks search-by-amount, MIS counts, and a clean Tally JV export | [Finance console](/phase-1/web/finance-console/), [Payouts](/phase-1/payouts/), [Submit and track](/phase-1/capture/submit-and-track/) |
+| Self-serve onboarding: 5-step wizard, demo claim approved in-session | Concur multi-country rollouts are reported at 6-12 months (review-reported, medium) and its configuration is consultant-dependent; Zoho hard-blocks submission when a claim matches no approval flow (vendor KB, high) <span class="pill pill--med">Medium</span> | [Company onboarding](/phase-1/onboarding/company-onboarding/), [Configuration model](/phase-1/onboarding/configuration-model/) |
+| Credit-metered pricing: unlimited seats, submissions are the meter, a soft paywall that queues | Per-user fees plus scan meters are resented: Expensify gives 25 free SmartScans/month then $0.20 each, Zoho caps autoscans at 20, billing traps are Expensify's loudest negative theme <span class="pill pill--high">High</span> | [Credits and metering](/phase-1/credits-and-metering/), [Pricing](/strategy/pricing/) |
+
+<p class="source-note">Source: incumbent bug trackers, vendor KBs, app stores, and review mining (Jun 2026). Review platforms bot-block crawlers, so several quotes are search-snippet-mediated; full findings and caveats live on the pain-points page.</p>
+
+:::tip[The pricing wedge in one line]
+A 25-employee company, at an estimated 4 submissions per employee per month (our derivation; frequency unbenchmarked), burns about 100 credits: roughly ₹700/month at Growth pack rates (₹6,999 for 1,000 credits) against ₹2,475/month for 25 Zoho Standard seats at ₹99, which still cap autoscans at 20 per user (vendor list prices, high; arithmetic ours). The 2-6 submissions per employee per month range is unbenchmarked; validate with design partners. Free stays free forever: unlimited users and approvers plus 20 submissions per company per month.
+:::
+
+## Operating principles
+
+Six principles bind every page that follows. None is an aspiration; each resolves to named states, stages, and tables in the spec.
+
+| Principle | What it binds in the build |
+| --- | --- |
+| Capture is deterministic | Optics over coaching: `quality_gate` measures blur (variance-of-Laplacian) and lighting at capture time and prompts an immediate retake; `crop_correct` de-skews server-side with a client 4-corner rescue editor; the offline outbox never drops a page. "Hold your phone steady" help text is the documented anti-pattern. |
+| OCR is honest, never silently wrong | Every extracted field carries confidence; fields below 0.80 are flagged, never silently auto-filled; the employee explicitly confirms merchant, date, and total; `extraction_failed` routes to manual entry with the image kept as evidence. Extraction is async; it never blocks the form. |
+| The credit meter never loses a bill | At zero balance, uploads still land (Receipt `queued`) and submissions wait in `awaiting_credits`; nothing is deleted or bounced; top-up drains the queue FIFO; resubmission after `sent_back` is free. Every grant, consumption, expiry, and adjustment is a `CreditEntry` row. |
+| Approvals never route to nobody | An undeletable, always-matching fallback rule is one of only three onboarding hard requirements; unroutable claims land in the admin queue flagged `rule_gap`; delegation, out-of-office cover, and a company fallback approver close the gaps; self-approval is blocked by default with skip-up. |
+| Every number is paise-precise | Money is integer `amount_paise` end to end, never floats; line decisions set `approved_amount_paise` at or below the claimed amount; GST validation checks that CGST equals SGST on intrastate bills and flags mismatches rather than silently fixing them. |
+| Everything is audit-logged | Every state change, rule firing (rule id, version, input snapshot), and decision writes an append-only `AuditEvent` with actor, role at decision time, and channel (web, email link, WhatsApp); retention is 8 financial years, the Companies Act bound. |
+
+Policy itself is data, not code: every Rule resolves to exactly one of six actions (`allow`, `flag`, `warn`, `cap`, `block`, `route`), evaluated per `LineItem` first, then per `Claim`, `block` overriding softer outcomes. The model lives in [Policy and rules](/phase-1/onboarding/policy-and-rules/).
+
+:::danger[Product invariant: funds never touch our accounts]
+The default payout is a bank bulk-payment file in the customer's bank format, executed by the customer in their own net-banking; a per-customer Razorpay-style payout API and a reimburse-via-payroll export are optional. This posture needs no PA or PPI authorisation (RBI position, confirmed, high), and still gets a written legal opinion before go-live. Details: [Money movement](/compliance/money-movement/).
+:::
+
+## Success metrics
+
+Targets are our derivation unless noted; anchors carry their own provenance. Individual pages add page-level acceptance criteria; these five are the product-level bar.
+
+| Metric | Phase 1 target | Anchor and provenance |
+| --- | --- | --- |
+| Time to first real claim | Under 24 hours from signup, with the demo claim approved inside the wizard session | Median SaaS time-to-value is ~1.5 days (analyst benchmark, medium); the 5-step wizard exists to beat it decisively |
+| Capture-to-submit time | Under 60 seconds on a Galaxy A24-class device | Our derivation, made plausible by the performance budget: P75 first load under 5 seconds within ~150 KiB HTML/CSS and 300-350 KiB JS gzipped; Android is 93.2% of India's mobile web (StatCounter, May 2026) |
+| OCR extraction latency | P50 under 5 seconds, async behind a visible `Scanning` chip, never form-blocking | Vendor comparators claim 0.5-4 seconds (Klippa) and "seconds" (Fyle), vendor-claimed, medium; SmartScan's official "minutes to hours" is the anti-benchmark |
+| Approval latency | 48-hour SLA (24 hours above the high-value threshold), maximum 2 nudges per item, then auto-escalation | The manager inbox is the admitted #1 bottleneck (high); reminder volume without escalation trains approvers to ignore the tool (medium) |
+| Payout-date visibility | 100% of approved claims display an expected payout date, driven by the payout-batch export event | Category-wide gap (medium): the 43% Webexpenses finding above, plus Indian vendor claims of 8-plus-day manual cycles (marketing, directional) |
+
+## Explicitly out of Phase 1
+
+The mistake that kills a small team in this category is not building too little; it is over-asking. The cut is explicit so no implementing agent quietly grows scope.
+
+| Out | One-line rationale | Where it returns |
+| --- | --- | --- |
+| Vendor invoices and vendor payouts | A different compliance object: vendor KYC, TDS, RCM, the MSME 45-day clock; mixing it in doubles Phase 1 | Phase 2 by design, written as deltas: [Phase 2 overview](/phase-2/overview/) |
+| Corporate cards and prepaid instruments | Interchange and float economics require a bank partner and RBI authorisation; structurally closed to a software-only team | Never; a stated non-goal in both phases |
+| Travel booking | A separate product surface and the category's exit path, not a reimbursement requirement | Never; a stated non-goal in both phases |
+| Multi-entity ISD and cross-charge | Input Service Distributor mechanics matter only to grouped buyers; building early is the classic over-ask | Deal-funded, revisited alongside Phase 2 AP adjacency: [Payouts and AP](/phase-2/payouts-and-ap/) |
+| Native mobile apps | The PWA captures on effectively all devices and ships same-day fixes; store builds add release trains, not capability | Staged: a TWA wrapper when customer IT demands Play Store presence, Capacitor only on demonstrated revenue blockage ([Architecture](/spec/architecture/)) |
+| SSO and SCIM | The 20-500 person ICP signs in with magic links and domain capture; SSO/SCIM is an enterprise checkbox with no funding deal yet | Deal-funded on the Scale plan; identity as shipped is in [Company onboarding](/phase-1/onboarding/company-onboarding/) |
+
+:::caution[Walls versus gates]
+Cards, prepaid instruments, float, and travel booking are walls: non-goals in both phases; holding or pooling funds triggers PA/PPI licensing a software-only team must not approach. The rest are gates: vendor flows have a designed Phase 2 home; ISD, native wrappers, and SSO/SCIM open on revenue, never speculation.
+:::
+
+## Where this goes next
+
+Read [Personas and journeys](/phase-1/personas-and-journeys/) to meet the people this scope serves, then [the end-to-end flow](/phase-1/end-to-end-flow/), which walks one claim from capture to `paid`. The decision trail that authorised this scope, with the conditions that would flip it and the build sequence, is in the verdict; the stack and module boundaries for implementing agents start in the architecture spec.
+
+<CardGrid>
+  <LinkCard title="The verdict" description="The conditional-build decision, its conditions, and the build sequence." href="/strategy/verdict/" />
+  <LinkCard title="Architecture" description="Stack, module boundaries, and where an implementing agent starts." href="/spec/architecture/" />
+</CardGrid>
+
+## Sources
+
+- [Expensify App, GitHub issue #45904](https://github.com/Expensify/App/issues/45904): blurry receipt scan shows a random amount with no warning flag (primary bug tracker, high).
+- [Apple Support Communities, Concur blurry receipts on iPhone 15](https://discussions.apple.com/thread/255243765): months-long capture regression; users switched phones (primary thread, high).
+- [Expensify Community FAQ, SmartScan duration](https://community.expensify.com/discussion/4715/faq-why-is-smartscan-taking-a-long-time): official "a few minutes to a few hours"; forum frozen Jul 2024, archive before citing (vendor, high).
+- [Zoho Expense KB, when autoscan fails](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/): 15 supported languages, zero Indic scripts (primary vendor KB, high).
+- [Fyle blog, expense approval bottlenecks](https://www.fylehq.com/blog/expense-approval-bottlenecks): the manager inbox as the admitted #1 bottleneck (practitioner, high).
+- [Corpay, employee expense reimbursement](https://www.corpay.com/resources/blog/employee-expense-reimbursement): relay of the 2024 Webexpenses 43% finding (secondary, medium).
+- [GBTA, how much do expense reports really cost a company](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/): $58 per report, 19% error rate, $52 plus 18 minutes per fix (industry body, 2015-vintage, still cited).
+- [SaaSPricePulse, Expensify true cost](https://www.saaspricepulse.com/tools/expensify): 25 free SmartScans/month, $0.20 overage, per-user tiers (vendor pricing tracker, medium).
+- [Trustpilot, Expensify reviews](https://www.trustpilot.com/review/www.expensify.com): billing and cancellation complaints (snippet-mediated, medium).
+- [HR Software Hyderabad, expense management](https://hrsoftwarehyderabad.com/expense-management-software/): up to 60% of ITC on travel spend lost (vendor marketing, directional only).

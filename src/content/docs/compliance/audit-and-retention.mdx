@@ -1,0 +1,151 @@
+---
+title: Audit Trail and Retention
+description: "The immutable evidence layer: what gets logged, channel provenance for one-tap approvals, and the retention schedule."
+---
+
+import { LinkCard } from '@astrojs/starlight/components';
+
+Every paid claim must be reconstructable years later, by someone who was not in the room, against the policy as it stood on the day. That is the whole requirement: cheap to meet at design time, nearly impossible to retrofit. v2 keeps the v1 controls (append-only trail, read-only auditor, 8-financial-year retention) and adds the one thing the new approval channels force: channel provenance. Once decisions happen over [email magic links and WhatsApp](/phase-1/web/approver-experience/), where an approval was made becomes part of whether it can be defended.
+
+## The AuditEvent record
+
+AuditEvent is a first-class entity, written in the same transaction as the change it records and append-only at the storage layer: no UPDATE or DELETE grants on the table, enforced by Postgres privileges, not application discipline. A correction is a new event that supersedes; nothing is mutated. Events are hash-chained per company: each record carries the hash of its predecessor, so tampering with or deleting any row breaks every hash after it.
+
+| Field | Contents | Why it exists |
+| --- | --- | --- |
+| `id` | Prefixed ULID (`evt_…`) | Stable ordering and reference |
+| `actor_id`, `actor_roles` | Who acted, with the Membership roles held at that moment | Authority is proven against role-at-decision-time, not today's role |
+| `acting_as_delegate_of` | Set when a delegate decides | Delegate decisions attribute to the delegate, never the absent approver |
+| `action` | Namespaced verb: `claim.submitted`, `approval_step.approved` | The what |
+| `subject_type`, `subject_id` | Entity touched | The where |
+| `claim_id` | Set when the subject belongs to a Claim | Joins the event to the claim dossier |
+| `before`, `after` | Field-level diff | Exactly what changed |
+| `occurred_at` | Server time, ISO 8601 UTC | Reliable chronology |
+| `ip`, `user_agent` | Network and device evidence | Location and device, doubly important off-web |
+| `channel` | `web`, `email_link`, `whatsapp`, `api`, `system` | One-tap provenance, the v2 addition |
+| `token_fingerprint` | Hash of the one-tap token, when channel is `email_link` or `whatsapp` | Replay analysis |
+| `prev_hash`, `hash` | SHA-256 chain per company | Tamper evidence |
+
+A worked example, an approval decided from an email link:
+
+```json
+{
+  "id": "evt_01JXAY7Q2K4M6P8R0T2V4X6Z8B",
+  "company_id": "co_01JXAW3N5Q7S9V1X3Z5B7D9F1H",
+  "actor_id": "usr_01JXAX1C3E5G7J9L1N3Q5S7V9X",
+  "actor_roles": ["approver"],
+  "acting_as_delegate_of": null,
+  "action": "approval_step.approved",
+  "subject_type": "ApprovalStep",
+  "subject_id": "apr_01JXAY5H7K9M1P3R5T7V9X1Z3B",
+  "claim_id": "clm_01JXAY2F4H6K8M0P2R4T6V8X0Z",
+  "before": { "status": "active" },
+  "after": { "status": "approved", "approved_amount_paise": 432000 },
+  "channel": "email_link",
+  "token_fingerprint": "sha256:41c0f7a92be84d11",
+  "ip": "49.207.183.22",
+  "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-A245F)",
+  "occurred_at": "2026-06-10T09:14:32Z",
+  "prev_hash": "sha256:9f2c41d83a07be65",
+  "hash": "sha256:b41e0c79d2a85f13"
+}
+```
+
+SOX does not bind an unlisted Indian SMB; we build to its audit-trail bar anyway because it is the standard reviewers recognize: tamper-evident, attributable, submitter and approver provably distinct, authority provable at decision time, a roughly 7-year retention norm <span class="pill pill--med">Medium</span> (advisory and vendor guidance: OCD Tech, OneUptime). The 8-financial-year Companies Act default exceeds it.
+
+:::caution[One-tap approvals weaken evidence if built naively]
+A forwarded email or a shared phone can fire an approval. The mitigations are not optional: single-use expiring tokens, amount-bounded one-tap with step-up to the web app above a threshold, in-place mutation of the card after use, and `channel` plus `token_fingerprint` on every decision event.
+:::
+
+Chain verification is a cheap nightly job; write the chain head to versioned, object-locked storage so truncation is detectable too. Storage privileges, row-level security, anchoring cadence, and key handling are specified in [security and compliance](/spec/security-and-compliance/).
+
+## What is always logged
+
+One rule: if it changes money, routing, configuration, or credits, it writes an event. No sampling, no log levels.
+
+| Event family | Example actions | What the event carries |
+| --- | --- | --- |
+| Every state transition | `claim.submitted`, `claim.sent_back`, `payout_batch.exported`, `receipt.extracted` | Before/after status, actor, channel. Includes `awaiting_credits` entry and drain, which later explains SLA timing gaps honestly |
+| Every rule firing | `rule.fired` | Rule id and version, input snapshot, outcome verb (`allow`, `flag`, `warn`, `cap`, `block`, `route`), resulting `approved_amount_paise` on `cap` |
+| Every config change | `approval_matrix.updated`, `rule.versioned`, `category.toggled` | Full before/after diff; policy version history is rebuilt from these |
+| Every credit ledger entry | `credit.granted`, `credit.consumed`, `credit.adjusted` | Mirrors each CreditEntry; `adjustment` requires a reason string |
+| Every payout file generation | `payout_batch.exported`, `payout_batch.executed` | SHA-256 of the generated bank file, so the file run in net-banking is provably the file we generated; see [payouts](/phase-1/payouts/) |
+| Every delegation | `delegation.granted`, `delegation.revoked` | Who delegated to whom, window, scope |
+| Every export and auditor access | `export.generated`, `auditor.viewed` | Who took what out of the system; part of the DPDP processor story |
+
+A rule decision made in June 2026 must be explainable in 2034 against the rule as it stood then; rule id, version, and input snapshot let the trail reproduce its own verdict. That is why every Rule carries `version` and `effective_from/to`.
+
+## Segregation of duties
+
+Maker-checker is the buying requirement; SoD is what makes it real. The constraints are structural, enforced server-side, never advisory.
+
+| Boundary | Enforcement point |
+| --- | --- |
+| Submitter ≠ approver | Approval engine, on every step including delegated decisions; prevent-self-approval defaults ON with skip-up routing |
+| Batch builder ≠ executor-marker | The membership that builds or exports a PayoutBatch cannot mark it `executed` or `reconciled`; a second `finance` membership must |
+| Approver edits | Trivial-field edits only, with mandatory rationale, logged as their own events |
+| Vendor-master maker ≠ checker (Phase 2) | Vendor KYC and bank-detail changes take effect only after a second user confirms; pending changes never feed payout batches. See [vendor onboarding](/phase-2/vendor-onboarding/) |
+
+One-person finance teams exist; the `owner` can waive the batch-builder rule per company. The waiver is a high-severity audit event with a reason and is permanently visible on the auditor screen.
+
+:::danger[A control you can quietly disable is theatre]
+Role grants, role removals, and SoD waivers are themselves audit events. Deliberate exceptions are loud, logged, and visible to the auditor role; silent exceptions must be impossible by construction.
+:::
+
+## The auditor role
+
+`auditor` is a canonical Membership role: read-only across claims, line items, receipt images, rule firings, config history, and the full event chain, with mutation rights on nothing. PII is need-bounded: BeneficiaryAccount numbers masked to last 4, no personal contact details, no notification bodies. Receipts stay fully visible because they are the evidence. Every auditor view and export is itself logged.
+
+## Retention schedule
+
+Three statutes set three clocks; the product defaults to the longest. <span class="pill pill--high">High</span>
+
+| Record class | Default retention | Basis |
+| --- | --- | --- |
+| Financial records: Claim, LineItem, Advance, PayoutBatch, PayoutInstruction, CreditEntry | 8 financial years | Companies Act 2013 Sec 128, the binding longest clock (govt) |
+| Receipt images | 8 financial years | Part of the same record; they are the GST and ITC evidence behind the numbers |
+| AuditEvent log | 8 financial years minimum | Our invariant: the trail never expires before the records it explains |
+| Notification delivery records (rendered email and WhatsApp bodies) | 24 months, configurable | Our derivation: the decision evidence is the AuditEvent, not the message; bodies are a PII surface |
+| Personal data of exited users | Anonymized once no retention duty remains | DPDP erasure via anonymization, below |
+
+<p class="source-note">Source: Companies Act Sec 128 (8 FY); CGST Sec 36 (72 months); Income Tax (6 years from end of the relevant assessment year). Govt and primary-corroborating, high confidence on the periods; primary CBIC and Income-Tax pages were intermittently un-fetchable during research, re-verify against the live statute before launch.</p>
+
+The 8 FY Companies Act window satisfies the 72-month GST and 6-year Income Tax windows simultaneously and removes a class of which-rule-applies bugs. The GST clock is the subtle one: 72 months runs from the GSTR-9 due date (31 December following the financial year), not the invoice date, so the effective hold is longer than a naive six years. Anchor it correctly or under-retain. Statutory context lives in the [regulatory map](/compliance/regulatory-map/).
+
+DPDP erasure resolves by anonymization, not deletion. AuditEvents reference actors by ID and never store names inline, so a User record can be reduced to a tombstone without touching the hash chain, while the financial skeleton survives its retention term. Retention required by law is the lawful basis to refuse premature erasure of the financial record itself; the full DPDP position is in [data protection](/compliance/data-protection/).
+
+### Litigation hold
+
+CGST Sec 36 extends retention to one year after final disposal of any appeal, revision, proceeding, or investigation, whichever is later. So: a hold flag settable at company, GSTIN, or claim grain; while any hold covers a record, the deletion job skips it regardless of the standard clock; setting and releasing a hold requires a reason and writes an event. Deletion after expiry is itself logged, so even the act of forgetting is on the record.
+
+:::note[What the engine actually enforces]
+Two cooperating rules. (1) A non-deletion guarantee inside the 8-year window, enforced by the store, not by policy. (2) A litigation-hold override that suspends expiry until explicitly lifted. Without the second, a routine retention cron can purge evidence the company is legally bound to keep, converting a cron job into a compliance incident.
+:::
+
+## Evidence exports: the claim dossier
+
+Auditors do not ask for database access; they ask for one claim, fully evidenced. The claim dossier is a single PDF per claim:
+
+- Cover: claim id, employee, category, cost center, claimed and approved amounts in ₹ (rendered from `amount_paise`).
+- Receipt images in capture order, with the extraction snapshot the rules evaluated.
+- Timeline: every state transition with actor, role-at-decision-time, channel, and timestamp.
+- Rule trace: every firing with rule id, version, outcome verb, and message.
+- Approval chain: each ApprovalStep decision with channel, IP, and delegate attribution.
+- Payout reference: batch id, bank-file hash, executed and reconciled marks.
+
+Alongside it, a bulk export: trail CSV plus document bundle for a chosen entity, period, and GSTIN. Done means: finance produces any claim's dossier self-serve in under a minute; the auditor role pulls a full-period bundle without engineering.
+
+This closes the compliance arc the [regulatory map](/compliance/regulatory-map/) opened: statutes in, controls enforced, evidence out. The engineering that guarantees all of it is next.
+
+<LinkCard title="Security and Compliance Spec" href="/spec/security-and-compliance/" description="RLS, storage privileges, hash anchoring, token handling, and the controls behind this trail." />
+
+## Sources
+
+- [Section 128, Books of account, Companies Act 2013 (CAIRR)](https://ca2013.com/128-books-of-account-etc-to-be-kept-by-company/) (primary-corroborating)
+- [Section 36, CBIC GST Act explorer](https://taxinformation.cbic.gov.in/content-page/explore-act/1000306/1000001) (govt)
+- [CGST Act Section 36 explained (AUBSP)](https://www.aubsp.com/cgst-act-section-36-explained/) (primary-corroborating)
+- [Accounts and records under GST, retention period (TaxGuru)](https://taxguru.in/goods-and-service-tax/accounts-other-records-gst-retention-period.html) (primary-corroborating)
+- [Income Tax 6-year retention rule (incometaxmanagement.com)](https://incometaxmanagement.com/Pages/Tax-Ready-Reckoner/GST-India/66-Period-of-Retention-of-Accounts-under-GST-Section-36-of-the-CGST-Act.html) (primary-corroborating)
+- [SOX audit checkpoints for approval flows (OCD Tech)](https://ocd-tech.com/sox/how-to-make-your-approval-flows-comply-with-sox-audit-checkpoints) (advisory)
+- [SOX-compliant audit trails (OneUptime)](https://oneuptime.com/blog/post/2026-02-06-sox-compliant-audit-trails-opentelemetry/view) (vendor)
+- [Workflow audit trail field requirements (Kissflow)](https://kissflow.com/workflow/workflow-audit-trail/) (vendor)

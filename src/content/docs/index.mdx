@@ -1,64 +1,63 @@
 ---
 title: Kharcha
-description: A research-backed build dossier on whether to build an India-first employee and vendor expense-reimbursement SaaS, and exactly how.
+description: "A research-backed build dossier for a pure-software, employee-first reimbursement SaaS for India, deep enough for LLM agents to build from."
 template: splash
 hero:
-  tagline: Should you build an expense-reimbursement product for India? A research-backed build dossier, with the verdict up front.
+  tagline: A pure-software reimbursement platform for India, specified deep enough to build. Employee-first in Phase 1, vendors in Phase 2, and a pricing model that meters work, not people.
   actions:
     # Hero action links live in frontmatter and cannot use import.meta.env.BASE_URL,
     # so the /reimbursement base is hardcoded here. If base changes, update these two.
-    - text: Read the verdict
-      link: /reimbursement/business/verdict/
+    - text: Vision and scope
+      link: /reimbursement/start/vision-and-scope/
       icon: right-arrow
       variant: primary
-    - text: Executive summary
-      link: /reimbursement/overview/executive-summary/
+    - text: Start Phase 1
+      link: /reimbursement/phase-1/overview/
       icon: open-book
       variant: minimal
 ---
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-Indian employees and vendors still float work expenses on their own money and wait weeks to be repaid: a field agent moving city to city, a team lead covering lunch, a salesperson at a client event, a developer who bought event tickets on a personal card, a contractor raising a claim. The product idea is to digitise that loop end to end: capture the bill, read and validate its GST detail, run it through a configurable policy engine, route it through a maker-checker approval, then pay it out from a bank account the system owner has configured, and post it to the books.
+An employee photographs a bill and gets paid on a visible date, with finance in control the whole way. That is the product. This dossier specifies it end to end: a PWA camera flow engineered to document-scanner grade (no stretched bills), OCR that is honest about its confidence with a manual line-item fallback, a configurable maker-checker approval engine routed by levels and amount thresholds, company onboarding that reaches a first approved claim in one session, payouts by bank-file export (with an optional payout API per customer), and a credit meter that charges for submissions while every user and approver logs in free.
 
-This dossier is the honest answer to a harder question: is that worth building as an indie hacker or a small team, in a market that already exists? It is built from a multi-agent research pass (14 domain studies and 7 adversarial fact-checks) and it commits to a recommendation.
+It is built from two multi-agent research passes (21 agents on the India market, regulation, and rails; 10 more on capture engineering, OCR UX, usage pricing, onboarding, approvals, and PWA reality in India), each adversarially fact-checked, then synthesized and reviewed. Figures carry their provenance and confidence throughout.
 
-:::tip[The verdict, in one line]
-<span class="pill pill--build">Conditional Build</span> &nbsp; Worth building, but only as a software-only, **Tally-native, WhatsApp-first reimbursement product for sub-200-employee Indian SMBs and field-heavy teams**, with money movement partnered out and revenue from software seats, not card float. Not worth building as a horizontal Zaggle or Happay clone, and not as a card-issuing business.
+:::tip[The stance, in one line]
+<span class="pill pill--build">Conditional Build</span> &nbsp; Pure software, **employee reimbursement first**, India-first. No cards, no float; funds never touch the platform. Unlimited users and approvers free; **submissions are the meter**, with a soft paywall that queues and never loses a bill. Vendors and their TDS/RCM complexity arrive in Phase 2, deliberately.
 :::
 
 ## The 90-second version
 
-- The market is a small but fast-growing niche: a defensible India expense-software figure is roughly **USD 150 to 250 million**, growing **14 to 18% a year**. "Fast-growing" is true; "large" is overstated. No tier-1 analyst publishes an India-only number.
-- Incumbents win on distribution, bank partnerships and **card interchange and float** (around three-quarters of the listed leader's revenue), not on better software. An indie team cannot touch that pool without RBI licensing.
-- So compete where software still decides: **India-native compliance and integration**. OCR and cards are table-stakes; GST input-credit capture and a rock-solid **Tally** integration are the moat.
-- Stay a technology provider on payments: if money never touches an account you control, you need no RBI Payment Aggregator or wallet licence. This is a product invariant, not a detail.
-- Get the over-ask right: a lovable MVP is buildable in 3 to 6 months if you defer cards, SOC 2, and deep ERP, and partner out payouts.
+- **The pain is documented, not assumed.** Companies already paying for expense software still hit silently-wrong OCR amounts, minutes-to-hours scan queues, approval black holes, and a category-wide inability to answer "when do I get paid?". Each pillar of this product maps to a cited, unresolved complaint.
+- **Capture is the demo.** No major incumbent ships document-scanner-grade capture in its core mobile flow. The stretched-bill bug is an engineering bug class with a canonical fix, and this dossier specifies it down to the canvas math.
+- **Pricing is the story.** Per-user fees plus scan meters are actively resented. Unlimited seats with metered submissions undercuts seat pricing for almost every Indian SMB (a 25-person company at an estimated 4 submissions/employee/month pays roughly ₹700/month here versus ₹2,475/month on seat pricing; our derivation, frequency unbenchmarked), at a modelled 67-90% gross margin on a ₹1.0-2.5 per-submission cost base (our derivation, medium confidence).
+- **Regulation is designed out, not managed.** Bank-file export means no RBI Payment Aggregator or wallet licence is needed; DPDP is engineered in from day one.
+- **The spec is buildable.** Data model, API, state machines, config and rule schemas, and the capture pipeline are specified for LLM coding agents to implement without asking questions.
 
 ## Start here
 
-{/* LinkCard is a component, so its href is not touched by the base-prefixing rehype plugin.
-    Build the href from import.meta.env.BASE_URL (which is "/reimbursement/") to stay base-aware. */}
-
 <CardGrid>
-  <LinkCard title="Executive Summary" href={import.meta.env.BASE_URL + 'overview/executive-summary/'} description="The whole argument on one page." />
-  <LinkCard title="The Whitespace and the Wedge" href={import.meta.env.BASE_URL + 'market/whitespace/'} description="Where incumbents leave a gap, and the five-part wedge." />
-  <LinkCard title="MVP Scope" href={import.meta.env.BASE_URL + 'product/mvp-scope/'} description="The explicit cut line: build, defer, never." />
-  <LinkCard title="Money Movement and RBI" href={import.meta.env.BASE_URL + 'compliance/money-movement/'} description="Why a payout-file model needs no RBI licence." />
+  <LinkCard title="Vision and Scope" href="/start/vision-and-scope/" description="The product, the two phases, and the invariants that never move." />
+  <LinkCard title="Camera and Document Capture" href="/phase-1/capture/camera/" description="The flagship: scanner-grade capture in a PWA, specified to the pixel." />
+  <LinkCard title="Credits and Metering" href="/phase-1/credits-and-metering/" description="The meter, the ladder, and the soft paywall that never loses a bill." />
+  <LinkCard title="The Verdict" href="/strategy/verdict/" description="The scored build decision and the conditions that flip it." />
 </CardGrid>
 
 ## How the dossier is organised
 
-**Market and Opportunity** sizes the [market](/market/size/), maps the [India incumbents](/market/competitors-india/) and the [global feature bar](/market/competitors-global/), catalogues the [verified pain points](/market/pain-points/), and locates [the wedge](/market/whitespace/).
+**Start Here** sets the frame: the [vision and scope](/start/vision-and-scope/) and [how to read this](/start/how-to-read/) by role, including how LLM agents should consume the spec.
 
-**Users and Buyers** profiles every [persona](/users/personas/) and resolves the [buying committee and ICP](/users/buyers-icp/), including the HR-versus-Finance ownership question.
+**Phase 1** is the deep core, in product order: the [overview](/phase-1/overview/), [personas and journeys](/phase-1/personas-and-journeys/), and the [end-to-end flow](/phase-1/end-to-end-flow/); capture ([camera](/phase-1/capture/camera/), [OCR and itemisation](/phase-1/capture/ocr-itemisation/), [manual entry](/phase-1/capture/manual-entry/), [submit and track](/phase-1/capture/submit-and-track/)); the web app ([employee portal](/phase-1/web/employee-portal/), [approver experience](/phase-1/web/approver-experience/), [approval engine](/phase-1/web/approval-engine/), [finance console](/phase-1/web/finance-console/)); onboarding ([company onboarding](/phase-1/onboarding/company-onboarding/), [configuration model](/phase-1/onboarding/configuration-model/), [policies and rules](/phase-1/onboarding/policy-and-rules/)); and the systems ([credits and metering](/phase-1/credits-and-metering/), [payouts](/phase-1/payouts/), [edge cases](/phase-1/edge-cases/), [ops runbooks](/phase-1/ops-runbooks/)).
 
-**Product** is the spec: the [claim lifecycle](/product/workflow/), the [maker-checker engine](/product/maker-checker/), the [rule engine](/product/rule-engine/), [what is not reimbursable](/product/non-reimbursables/), [OCR and fraud](/product/ocr/), [onboarding and bank whitelisting](/product/onboarding-kyc/), [payouts](/product/payouts/), the [edge cases](/product/edge-cases/), and the [MVP scope](/product/mvp-scope/).
+**Engineering Spec** is ground truth for builders: [architecture](/spec/architecture/), [capture pipeline](/spec/capture-pipeline/), [data model](/spec/data-model/), [API](/spec/api/), [state machines](/spec/state-machines/), [config schema](/spec/config-schema/), [rule schema](/spec/rule-schema/), [integrations](/spec/integrations/), [security and compliance](/spec/security-and-compliance/), and [non-functionals](/spec/non-functionals/).
 
-**Compliance and Risk** covers the [regulatory map](/compliance/regulatory-map/), [money movement and RBI](/compliance/money-movement/), [data protection under DPDP](/compliance/data-protection/), and [audit and retention](/compliance/audit-retention/).
+**Phase 2** scopes the vendor expansion separately: [overview](/phase-2/overview/), [vendor onboarding](/phase-2/vendor-onboarding/), the [vendor tax engine](/phase-2/vendor-tax-engine/), and [payouts and AP](/phase-2/payouts-and-ap/).
 
-**Business** is the operator's view: [pricing](/business/pricing/), [freemium](/business/freemium/), [go-to-market](/business/gtm/), [unit economics](/business/unit-economics/), [integrations and survival](/business/integrations/), the [roadmap](/business/roadmap/), the [risks](/business/risks/), and the [final scored verdict](/business/verdict/).
+**Compliance** holds the guardrails: the [regulatory map](/compliance/regulatory-map/), [money movement and RBI](/compliance/money-movement/), [data protection](/compliance/data-protection/), and [audit and retention](/compliance/audit-and-retention/).
 
-**Reference** holds the [rule-object schema](/reference/rule-schema/), [bank file formats](/reference/bank-files/), the [glossary](/reference/glossary/), and the full [sources and methodology](/reference/sources/).
+**Strategy** is the why: [the problem](/strategy/the-problem/), [market](/strategy/market/), [competitors](/strategy/competitors/), [verified pain points](/strategy/pain-points/), [the whitespace](/strategy/whitespace/), [pricing](/strategy/pricing/), [go-to-market](/strategy/gtm/), [unit economics](/strategy/unit-economics/), and [the verdict](/strategy/verdict/).
 
-<p class="source-note">Kharcha is a working product name, trivially swappable. Figures carry their provenance and confidence throughout; soft and vendor-sourced numbers are labelled as such. See <a href={import.meta.env.BASE_URL + 'reference/sources/'}>Sources and Methodology</a>.</p>
+**Reference** holds [bank file formats](/reference/bank-files/), the [glossary](/reference/glossary/), and the full [sources and methodology](/reference/sources/).
+
+<p class="source-note">Kharcha is a working product name, trivially swappable. Soft and vendor-sourced numbers are labelled as such throughout. See <a href="/reference/sources/">Sources and Methodology</a>.</p>

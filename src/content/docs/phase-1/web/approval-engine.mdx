@@ -1,0 +1,211 @@
+---
+title: The Approval Engine
+description: "Chain resolution, amount thresholds and DoA, snapshot semantics, SLA and escalation: the maker-checker core, specified."
+---
+
+import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
+
+Maker-checker chain resolution is a pure function: same claim, same org graph, same policy version, same chain, every time. Three guarantees define the engine. Resolution never fails (the floor is the admin queue, flagged `rule_gap`). A submitter never decides their own claim. Every decision lands in the audit log with the channel it arrived on. The approver-facing surface is [the approver experience](/phase-1/web/approver-experience/); this page is the machinery underneath it.
+
+## What the resolver consumes
+
+Resolution runs once per submission, after the rule engine has evaluated every line. The six rule actions (`allow`, `flag`, `warn`, `cap`, `block`, `route`) are authored in [policy and rules](/phase-1/onboarding/policy-and-rules/): hard `block` stops submission at the employee review screen; soft `block` resolves the chain and surfaces as a pinned exception in the approver inbox; `cap` lowers a line's `approved_amount_paise`; `flag` annotates steps for the exceptions-first queue; `warn` gates submission on a typed employee reason that rides to the approver; `route` injects an extra approver into the resolved chain.
+
+| Input | What the resolver reads | Where it comes from |
+| --- | --- | --- |
+| The Claim | `claimed_amount_paise`, category, cost center, branch, linked Advance, rule outcomes | submission payload plus rule-engine results |
+| The submitter | Membership roles, department, grade, manager pointer, branch | org graph as of submission time |
+| The config | ordered Rule stack with priorities, role-abstracted chain templates, DoA limit grid, undeletable fallback rule | the active Policy version, built in [the configuration model](/phase-1/onboarding/configuration-model/) |
+
+:::caution[The engine never sees awaiting_credits]
+A claim submitted at zero balance parks in `awaiting_credits`: no credit consumed, no chain resolved, until top-up drains the queue FIFO. Queued claims are pending credits, not "pending approval"; say so loudly or month-end exhaustion becomes a finance incident. Semantics in [credits and metering](/phase-1/credits-and-metering/).
+:::
+
+## How a chain resolves
+
+<Steps>
+
+1. **Match routing rules by priority.** Rules are data, ordered by priority number, lowest wins. Conditions (amount, category, cost center, branch, submitter attributes) evaluate top-down; the first match supplies the chain template, every other match lands in the trace so admins see which rule fired and why. `route` outcomes inject their targets at the configured position.
+
+2. **Expand role-abstracted slots.** Template slots are roles, never names: Manager, Manager's manager, Department head, Finance, or a named group (the Ramp pattern), resolved against the org graph: manager pointer, department record, current group members. Role slots survive churn; named-people chains rot.
+
+3. **Walk the DoA grid.** Where the one-screen Delegation of Authority grid is filled (slot by maximum amount, Concur's limit-based pattern), the engine appends every level whose limit sits below `claimed_amount_paise` and stops at the first level that covers it. Each threshold crossed adds a signer; Concur's direct-jump variant (straight to the first sufficient approver) is deliberately not in Phase 1.
+
+4. **Dedupe consecutive same-approver slots.** Flat orgs collapse levels: when the same human occupies adjacent slots, merge them into one step so nobody is asked to decide the same claim twice in a row.
+
+5. **Enforce submitter-not-approver with skip-up.** If the submitter occupies any slot, substitute the next person up the org graph. This runs from day zero with no setup; SAP KB 1944022's deadlock (a manager routed to themselves, fixable only by support ticket) is the cautionary tale. Substitutions re-run the dedupe pass.
+
+6. **Apply the fallback.** Every stack ends with an undeletable, always-matching fallback rule (the Fyle invariant) routing to the submitter's manager. If even that cannot produce a human (no manager on record), the claim routes to the admin queue flagged `rule_gap`. Submission is never blocked for routing reasons; Zoho's hard block ("does not match your organization's approval criteria"), documented in Zoho's own KB, is the anti-pattern we refuse to ship <span class="pill pill--high">High</span>.
+
+7. **Persist and activate.** The output is an ApprovalChain with ordered ApprovalStep rows (`apr_` ULIDs), the firing rule id and version, the `policy_version`, and a full resolution trace written as an AuditEvent. The first step flips to `active` and `Claim.status` moves `submitted` to `in_review`.
+
+</Steps>
+
+The schema caps chains at 5 levels; templates never generate more than 3. Deeper ladders are bureaucratic theatre.
+
+## Snapshot at submission, re-route by exception
+
+The resolved chain is frozen at submission. Ramp's sentence is the contract, worth copying into our UI verbatim: "Changes to approval workflows only apply to new requests, not those already in progress" (Ramp's support docs) <span class="pill pill--high">High</span>. Each Claim stores `policy_version` plus the firing rule id and version, so "which rules were live when this was approved" is a lookup, not an investigation.
+
+:::note[The one exception is explicit]
+Admins get a re-route in-flight action (ApprovalMax's restart pattern): it re-resolves against the current policy version, marks existing steps `skipped`, voids decisions already taken, creates the fresh chain, notifies the submitter and every affected approver, and writes an AuditEvent pairing old and new chains. Re-routing is loud by design; silent mutation of an in-flight chain is indistinguishable from tampering.
+:::
+
+Every save bumps `Policy.version` with author, timestamp, and diff; the matrix editor shows the history. Because the resolver reads config at submission, an edit affects the very next submission and nothing in flight.
+
+Resubmission after `sent_back` is the same claim and credit, free. Our rule: if routing inputs are unchanged or the amount decreased, the chain resumes at the step that sent it back and earlier approvals stand; if `claimed_amount_paise` increased or category, cost center, or branch changed, the engine re-resolves against current policy and all steps reset. An approval given for ₹9,000 is not an approval for ₹90,000.
+
+## ApprovalStep mechanics
+
+| ApprovalStep.status | Meaning | Set by |
+| --- | --- | --- |
+| `pending` | not yet reachable | resolver |
+| `active` | owns the claim; SLA clock running | engine |
+| `approved` | holder approved, line-level caps or rejects allowed | decision write |
+| `rejected` | whole-claim reject, reason required | decision write |
+| `sent_back` | returned to employee, comment required | decision write |
+| `skipped` | removed by dedupe, skip-up, or re-route | resolver or engine |
+| `escalated` | SLA breached; handed to backup, delegate, or admin | timer worker |
+| `delegated` | handed to out-of-office approver or delegate | engine |
+| `expired` | escalation ladder exhausted without a decision | timer worker |
+
+`escalated` and `delegated` are handoff markers, not decisions: the original step closes with the marker and a successor step materialises at the same level, so every step row has exactly one holder and one outcome. Line items decide individually (`approved`, `capped`, `rejected`); a claim with any approved line proceeds with `approved_amount_paise` at or below `claimed_amount_paise`, so one bad line never sinks nine good ones.
+
+| Engine event | Claim.status effect |
+| --- | --- |
+| First step activates | `submitted` to `in_review` |
+| Step decides `sent_back`, employee resubmits | `in_review` to `sent_back` to `submitted`, free, same credit |
+| Final step approves | `in_review` to `approved` |
+| Whole-claim reject | `in_review` to `rejected` |
+
+### Sequential levels, require-any groups
+
+Phase 1 ships strictly sequential levels: one `active` step per claim, an unambiguous "who owns this now", and SLA clocks that never overlap. Within a named-group slot the rule is require-any: every member is notified, the first decision satisfies the step, the step records who acted, and other members' cards mutate to decided so a second tap is impossible. Require-all parallel steps (Ramp offers both) are deferred; a design partner with a real two-signatory policy flips that, via a `satisfied_when` guard rather than a second engine.
+
+### SLA timers and the escalation ladder
+
+Timers exist because the manager inbox is the category's admitted worst bottleneck <span class="pill pill--high">High</span>. Defaults are admin-tunable; the high-value class applies above the top DoA threshold, the same threshold that forces step-up past one-tap email approval.
+
+| Ladder point | Standard SLA (48h) | High-value SLA (24h) | What fires |
+| --- | --- | --- | --- |
+| Activation | 0h | 0h | decision card to web inbox, signed magic-link email, optional WhatsApp utility nudge |
+| Mid-SLA nudge | 24h | 12h | reminder 1, digest-batched, IST quiet hours respected |
+| Pre-escalation warning | 40h | 20h | reminder 2, names the escalation target: "escalates to Priya Nair in 8h" |
+| Breach | 48h | 24h | step `escalated`; successor for backup or delegate, fresh 24h clock |
+| Second breach | +24h | +24h | step `expired`; claim parks in admin queue, flagged on the close dashboard |
+
+<p class="source-note">Source: 48h standard, 24h high-value, reminder before escalation: practitioner guidance (Cflow, medium). Two-reminder cap and IST quiet hours are our defaults.</p>
+
+Two reminders per holder, never more; escalation resets the counter only because it creates a new step. Expiry never auto-approves: the per-company opt-in automation tier (in-policy claims under a threshold, a random audit slice routed back to humans) is decided at resolution, before the first step activates. A timer never approves anything.
+
+### Delegation
+
+Four primitives, all audit-attributed: a time-bound out-of-office approver (receives the queue, no account access), a standing delegate (own login, logged "as delegate of"), admin-assigned delegation (closing a documented Concur Standard gap), and a company fallback approver so nothing ever routes to nobody. Unroutable and expired items surface on the admin dashboard and in the close sweep in [the finance console](/phase-1/web/finance-console/).
+
+## Four claims through the resolver
+
+Meridian Agro Pvt Ltd, 120 employees. The admin started from the 50-250 template (manager, then finance above ₹25,000) and inserted a department-head tier, producing this grid; the high-value SLA threshold therefore sits at ₹75,000.
+
+| Slot (level order) | Resolves via | Authority limit |
+| --- | --- | --- |
+| Manager | submitter's manager pointer | up to ₹25,000 |
+| Department head | department record | up to ₹75,000 |
+| Finance (named group, require-any) | Finance group members | terminal, no limit |
+
+<p class="source-note">Source: limit-based walk-up per Concur's authorized-approver pattern (SAP Learning, medium); rupee limits are example defaults, not statutory.</p>
+
+### 1. Two routine claims: a team meal, and the manager on leave
+
+Asha Pillai (Sales) reports to Vikram Rao; Priya Nair holds Vikram's out-of-office window, 9 to 20 June.
+
+| Claim | Resolution |
+| --- | --- |
+| ₹2,400 team meal (`claimed_amount_paise: 240000`) | Standard expense chain, priority 10; DoA walk stops at Manager (within ₹25,000); one step, Vikram Rao, 48h SLA |
+| ₹12,300 travel while Vikram is away | Same chain; the out-of-office window is active at submission, so Vikram's step closes `delegated` and a successor step activates for Priya, who approves; AuditEvent reads "Priya Nair, as out-of-office approver for Vikram Rao", channel `email_link` |
+
+### 2. A ₹78,000 client event, two thresholds crossed
+
+Asha's client-event claim crosses both the ₹25,000 and ₹75,000 limits, so the walk appends three levels and every step runs the 24h high-value clock (`sla_due_at` is stamped when a step activates). The persisted resolution:
+
+```json
+{
+  "claim_id": "clm_01JXF2M8Q3T9V5B7D1F4H6K8NP",
+  "claimed_amount_paise": 7800000,
+  "currency": "INR",
+  "policy_version": 7,
+  "resolution": {
+    "rule_id": "rule_01JXF2N9P4R6S8T0W2Y4Z6A8CE",
+    "rule_version": 3,
+    "sla_class": "high_value",
+    "trace": [
+      "matched: Standard expense chain (priority 10)",
+      "slots: manager -> department_head -> finance",
+      "doa_walk: 7800000 > 2500000 (manager), 7800000 > 7500000 (department_head), stop at finance (terminal)",
+      "dedupe: none; self_check: submitter not in chain"
+    ]
+  },
+  "steps": [
+    { "id": "apr_01JXF2P0A2C4E6G8J0M2N4Q6SV", "step_index": 1, "approver_id": "mem_01JXF2Q3D5F7H9K1M3N5P7R9TV", "status": "active", "sla_due_at": "2026-06-11T09:30:00Z" },
+    { "id": "apr_01JXF2P1B3D5F7H9K1M3P5R7TW", "step_index": 2, "approver_id": "mem_01JXF2Q4E6G8J0K2M4N6Q8S0VW", "status": "pending", "sla_due_at": null },
+    { "id": "apr_01JXF2P2C4E6G8J0K2N4Q6S8VX", "step_index": 3, "group": "Finance", "require": "any", "status": "pending", "sla_due_at": null }
+  ]
+}
+```
+
+Approval is the conjunction of all required levels, not the last click: the claim stays `in_review` until whichever Finance member acts first closes the chain.
+
+### 3. The submitter is the department head
+
+Meera Iyer, Sales department head, submits ₹40,000. Her manager is Arjun Mehta, VP.
+
+| Stage | Result |
+| --- | --- |
+| Slots expanded | Manager: Arjun Mehta; Department head: Meera herself |
+| DoA walk | above ₹25,000, within ₹75,000: Manager, then Department head |
+| Self-check | Meera occupies her own chain; skip-up substitutes Arjun Mehta |
+| Dedupe re-run | adjacent levels both Arjun; collapse to one step |
+| Final chain | one step, Arjun Mehta, holding the department-head slot's ₹75,000 authority, 48h SLA |
+
+## Simulate a claim before it bites
+
+Every failure mode above shipped at some incumbent. The simulator catches them at config time, following Oracle Fusion's `Test Rules > Simulate` precedent <span class="pill pill--high">High</span>.
+
+| Aspect | Spec |
+| --- | --- |
+| Entry points | matrix-editor button, final onboarding-wizard screen; the employee submission screen renders the same resolver read-only (Fyle's chain-preview pattern) |
+| Inputs | employee, `amount_paise`, category; optional cost center, branch, date |
+| Output | rendered chain (person or group per level, SLA class); firing rule id and version, other matches in priority order; DoA walk arithmetic; substitutions (skip-up, dedupe, active out-of-office windows) |
+| Warnings | fallback matched (`rule_gap`: prompt to add coverage), unfilled slot, deactivated approver, chain depth at cap |
+| Guarantees | production resolver behind a dry-run flag; writes nothing, notifies nobody; admin-gated, employee preview scoped to self |
+
+Done means: an admin answers "who approves Asha's ₹78,000 client event" in one screen; every simulated chain names the rule that fired and why; preview and production can never disagree, because they are one function, contract-tested.
+
+## What the engine promises the auditor
+
+:::danger[Engine invariants, non-negotiable]
+- **No self-approval, ever.** Skip-up at resolution, plus server-side rejection of any decision whose actor is the submitter, whatever the chain says. UI toggles regress: Expensify paid a $500 bounty for "admin can approve own report with Prevent Self-Approval on" (GitHub #36425). Enforce in the decision write path; regression-test it.
+- **No orphan claims.** Resolution never fails and submission is never blocked for routing reasons; the floor is the admin queue flagged `rule_gap`.
+- **Every decision is an AuditEvent.** Append-only: actor, role-at-decision-time, action, before and after values, timestamp, IP and device, and channel (`web`, `email_link`, `whatsapp`). One-tap channels make channel provenance mandatory, and tokens are single-use and amount-bounded. Retain 8 financial years, the Companies Act bound that outlasts the rest.
+- **Graph validation on every save.** Cycles, orphan approvers, deactivated references: caught at config time, never at submission.
+:::
+
+## The formal artifacts
+
+Specified once, referenced everywhere:
+
+<CardGrid>
+<LinkCard title="State machines" href="/spec/state-machines/" description="Claim, ApprovalStep, Receipt, and PayoutBatch transitions with guards and side effects." />
+<LinkCard title="Config schema" href="/spec/config-schema/" description="Chain templates, role slots, the DoA grid, SLA policy, and delegation windows as JSON Schema." />
+</CardGrid>
+
+## Sources
+
+- [Ramp Support: Setting up spend request approvals](https://support.ramp.com/hc/en-us/articles/20843280013459-Setting-up-spend-request-approvals) (vendor docs, high): role slots, require any versus all, the snapshot sentence.
+- [Fyle Help: Approval workflows on Fyle](https://www.fylehq.com/help/en/articles/11129811-approval-workflows-on-fyle) (vendor docs, high): undeletable default rule, ordered rule stack.
+- [Zoho Expense KB: Approval criteria error](https://www.zoho.com/us/expense/kb/reports/approval-criteria-error/) (vendor KB, high): the orphan-claim hard block anti-pattern.
+- [SAP Learning: Managing a limit-based approval](https://learning.sap.com/learning-journeys/getting-started-with-concur-expense-standard-for-administrators/managing-a-limit-based-approval) (vendor docs, medium): limit-based DoA walk-up, direct-jump variant.
+- [SAP KB 1944022: Default approver determination when self-approval is not allowed](https://userapps.support.sap.com/sap/support/knowledge/en/1944022) (primary KB, high): the self-approval deadlock behind skip-up.
+- [Expensify/App GitHub issue #36425](https://github.com/Expensify/App/issues/36425) (primary, high): Prevent Self-Approval bypassed; why enforcement is server-side.
+- [Oracle Fusion HCM: How You Simulate Approval Rules](https://docs.oracle.com/en/cloud/saas/human-resources/faucf/how-you-simulate-approval-rules.html) (primary docs, high): the simulate precedent.
+- [ApprovalMax Help Centre: Workflows and approvals](https://support.approvalmax.com/en/collections/1028070-workflows-approvals) (vendor KB, medium; restart article moved, re-verify): restart for in-flight requests, version history.
+- [Cflow: How automated escalation rules reduce approval bottlenecks](https://www.cflowapps.com/how-automated-escalation-rules-reduce-approval-bottlenecks/) (practitioner, medium): 48h and 24h SLA norms, reminder before escalation.

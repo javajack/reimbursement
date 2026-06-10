@@ -1,0 +1,181 @@
+---
+title: Submit and Track
+description: "Claim assembly, the policy pre-check, the credit gate, and the status timeline that finally answers when do I get paid."
+---
+
+import { LinkCard, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Submission is where capture becomes money in motion, and where the category breaks trust. 43% of employees say slow reimbursement hurts their work experience (Webexpenses UK survey 2024, relayed by Corpay) <span class="pill pill--med">Medium</span>, and average claim processing runs about 9 days (same research cluster, medium). Much of that pain is opacity, which software fixes immediately. This page specifies the path from reviewed line items to a paid claim: assembly, the pre-submit screen, the credit gate, and the status timeline with an expected pay date.
+
+## Claim assembly
+
+A Claim is the unit of submission and payment; the LineItem is the unit of decision. Lines arrive from [OCR review](/phase-1/capture/ocr-itemisation/), [manual entry](/phase-1/capture/manual-entry/) when extraction fails, and the employee portal's web form; one claim can mix all three (a field day's cab, lunch, and hotel folio together, or one folio as six lines).
+
+| Assembly element | Behaviour | Rules |
+| --- | --- | --- |
+| Lines | From the receipt tray, an inline "scan another bill", or manual entry | Scanned lines: merchant, date, total human-confirmed before the line counts; manual and templated lines validate via the composer's required fields instead |
+| Receipts | Up to 5 images ride inside one credit | Visible counter; +1 credit per additional 5 images (anti-batching fair-use guard) |
+| Advance netting | Open Advance balance previewed against the claim total | Netting executes at payout; the submit preview is informational |
+| CostCenter and project tags | Shown only when company configuration enables them | Defaults from the employee's Department; required or optional per Policy |
+| Category | Per line, from the company's active set | One active category always exists (onboarding invariant) |
+
+Advance netting preview (arithmetic in `amount_paise`): "You hold a ₹6,000 travel advance. If this ₹8,200 claim is approved in full, you receive ₹2,200 and the advance closes." Showing the subtraction up front beats adjudicating a double-recovery dispute later.
+
+## The pre-submit screen
+
+One screen between "add line" and the submit tap, four jobs: policy verdicts, the resolved chain, duplicate warnings, an honest cost summary.
+
+### Policy pre-check
+
+The production rule engine runs in dry-run at submit, with the same six actions used at approval: allow, flag, warn, cap, block, route. Results render as pills with plain-language reasons from each Rule's `message` field, never rule IDs. Soft outcomes (flag, cap) never stop a submission; warn pauses it only for a typed reason that rides to the approver; only block stops it outright, and block is reserved for policy absolutes.
+
+| Verdict | Example microcopy | Effect at submit |
+| --- | --- | --- |
+| <span class="pill pill--allow">allow</span> | (silent) | Proceeds |
+| <span class="pill pill--flag">flag</span> | "Meals above ₹2,000 get a finance look. No action needed." | Submits, annotated on the approver's card |
+| <span class="pill pill--info">warn</span> | "No receipt on the ₹1,200 line. You can submit; approval may be slower." | Submits after the employee types a reason; the reason rides to the approver |
+| <span class="pill pill--info">cap</span> | "Hotel is above your grade cap: ₹9,000 claimed, ₹7,500 reimbursable." | Line's `approved_amount_paise` preview reduced |
+| <span class="pill pill--block">block</span> | "Alcohol is not reimbursable under company policy. Remove or edit this line." | Submit disabled until the line changes |
+| <span class="pill pill--info">route</span> | (invisible) | Adds or swaps ApprovalSteps in the resolved chain |
+
+GBTA's 2015-vintage baseline, still industry-cited, is why this screen exists: 19% of reports contain errors, each costing about $52 and 18 minutes to fix. A block caught at submit costs one tap. Rule authoring and the India-native built-ins (GSTIN_FORMAT, PER_DIEM_CAP and friends) live in [policy and rules](/phase-1/onboarding/policy-and-rules/).
+
+### Who will approve
+
+The screen renders the resolved ApprovalChain before submission, the Fyle pattern: "Goes to Priya Sharma (Manager), then Finance (claims above ₹25,000)." The chain snapshots at submission; later matrix edits apply to new claims only, with an explicit admin re-route action for in-flight claims (Ramp and ApprovalMax semantics).
+
+:::danger[Product invariant: routing never blocks submission]
+A claim is never rejected at submit for routing reasons. If no rule matches, the undeletable fallback rule routes it to the submitter's manager; if even that cannot produce a human (no manager on record), the resolver floor parks it in the admin queue flagged `rule_gap`. Zoho's hard error at this exact moment is the documented anti-pattern we refuse to ship.
+:::
+
+### Duplicates
+
+Dedupe runs in three layers; this screen owns the second (capture-time perceptual-hash lives in the camera flow). At submit, a date-plus-amount collision against recent claims and unsubmitted receipts raises a dismissible warning with exactly two verbs: **Keep both** and **Keep one** (Expensify's pattern). Silent auto-merge is reserved for near-exact matches under published tolerances (Fyle precedent; Brex publishes its matching rule, so do we). `DUPLICATE_SUSPECT` is a flag, never a silent delete.
+
+### Cost summary
+
+A persistent footer: "₹8,200 claimed · Uses 1 credit (company balance: 14) · ₹2,200 payable after advance." The meter stays likeable only while it is visible at the moment it ticks.
+
+## The credit gate
+
+Submission debits the company's credit balance, never the employee. On the submit tap:
+
+<Steps>
+
+1. The server re-runs the rule evaluation authoritatively; any block returns with reasons (same engine and rule versions as the client preview).
+
+2. The ApprovalChain resolves and snapshots; duplicate decisions are recorded against the claim.
+
+3. Credit consumption is attempted against the ledger, expiring-soonest CreditEntry first.
+
+4. With a positive balance the claim becomes `submitted` and the first ApprovalStep activates; at zero balance it lands in `awaiting_credits`.
+
+</Steps>
+
+<Tabs>
+
+<TabItem label="Balance available">
+
+One credit covers the journey: OCR (up to 5 receipt images), storage, approvals, payout-file generation, exports. The claim is `submitted`; the timeline starts; the employee is done in one tap.
+
+</TabItem>
+
+<TabItem label="Zero balance">
+
+The claim enters `awaiting_credits` with calm copy: "Your bills are safe. They'll enter approval as soon as your company adds credits." One tap, **Notify admin**, nudges the admin with current queue depth and a top-up link. Capture and upload keep working; nothing is ever lost; processing pauses in a visible queue.
+
+</TabItem>
+
+</Tabs>
+
+On recharge the queue auto-drains FIFO: oldest `awaiting_credits` claim first, each consuming a credit and moving to `submitted`, with a "your claim is moving" push to its owner. No admin action beyond payment. Ledger semantics, pack prices, and auto-top-up: [credits and metering](/phase-1/credits-and-metering/).
+
+:::caution[Month-end is the failure window]
+`awaiting_credits` claims are not in the approval flow. A zero balance during month-end close becomes a finance incident unless the product is loud: admin alerts at 50/80/95/100% burn, a burn-rate forecast ("out in ~N days"), a queue-depth banner on the finance console.
+:::
+
+## The status timeline
+
+"When do I get paid?" is unanswered in-product across the category; Spendesk markets the answer as a differentiator, and Happay's Play Store reviews complain of money "withdrawn but not disbursed". We answer structurally: one shared timeline, identical for employee, approver, and finance. Shared visibility also kills Concur's documented anti-pattern: rejected reports vanishing from AP's view until resubmission.
+
+| Stage | `Claim.status` | What the employee sees | Source event |
+| --- | --- | --- | --- |
+| Submitted | `submitted` | "Submitted 4 Jun, 10:42 · 1 credit used" | Submission accepted; `consumption` CreditEntry |
+| In review | `in_review` | "With Priya Sharma since 4 Jun · step 1 of 2" | Active ApprovalStep (who, since when) |
+| Approved | `approved` | "Approved ₹7,840 of ₹8,200 · 1 line capped" | Final ApprovalStep approved |
+| In payout batch | `in_payout` | "In payout batch · file generated 6 Jun" | PayoutBatch `exported` (file path) or `executing` (API path) |
+| Paid | `paid` | "Paid 9 Jun · UTR SBIN425161234567" | Return-file reconciliation or payout-API webhook |
+
+The expected pay date is our derivation, labelled "expected" in the UI, never promised:
+
+```text
+expected_pay_date = next run in the company payout calendar
+                    on or after final approval
+                    + bank execution buffer (config, default 1 business day)
+```
+
+It hardens as events land: joining a PayoutBatch snaps it to the batch's scheduled run, and "included in the file generated on 6 Jun" is the paid-proxy event until the UTR arrives in the bank's return file. Batches, bank formats, and the payout API live in [payouts](/phase-1/payouts/).
+
+:::tip[The cheapest retention feature in the category]
+The timeline deletes the most common inbound question to HR and finance, and it renders from AuditEvents we already retain for 8 financial years. The answer comes from data we keep anyway.
+:::
+
+## Notifications
+
+Web push is Android-first (93.2% of India mobile; StatCounter, May 2026); iOS users get WhatsApp or email instead, per the PWA stance. WhatsApp utility templates cost ₹0.115-0.145 plus 18% GST each (Meta BSP rates, re-verify at build), so paid sends are reserved for events people act on.
+
+| Event | Recipient | Push (Android) | WhatsApp utility | Email |
+| --- | --- | --- | --- | --- |
+| Claim submitted | Employee | Yes | No | Summary receipt |
+| Approval needed | Approver | Yes | Nudge with deep link | Magic-link action buttons |
+| Sent back with query | Employee | Yes | Yes | Yes, with query text |
+| Approved | Employee | Yes | No | No (timeline covers it) |
+| Entered payout batch | Employee | Yes | No | No |
+| Paid, UTR available | Employee | Yes | Yes | Yes, payment proof |
+| Landed in `awaiting_credits` | Employee | Yes, calm copy | No | No |
+| Burn alerts at 50/80/95/100% | Admin, Finance | Yes | No | Yes, with top-up link |
+| Recharge drained the queue | Queued claim owners | Yes | No | No |
+
+Restraint is a feature: at most 2 reminders per item, IST-aware quiet hours, daily approver digests; Fyle's reviews show undifferentiated volume trains people to ignore the tool. Approver cadence and escalation live on the approver experience page, linked below.
+
+## Send-back, the cheap loop
+
+`sent_back` requires a comment and opens a query thread on the claim: the approver's question, the employee's reply, attachments, all mirrored into AuditEvents. Decisions are line-level: an approver can approve some lines, cap or reject others, and send the claim back with the query pinned to specific lines; decided lines keep their outcomes and only the queried lines reopen. The whole-report bounce, where one bad ₹450 line freezes a ₹40,000 claim, is the documented punishment loop we refuse.
+
+Fix-and-resubmit is FREE: same claim, same credit, zero new consumption. Resubmission returns the claim to `submitted`, and rules re-evaluate at the resubmission instant (both traces retained). Earlier approvals stand and the claim re-enters at the querying step, unless `claimed_amount_paise` increased or the category or cost center changed, in which case the chain re-resolves fresh. Full transition tables with guards and side effects live in [state machines](/spec/state-machines/).
+
+## Empty and error states
+
+| State | Microcopy | Recovery |
+| --- | --- | --- |
+| No claims yet | "No claims yet. Scan your first bill; it takes about a minute." | CTA into capture |
+| Zero lines | Submit disabled: "Add at least one line to submit." | Add from the tray or manual entry |
+| Receipt still scanning | "1 receipt is still scanning. Submit your confirmed lines, or enter it manually now." | OCR never blocks the form; the pending Receipt stays in the tray |
+| Offline at submit | "You're offline. We'll submit automatically when you're back." | Outbox replay with `Idempotency-Key` |
+| Submit API failure | "Couldn't submit. Your claim is saved as a draft. Retry?" | Retry reuses the `Idempotency-Key`; no double burn |
+| Routing gap | Nothing shown to the employee | Routes to admin queue flagged `rule_gap` |
+| Cancelled after submit | "Claim cancelled. Credits are not auto-refunded; your admin can adjust the ledger." | From any pre-decision state; `adjustment` CreditEntry at admin discretion |
+
+## Done means
+
+- Pre-submit and approval-time verdicts come from the same engine and rule versions; parity asserted in CI.
+- Every submittable claim renders a chain preview; the fallback rule guarantees a match, so an empty preview is a bug.
+- Zero-balance submission lands in `awaiting_credits` with the calm copy and a working **Notify admin** tap; recharge drains FIFO with no manual step.
+- Timeline stages render from AuditEvents; employee, approver, and finance see one identical timeline.
+- Expected pay date appears at approval and updates on every batch event through to the UTR.
+- Resubmission after `sent_back` consumes zero credits (ledger-asserted in tests) and re-evaluates rules at the resubmission instant, both traces retained.
+
+<LinkCard title="Approver experience" href="/phase-1/web/approver-experience/" description="Where the claim goes next: inbox, decision card, one-tap channels, escalation." />
+
+<LinkCard title="Finance console" href="/phase-1/web/finance-console/" description="The verification queue and the payout-batch builder that turn approved into paid." />
+
+## Sources
+
+- [Employee expense reimbursement guide, Corpay](https://www.corpay.com/resources/blog/employee-expense-reimbursement) (vendor relay of the 2024 Webexpenses survey; medium)
+- [Employee expense reports, Spendesk](https://www.spendesk.com/blog/employee-expense-reports/) (vendor; status visibility as differentiator)
+- [How much do expense reports really cost a company, GBTA](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/) (industry body; 2015-vintage, still cited)
+- [Happay on Google Play](https://play.google.com/store/apps/details?id=com.happay.android.v2&hl=en_IN) (user reviews via snippets; disbursement opacity)
+- [Rejected reports invisible to AP, SAP Concur Community](https://community.concur.com/t5/Concur-Expense-Forum/where-we-can-see-the-rejected-expense-reports-as-an-concur-admin/m-p/75883) (primary forum thread)
+- [Expense approvals, Fyle](https://www.fylehq.com/product/approvals) (vendor; submitter-visible chain pattern)
+- [Setting up spend request approvals, Ramp Support](https://support.ramp.com/hc/en-us/articles/20843280013459-Setting-up-spend-request-approvals) (primary docs; snapshot-at-submission)
+- [Approval criteria error, Zoho Expense KB](https://www.zoho.com/us/expense/kb/reports/approval-criteria-error/) (primary vendor KB; the hard-block anti-pattern)

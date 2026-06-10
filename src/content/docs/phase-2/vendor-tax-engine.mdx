@@ -1,0 +1,190 @@
+---
+title: The Vendor Tax Engine
+description: "TDS sections and thresholds, reverse charge, and GST capture differences when the payee is a vendor, version-dated by financial year."
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Change the payee from an employee to a vendor and two regimes Phase 1 never touches switch on: withholding (TDS) and GST reverse charge (RCM). A third, input tax credit, hardens from informational tagging into invoice-grade matching, and a statutory payment clock starts ticking for MSME vendors. This page specifies that delta, version-dated by financial year because the 2024-2025 Finance Acts moved three of these numbers.
+
+:::danger[The engine computes; finance decides]
+No tax computation on this page blocks a claim or a payout on its own. TDS_COMPUTE attaches numbers, RCM_FLAG and ITC_MATCH raise exceptions, the MSME clock counts down in plain sight. Tax law changes faster than software ships: a flag that is wrong for a week is an annoyance; a block that is wrong for a week is an outage.
+:::
+
+## What changes when the payee is a vendor
+
+A vendor invoice enters as a Claim against a Vendor master record (`ven_` prefix, defined with its KYC fields in [vendor onboarding](/phase-2/vendor-onboarding/)), rides the same lifecycle from `draft` (and `awaiting_credits` at zero balance) through `submitted`, `in_review`, `approved`, `in_payout`, `paid`, and consumes one credit at submission. The tax surface is what changes.
+
+| Dimension | Employee claim (Phase 1) | Vendor invoice (Phase 2) |
+| --- | --- | --- |
+| Evidence | Any receipt photo; manual fallback | Proper tax invoice; IRN and QR expected above the e-invoice turnover threshold |
+| GST posture | ITC_ELIGIBLE tags eligible vs blocked, informational | ITC_MATCH: buyer GSTIN must match the company's |
+| Withholding | None | TDS_COMPUTE by section and FY, netted at payout |
+| Reverse charge | Not handled | RCM_FLAG on GTA, legal, unregistered-supplier cases |
+| Payment clock | Policy SLA only | MSME 45-day clock (Sec 43B(h)) for micro and small vendors |
+| Payout amount | Net equals approved amount | Approved amount minus TDS; a TDS register entry is emitted |
+
+## TDS: compute by section, resolve by financial year
+
+The engine ships the three sections that cover expense-shaped vendor spend, plus the no-PAN penalty rate. Rates and thresholds below are the FY 2025-26 picture from v1 research <span class="pill pill--high">High</span> (govt and analyst corroborated), and they are stored as data with effective ranges, never as constants.
+
+| Section | Covers | Rate | Threshold | Effective dating |
+| --- | --- | --- | --- | --- |
+| 194C | Contractors: job work, manpower, events, transport | 1% (Individual/HUF), 2% (others) | ₹30,000 single contract / ₹1,00,000 FY aggregate | Stable; track both counters per vendor per FY |
+| 194J | Professional services | 10% | ₹50,000 per FY (raised from ₹30,000) | Threshold effective FY 2025-26 |
+| 194J | Technical services | 2% | ₹50,000 per FY (same pool) | Rate split predates the threshold change |
+| 194H | Commission / brokerage | 2% (was 5%) | ₹20,000 per FY (was ₹15,000) | Rate w.e.f. 1 Oct 2024; threshold w.e.f. 1 Apr 2025 |
+| No PAN | Any of the above | 20% | n/a | Vendor master should hard-require PAN at onboarding |
+
+<p class="source-note">Source: incometaxindia.gov.in TDS rates, ClearTax TDS chart, Bajaj Finserv on 194H (govt/primary corroborated, high confidence). Confirm each value against the Finance Act for the relevant FY; CA signoff is a launch gate, not a nicety.</p>
+
+Computation rules the engine applies:
+
+- **Base is taxable value.** When GST is separately stated, TDS is computed on the value excluding GST; the line-level `taxable_value_paise` extracted at capture is the base. If the split is absent, the engine flags rather than guesses.
+- **Thresholds are per vendor, per section, per FY.** 194C keeps two counters (single contract and FY aggregate). On a mid-year crossing the engine starts deducting and flags the catch-up question (earlier un-deducted payments) to finance instead of rewriting history.
+- **Lower or nil deduction certificates are vendor-master fields**: `ldc_certificate_no`, `ldc_rate_pct`, `ldc_valid_from`, `ldc_valid_to`, `ldc_cap_amount_paise`, plus a consumption counter. Within validity and under the cap, TDS_COMPUTE uses the certificate rate; expiry or exhaustion reverts to statutory and emits a flag.
+
+:::caution[Version-date everything, or mis-withhold on schedule]
+Every rate, threshold, and clause carries `effective_from` and `effective_to` and resolves by the financial year (Apr-Mar) of the invoice date, riding the versioning fields the [rule schema](/spec/rule-schema/) already defines. The 2024-2025 churn alone (194H rate cut 1 Oct 2024, its threshold raised 1 Apr 2025, the 194J threshold raised for FY 2025-26) means a flat constant silently mis-withholds the moment the calendar turns. v1 research already noted further draft revisions in flux: assume drift.
+:::
+
+## Reverse charge: flag candidates, never auto-book
+
+RCM shifts the GST liability from the supplier to the company for notified services and certain unregistered-supplier purchases. The expense-relevant cases, carried from v1 research <span class="pill pill--med">Medium</span>:
+
+| Case | RCM posture | Engine behaviour |
+| --- | --- | --- |
+| Goods Transport Agency (GTA) | Notified; depends on the GTA's rate election | <span class="pill pill--flag">Flag</span> candidate for finance |
+| Legal services from advocates | Notified | <span class="pill pill--flag">Flag</span> candidate |
+| Purchases from unregistered suppliers | Recipient liability in notified cases | <span class="pill pill--flag">Flag</span> when supplier GSTIN is absent |
+| Rent-a-cab | Only where the supplier elects the RCM rate | <span class="pill pill--flag">Flag</span>, never auto-book |
+| Aggregator rides (Ola/Uber) | Sec 9(5): the platform pays | No flag; nothing to do |
+
+When finance confirms a candidate, the company must self-invoice, pay the tax in its GST filing, and claim offsetting ITC where Sec 17(5) does not block it. Kharcha generates the self-invoice draft from the captured line items and attaches it to the claim as evidence; the tax payment itself happens in the company's GST workflow, never on our books.
+
+:::caution[Do not blanket-apply RCM]
+RCM is service-specific and notification-specific; rent-a-cab depends on the supplier's election, and the notified list moves. The engine raises candidates with the reason attached and lets finance confirm against current notifications; auto-booking RCM on every transport bill manufactures GST liabilities that do not exist. The stance is carried unchanged from v1.
+:::
+
+## GST capture: a tax invoice, not a bill photo
+
+Phase 1 treats a GSTIN as evidence quality. Phase 2 treats the vendor invoice as an ITC instrument, because the rupees are real: ITC wrongly availed and utilised accrues interest at 18% per annum under Sec 50(3) as amended by Finance Act 2022, retrospective to 1 July 2017 (the older 24% figure predates the amendment); CA to confirm at the rules-pack signoff. The capture pipeline is unchanged through `extract` and `review_items`; the checks on top get stricter.
+
+| Check | What it verifies | On failure |
+| --- | --- | --- |
+| GSTIN_FORMAT (carried) | Luhn-mod-36 checksum on supplier and buyer GSTINs | Flag; tap-to-fix in review |
+| ITC_MATCH (new) | Buyer GSTIN equals the company's registered GSTIN (or one of its state GSTINs, matched to the claiming branch) | Flag: "ITC at risk; invoice not addressed to this company" |
+| Tax-split consistency (carried) | CGST equals SGST intrastate, or IGST alone interstate; flag, never silently fix | Flag to finance |
+| E-invoice presence (new) | IRN and signed QR present when the supplier's turnover exceeds the notified e-invoicing threshold | Risk signal, severity raised; never a block |
+
+The e-invoicing turnover threshold has been lowered repeatedly; last verified at ₹5 crore, with a reported lowering toward ₹2 crore (Oct 2025) not yet confirmed against the CBIC notification <span class="pill pill--med">Medium</span> (secondary); it ships as FY-versioned configuration with a build-time verification task, never as a constant. Sec 17(5) ITC tagging continues exactly as in Phase 1; the eligible-ITC totals feed the AP view and GSTR-2B reconciliation in [payouts and AP](/phase-2/payouts-and-ap/).
+
+## How the rule engine extends
+
+Rules stay data and the verb set stays closed: `allow`, `flag`, `warn`, `cap`, `block`, `route`, exactly six, no Phase 2 additions. What activates is the `vendor_invoice` scope reserved in the Phase 1 schema, plus three built-ins. TDS_COMPUTE follows the precedent ITC_ELIGIBLE set in [policies and rules](/phase-1/onboarding/policy-and-rules/): an `allow`-verb rule that attaches computed fields rather than gating anything.
+
+| Built-in | Verb | Fires on | Attaches or says |
+| --- | --- | --- | --- |
+| TDS_COMPUTE | `allow` (info) | Every vendor_invoice line once the section threshold is crossed | `tds_section`, `tds_rate_pct`, `tds_base_paise`, `tds_paise` |
+| RCM_FLAG | `flag`, soft | GTA, legal, unregistered-supplier, rent-a-cab candidates | "Possible reverse charge: legal services. Confirm before payout." |
+| ITC_MATCH | `flag`, soft | Buyer GSTIN missing or not the company's | "Buyer GSTIN does not match; ₹18,000 ITC at risk." |
+
+Every firing remains an AuditEvent with rule id, version, and input snapshot, on the same 8-financial-year retention that binds the rest of the books. At payout time the computation becomes money:
+
+<Steps>
+
+1. **Approve.** The claim reaches `approved` carrying its TDS_COMPUTE outputs; finance pulls it into a `building` PayoutBatch as in [Phase 1 payouts](/phase-1/payouts/).
+
+2. **Net.** The PayoutInstruction carries `gross_amount_paise`, `tds_paise`, and `amount_paise` (the net). The bank-file row or payout-API call moves only the net.
+
+3. **Register.** Executing the instruction emits a TdsEntry (`tds_` prefix) into the company's TDS register: vendor PAN, section, rate, base, amount, invoice reference, deduction date, FY.
+
+4. **Hand off.** Register exports feed the challan and quarterly TDS return workflow the company's CA runs. Kharcha never remits tax and never files; it keeps the register reconciled to the paise.
+
+</Steps>
+
+## Worked example: a ₹1,18,000 professional-services invoice
+
+A Bengaluru company receives an intrastate professional-services invoice dated 12 Feb 2026 (FY 2025-26): taxable value ₹1,00,000, CGST ₹9,000, SGST ₹9,000, total ₹1,18,000. The base exceeds the ₹50,000 194J threshold, so TDS_COMPUTE applies the 10% professional rate to the taxable value, not the gross: TDS ₹10,000, payout ₹1,08,000. The buyer GSTIN matches and professional fees are not Sec 17(5)-blocked, so ₹18,000 of ITC is eligible and ITC_MATCH does not fire. The Claim carries `claim_kind: "vendor_invoice"` (a Claim field new in Phase 2; `scope` stays rule-engine vocabulary).
+
+```json
+{
+  "claim": {
+    "id": "clm_01JXG2M9QW4T8KD5NB3RV7YEHA",
+    "claim_kind": "vendor_invoice",
+    "vendor_id": "ven_01JXG2KX5P9R3HM7TWB2DQZC6F",
+    "status": "approved",
+    "claimed_amount_paise": 11800000,
+    "approved_amount_paise": 11800000,
+    "currency": "INR"
+  },
+  "line_item": {
+    "id": "li_01JXG2NCT6W9E2KR5PM8VBYD4H",
+    "category": "professional_services",
+    "taxable_value_paise": 10000000,
+    "cgst_paise": 900000,
+    "sgst_paise": 900000,
+    "igst_paise": 0,
+    "supplier_gstin": "29ABCDE1234F1Z5",
+    "buyer_gstin": "29AABCK1234M1Z6",
+    "itc_tag": "itc_eligible"
+  },
+  "rule_firings": [
+    {
+      "rule": "TDS_COMPUTE",
+      "action": "allow",
+      "params_out": {
+        "tds_section": "194J",
+        "tds_rate_pct": 10,
+        "tds_base_paise": 10000000,
+        "tds_paise": 1000000
+      }
+    }
+  ],
+  "payout_instruction": {
+    "id": "pin_01JXG2PRZ3B7Y4WQ8KD6THMV5N",
+    "gross_amount_paise": 11800000,
+    "tds_paise": 1000000,
+    "amount_paise": 10800000,
+    "rail": "neft"
+  },
+  "tds_entry": {
+    "id": "tds_01JXG2QK8M4D7XW2YB5PRVHE9C",
+    "vendor_pan": "ABCDE1234F",
+    "section": "194J",
+    "rate_pct": 10,
+    "base_paise": 10000000,
+    "tds_paise": 1000000,
+    "deducted_on": "2026-02-20",
+    "fy": "2025-26"
+  }
+}
+```
+
+The export to the accounting system carries the full set of ledger lines, so the books balance without manual journal work:
+
+| Ledger line | Dr (₹) | Cr (₹) |
+| --- | --- | --- |
+| Professional fees expense | 1,00,000 | |
+| Input CGST | 9,000 | |
+| Input SGST | 9,000 | |
+| TDS payable (194J) | | 10,000 |
+| Vendor payable (settled by payout) | | 1,08,000 |
+
+## The MSME 45-day clock
+
+Vendor KYC captures Udyam registration, and with it the micro or small classification. Every claim from such a vendor shows a countdown chip against the MSME 45-day outer limit, because Sec 43B(h) defers the income-tax deduction to the year of actual payment when the MSMED time limit is missed <span class="pill pill--med">Medium</span>: late payment has a direct tax cost, not just a relationship cost. The statute counts from acceptance; the engine defaults the anchor to the invoice date (the earlier, conservative choice), lets finance record an acceptance date per claim, and sends anchor semantics to the CA reviewer with the rest of this page.
+
+Behaviour, template defaults (our derivation): chip from day 0; `flag` on entering the Watch bucket (day 31, 14 days remaining); severity raised on entering Critical (day 41, 4 days remaining), matching the aging buckets in [payouts and AP](/phase-2/payouts-and-ap/); overdue claims pin to the top of the AP aging view. It never blocks and never auto-builds a batch; it makes the deadline impossible to miss and the decision finance's own.
+
+That is the whole vendor tax surface: three TDS sections, a short RCM candidate list, stricter invoice matching, one statutory clock, zero new verbs. Batching, netting files, and reconciliation continue in [payouts and AP](/phase-2/payouts-and-ap/); the employee-side statute this page deliberately excludes stays in the [regulatory map](/compliance/regulatory-map/).
+
+## Sources
+
+- [TDS rates, Income Tax Department](https://www.incometaxindia.gov.in/w/tds-rates-1) (govt; returned 403 to automated fetch at research time, corroborated via secondaries)
+- [TDS rate chart, ClearTax](https://cleartax.in/s/tds-rate-chart) (analyst)
+- [TDS on commission and brokerage, Section 194H, Bajaj Finserv](https://www.bajajfinserv.in/about-tds-on-commission) (analyst; 194H rate and threshold effective dates)
+- [Reverse charge mechanism under GST, ClearTax](https://cleartax.in/s/reverse-charge-gst) (analyst)
+- [Reverse Charge Mechanism flyer, GST Council](https://gstcouncil.gov.in/sites/default/files/e-version-gst-flyers/Reverse%20charge%20Mechanism.pdf) (govt)
+- [Section 17(5) of CGST Act, blocked credit, ClearTax](https://cleartax.in/s/section-175-of-cgst-act) (analyst)
+- [Section 17(5), CBIC statute](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/acts/2017_CGST_act/active/chapter5/section17_v1.00.html) (primary; TLS error at fetch, verify live)

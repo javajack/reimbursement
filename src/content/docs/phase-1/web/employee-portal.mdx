@@ -1,0 +1,172 @@
+---
+title: The Employee Portal (Web)
+description: "Web-first submission parity, claim history, profile and the verification-gated beneficiary bank account."
+---
+
+import { CardGrid, LinkCard, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Office staff, accountants, anyone with an airline invoice in their inbox submits from a laptop, so the Console's employee surface carries full submission parity with the PWA: file upload and drag-drop where the camera was, the same OCR, review and manual flows after. It also owns the one flow that exists nowhere else: the BeneficiaryAccount, the verification-gated bank account every payout depends on. Approver and finance surfaces are sibling pages; this one stays employee-only.
+
+## The dashboard
+
+The landing route answers three questions in one glance: what needs me, where is my money, and is anything stuck.
+
+| Module | Shows | Primary action |
+|---|---|---|
+| Awaiting your action | `sent_back` claims with the approver's comment; `extraction_failed` receipts | Fix and resubmit (free, same credit) |
+| Drafts | `draft` claims with receipt thumbnails and async `Scanning` chips | Resume |
+| Recent claims | Last 10 claims with status chips and amounts | Open timeline |
+| Advance balance | Outstanding Advance in ₹ and claims settled against it | View advance |
+| Bank account card | BeneficiaryAccount state: unverified, pending, verified or failed | Verify now |
+| Credit-paused banner | Conditional: only when company balance is 0 and claims sit in `awaiting_credits` | Remind your admin (one tap) |
+
+Banner copy follows the soft-paywall contract: "Your claim is saved and queued. Acme Traders is out of submission credits; processing resumes the moment credits are added." Capture and upload never stop, nothing is lost, and the one-tap nudge pings the admin. Mechanics live in [credits and metering](/phase-1/credits-and-metering/).
+
+## Submission parity, minus the camera
+
+Web submission enters the same capture pipeline at `intake` through a file picker, drag-drop (dashboard and claim form both accept drops) or clipboard paste: JPEG/PNG images, the same accept contract as the capture ladder on the [camera page](/phase-1/capture/camera/).
+
+| Pipeline stage | PWA (camera) | Web portal |
+|---|---|---|
+| `intake` | Viewfinder or photo library | File picker, drag-drop, paste, bulk select |
+| `frame_analysis`, `capture` | Live edge overlay, auto-capture | Skipped: files arrive pre-captured |
+| `quality_gate` | Blur and brightness checks, retake prompt | Same checks on upload; re-upload prompt |
+| `crop_correct` | Server-side, manual 4-corner rescue | Identical, editor driven by mouse |
+| `compress` | Client-side, ~2048 px long edge | Same in-browser re-encode before upload |
+| `extract`, `review_items` | Field and line-item review | Identical, keyboard-first |
+
+Extraction is async: the draft shows a `Scanning` chip, navigation away is fine, and low-confidence fields return flagged for the click-to-fix review specced in [OCR and itemisation](/phase-1/capture/ocr-itemisation/). When extraction fails or the bill is hopeless, the portal drops into the same [manual line-item entry](/phase-1/capture/manual-entry/), image kept attached as evidence.
+
+Bulk upload is the one capability the desktop adds: drop 12 receipts at once and they land in a tray as individual Receipt records (`uploaded` → `processing` → `extracted`, via `queued` when credits are exhausted or there is a backlog), then group into claims, multi-page bills together, unrelated spends apart. Credit math is unchanged: one credit per submitted Claim covering up to 5 receipt images, +1 credit per additional 5; pre-submission scans stay free under the `max(20, 3 × remaining credits)` monthly fair-use cap while the balance is positive (at zero balance, pre-submission OCR pauses and receipts hold in `queued`).
+
+## Claim history, search and filters
+
+The claim list and detail views render the same status timeline as the PWA, same state names, same order: `draft`, `awaiting_credits` when applicable, `submitted`, `in_review`, `sent_back` loops, `approved` or `rejected`, `in_payout`, `paid`, `closed`. Timeline semantics and microcopy are owned by [submit and track](/phase-1/capture/submit-and-track/); the portal adds density, a sortable table instead of cards, with drill-down per LineItem outcome (`approved`, `capped`, `rejected`).
+
+| Filter | Values | Notes |
+|---|---|---|
+| Status | Any Claim.status, multi-select chips | `sent_back` and `awaiting_credits` pinned first |
+| Date | Spend date or submission date range | FY presets, Apr-Mar |
+| Category | Active company category set | From company config |
+| Amount | Min/max | Runs server-side on `amount_paise` |
+| Search | Merchant, claim title, claim ID (`clm_...`) | Free text |
+
+Results paginate by cursor like every list in the API. Search-by-amount is deliberate: a documented finance pain in incumbents that employees reconciling a bank statement share.
+
+## Profile: identity
+
+Identity is mostly read-only on purpose; the master record belongs to the admin and the import pipeline.
+
+| Field | Editable by employee | Notes |
+|---|---|---|
+| Name | No (request change) | Must match bank records for name-match scoring |
+| Employee ID, department, manager | No | Synced from admin import or HRMS feed |
+| Work email | No | Login identity |
+| PAN | Yes, when enabled | Optional per company config; format-checked client-side; API verification (~₹1-3/call, aggregator list price, vendor) <span class="pill pill--med">Medium</span> is a config toggle for payroll-grade exports |
+
+## The beneficiary account: the payout gate
+
+This flow justifies the profile section: approvals can flow without a bank account; money cannot.
+
+<Steps>
+
+1. **Add.** The employee opens Profile → Bank account, confirms the account-holder name (prefilled from profile, editable to match bank records).
+
+2. **Verify.** Choose a path: reverse-penny-drop via a UPI QR (default), or key account number + IFSC for classic penny-drop. Either way the bank returns the registered holder name.
+
+3. **Score.** We compute a name-match score against the profile name. A clean match auto-verifies. A partial match parks at `pending` (finance review), maker-checker on the master record itself, never auto-approved. A miss fails with a reason and a retry.
+
+4. **Gate.** Only a `verified` BeneficiaryAccount (`bene_` ID) can be referenced by a PayoutInstruction. Until then, claims approve normally but wait at `approved`; the [payout batch builder](/phase-1/payouts/) lists them under "blocked: unverified account" with a one-click reminder to the employee.
+
+5. **Re-verify on any edit.** Changing any field, even one IFSC digit, drops the account back to `pending` and re-runs the entire flow before the next payout.
+
+</Steps>
+
+<Tabs>
+
+<TabItem label="Reverse-penny-drop (default)">
+
+The employee pays ₹1 from their own UPI handle; the inbound credit identifies the account, so nothing is keyed and typo risk disappears. The ₹1 auto-refunds, typically within ~48 hours (Setu docs, vendor). Success runs ~95-97% (HyperVerge, vendor-stated) <span class="pill pill--med">Medium</span>. On desktop the portal shows a QR to scan with the phone and polls until the state flips.
+
+</TabItem>
+
+<TabItem label="Classic penny-drop (fallback)">
+
+For employees without UPI: key account number + IFSC (format-validated, bank looked up), we deposit ₹1 and read back the bank-returned name. Coverage 600+ banks including 126+ co-operatives at >97% success (Cashfree, vendor). Some co-operative accounts still fail; those route to a manual fallback: cancelled-cheque upload, admin review, recorded as manually verified in the audit trail.
+
+</TabItem>
+
+</Tabs>
+
+| verification_status | Meaning | Exits |
+|---|---|---|
+| `unverified` | Account details saved; no verification run yet | `pending` when a check starts |
+| `pending` | Added or edited; check running, or partial name match parked for finance review | `verified` on pass or finance approval, `failed` on miss |
+| `verified` | Name-match passed; eligible for PayoutInstruction | `pending` on any edit |
+| `failed` | Bank check failed or finance rejected the match | `pending` on retry with corrected details |
+
+Each successful bank verification costs about ₹3 plus GST (Setu and Cashfree published pricing, vendor) <span class="pill pill--high">High</span> and the cost is ours: platform COGS, never billed to the company or the employee, and never a credit. One check per employee plus edits is noise against the ₹1.0-2.5 per-submission COGS baseline.
+
+:::danger[Product invariant: no payout to an unverified account]
+No PayoutInstruction is ever created against a BeneficiaryAccount that is not `verified`. The most common real-world payout fraud is not a forged receipt; it is a quietly edited bank account. Re-verification on every edit closes that hole, and the reset-to-pending is server-enforced, not a UI nicety.
+:::
+
+:::tip[A free second check at payment time]
+RBI mandates a free beneficiary name look-up for NEFT/RTGS since 1 April 2025. The [payout flow](/phase-1/payouts/) layers it on top of this one-time verification: onboarding proves the account exists and matches; the look-up catches anything stale at the moment money actually moves.
+:::
+
+## Notifications and language
+
+Preferences are per-channel, per-event. Email is the universal default; web push is opt-in where the PWA is installed (Android-first; iOS relies on email by design); WhatsApp arrives later via BSP, strictly transactional templates.
+
+| Event | Default | Notes |
+|---|---|---|
+| Decision: `approved` / `rejected` | Email on | Reason text included on rejection |
+| `sent_back` with comment | Email on | Deep link straight to the fix |
+| `paid` | Email on | The "when do I get paid" answer, with UTR when the bank return file carries one |
+| `extraction_failed` | Email on | Immediate, deep link to manual entry |
+| Extraction finished | Daily digest | Successful async OCR completions batch |
+| Queue drained: `awaiting_credits` → `submitted` | Email on | Fires after an admin top-up |
+
+The language picker sits beside notifications: English, Hindi and 2-3 state languages at launch, applied instantly, with the web stack allowing same-day string fixes.
+
+## Keyboard and empty states
+
+| Key | Where | Action |
+|---|---|---|
+| `/` | Anywhere | Focus search |
+| `n` | Dashboard, claim list | New claim |
+| `Enter` / arrows | Claim list | Open row / move selection |
+| `Tab` | `review_items` | Jump to next low-confidence field |
+| `Esc` | Detail drawer, editors | Close without losing state |
+
+| Surface | Empty-state copy | CTA |
+|---|---|---|
+| Dashboard, first run | "No claims yet. Drag a receipt here, or press n." | Submit your first claim |
+| Awaiting your action | "Nothing needs you right now." | None |
+| Filtered list, no hits | "No claims match these filters." | Clear filters |
+| Profile, no bank account | "Approvals will flow; payouts will not. Add your bank account so finance can pay you." | Add bank account |
+
+## Done means
+
+- `draft` → `submitted` completes entirely on web, file upload only, no camera code path invoked.
+- A 12-image bulk drop groups into claims with credit math honored (1 credit per claim up to 5 images, +1 per additional 5).
+- The claim timeline renders identical state names and order to the PWA, from one shared component.
+- A BeneficiaryAccount edit immediately resets `verified` → `pending`, and the next PayoutBatch build excludes that employee until re-verified.
+- Every list and form on this surface has defined empty, loading and error states, and the `review_items` flow is completable by keyboard alone.
+
+<CardGrid>
+
+<LinkCard title="The approver experience" href="/phase-1/web/approver-experience/" description="The inbox, the decision card, and one-tap channels for the other side of every claim." />
+
+<LinkCard title="The finance console" href="/phase-1/web/finance-console/" description="Verification queue, payout batches and exports, where the gate on this page bites." />
+
+</CardGrid>
+
+## Sources
+
+- [Setu, Bank Account Verification API (₹3/successful)](https://setu.co/data/kyc/bank-account-verification/) (vendor)
+- [Setu, Reverse Penny Drop quickstart (₹1, ~48h refund)](https://docs.setu.co/data/bav/reverse-penny-drop/quickstart) (vendor)
+- [Cashfree, Bank Account Verification (₹3 + GST, 600+ banks, >97%)](https://www.cashfree.com/bank-account-verification/) (vendor)
+- [HyperVerge, Reverse Penny Drop 101 (~97% success)](https://hyperverge.co/blog/reverse-penny-drop-101/) (vendor)
+- [BusinessToday, RBI free beneficiary name look-up for NEFT/RTGS](https://www.businesstoday.in/technology/news/story/you-will-soon-be-able-to-verify-beneficiary-details-during-rtgs-neft-payments-for-free-459083-2024-12-31) (analyst)

@@ -1,0 +1,162 @@
+---
+title: The Finance Console
+description: "Verification queue, payout-batch builder, bank-file export, UTR reconciliation, close-week tools, and the MIS finance actually asks for."
+---
+
+import { Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Employees feel the camera and approvers feel the inbox, but finance signs the renewal. This page specifies the buyer's cockpit: verify approved claims, build payout batches, execute over the customer's own bank rails, reconcile by UTR, sweep the period closed, and answer MIS questions without first exporting to a spreadsheet. The gaps are documented, not imagined: Expensify users report there is no search-by-amount, Happay admins report missing processed/failed MIS, and Indian finance teams still rekey entries into Tally (review-mined, medium confidence). We treat all three as launch-blocking requirements, not roadmap.
+
+## The verification queue
+
+Claims land here in `approved` status once the chain in [the approval engine](/phase-1/web/approval-engine/) completes. Approvers answered "is this legitimate"; finance answers "is this payable". The queue is a worklist, not a report: oldest first, keyboard-driven, with badges that tell finance where to spend its scarce attention. Every row shows `approved_amount_paise` (after `cap` rules), never the claimed figure.
+
+| Badge | Fires when | Why finance cares |
+|---|---|---|
+| <span class="pill pill--flag">ITC at risk</span> | A line is tagged blocked under Sec 17(5) by the ITC_ELIGIBLE rule, or a GST invoice lacks the employer GSTIN | Feeds the ITC-at-risk total; vendors claim up to 60% of T&E ITC is lost in India <span class="pill pill--low">Directional</span> |
+| <span class="pill pill--info">Entered manually</span> | LineItems came from the manual path (`extraction_failed` or OCR skipped) | Highest mis-key risk; the receipt image stays attached as evidence |
+| <span class="pill pill--info">Capped</span> | A `cap` rule set a line below its claimed amount | Confirms the payable figure is the capped one |
+| <span class="pill pill--flag">Flagged</span> | A `flag` or `warn` rule fired and an approver cleared it | One-glance audit context before money moves |
+| <span class="pill pill--info">Held</span> | Finance placed a hold with a reason | Excluded from batch filters until released |
+
+<p class="source-note">Source: pain-point mining across G2, Capterra, app stores, and vendor forums (bot-blocked sites, snippet-mediated; treat quotes as paraphrase); India ITC stat is vendor marketing, directional only.</p>
+
+The spot-check view is a split screen: the receipt on the left with full-screen zoom, rotate, and multi-page navigation; extracted LineItems with the CGST/SGST/IGST split on the right; rule firings and the approval trail beneath. Tapping a field zooms the image to its source region, the same bounding-box viewer the employee used at capture, read-only here. Verify (`v`) stamps `verified_by` and `verified_at` on the claim, recorded as an AuditEvent rather than a `Claim.status`; the batch builder's filter admits only claims carrying that stamp. Keyboard: `j`/`k` move, `v` verify, `b` request a fix, `h` hold; these bindings are scoped to this verification-queue split view and do not collide with the employee portal's list keys.
+
+Two exits besides "add to batch". **Request a fix** notifies the employee with a required reason (an illegible page, a missing GST invoice); mechanically it is a hold plus an employee fix request, because the canonical lifecycle in [state machines](/spec/state-machines/) defines `sent_back` only as the approver loop out of `in_review`, and an approved claim never changes amount without re-entering approval. Finance releases the hold once the fix lands. **Hold** is a queue flag with a reason, not a `Claim.status`: the claim stays `approved` but out of batches until released. Catching errors here is the cheap option; the correction loop costs $52 and 18 minutes per fixed report on the 2015-vintage GBTA baseline that the industry still cites.
+
+## The payout-batch builder
+
+A PayoutBatch is money about to move, so building one is deliberate: filter, group, preflight, summarise, confirm.
+
+<Steps>
+
+1. **Filter** verified claims, meaning only those carrying the queue's `verified_by`/`verified_at` stamp: date range, department, amount band, category. Held claims never appear.
+
+2. **Group by source BankAccount and rail.** One batch per pair. Routing rules map categories to source accounts (travel debits ICICI, everything else HDFC); unmapped categories fall back to the default BankAccount. Rail default is NEFT (batch, no amount cap); IMPS for urgent claims up to ₹5 lakh; RTGS from ₹2 lakh up when same-hour settlement matters. Rails, limits, and costs are argued in [payouts](/phase-1/payouts/).
+
+3. **Beneficiary preflight.** Every payee needs a verified BeneficiaryAccount (penny-drop verification, about ₹3 per check; Setu pricing, high confidence). Unverified payees drop into a fix list with a one-tap re-verification request; their claims stay in the queue rather than blocking the batch.
+
+4. **Review the batch summary**: instruction count, total `amount_paise`, per-rail split, largest single instruction, and a duplicate-payee callout (two instructions to one account is usually two claims, occasionally a mistake).
+
+5. **Confirm.** Each claim becomes a PayoutInstruction (`pin_`) in `pending`; the claim stays `approved` but reserved (removing it while the batch is still `building` releases the reservation), and the batch sits in `building` until export.
+
+</Steps>
+
+```json
+{
+  "id": "pob_01JXAY9Q2K7M4R8T1V5W3N6P0Z",
+  "status": "building",
+  "bank_account_id": "ba_01JXAYA3F8H2K6M9Q4S7V1X5Z0",
+  "rail": "neft",
+  "instruction_count": 41,
+  "total_amount_paise": 48275000,
+  "largest_instruction_paise": 4612500,
+  "built_by": "usr_01JXAYAR5D8G2J6M9N3Q7T0W4Y",
+  "executed_by": null
+}
+```
+
+:::danger[Maker-checker applies to the batch itself]
+The user who builds a batch cannot mark it executed or trigger API execution. This is the same server-enforced separation as submitter and approver on claims, applied to money. Companies with a single finance user route the second signature to the `owner`. Both identities, with role at decision time, land in the AuditEvent stream.
+:::
+
+## Executing the batch: file, API, or payroll
+
+Default is a bank file the customer authorises in their own net banking. The payout API is a per-customer opt-in. Payroll export is the third path, for companies that fold reimbursements into the salary run.
+
+<Tabs>
+<TabItem label="Bank file (default)">
+
+<Steps>
+
+1. **Export.** The file format follows the source BankAccount's bank: ICICI CIB, HDFC ENet, Axis PayPro, SBI, Kotak. Field layouts live in [bank files](/reference/bank-files/); formats are bank-versioned and some specs exist only inside the corporate portal, so each parser ships behind a per-bank verification checklist. We stamp the claim reference into the remarks field for return matching, and auto-split when a bank caps file size (HDFC ENet: about 1,000 rows and ₹10 crore per file; bank manual via secondary source, medium). Batch: `building` to `exported`; instructions flip `pending` to `dispatched`, and member claims flip `approved` to `in_payout`.
+
+2. **Upload in net banking.** The batch screen prints the runbook line for that bank, for example: "ENet: log in, Payments, Bulk Upload, select the saved format, upload, authorise with your token." Editable per company, because portal menus differ by relationship.
+
+3. **Mark executed.** A second finance user records the bank's acknowledgment reference. Batch: `exported` to `executed`.
+
+4. **Import the return file.** Each row carries a UTR. Matched instructions become `paid`; their claims flip `in_payout` to `paid`, and the employee's timeline shows the date and UTR. That closes the category-wide "when do I get paid" gap (43% of employees say slow reimbursement hurts their work experience; Webexpenses UK 2024, medium). When every instruction resolves, the batch is `reconciled`.
+
+5. **Repair failures.** A rejected row (closed account, IFSC mismatch, name mismatch) marks that single instruction `failed` with the bank's reason and drops it into the repair queue. Fix the BeneficiaryAccount, re-run penny-drop, and reissue: instructions are immutable attempts, so reissue creates a new PayoutInstruction (a new `pin_`) on the same claim in a new `building` batch, with an `instruction.reissued` AuditEvent linking old to new. The claim holds at `in_payout` throughout (it returns to `approved` only on explicit finance write-off): nothing silently drops, and nothing re-enters approval.
+
+</Steps>
+
+</TabItem>
+<TabItem label="Payout API (per-customer opt-in)">
+
+Same builder, same preflight, same maker-checker, same batch semantics. What changes: the checker clicks Execute in the Console instead of uploading a file, and instruction status arrives by webhook (`pending`, `dispatched`, `paid`, `failed` with reason and UTR). The batch runs `building` to `executing` (member claims flip `approved` to `in_payout`) to `completed` or `partially_failed`, then `reconciled`. Failed instructions enter the identical repair-and-reissue loop, minutes after execution instead of next morning.
+
+Economics: payout APIs run roughly ₹1.75-5 per transaction plus GST (vendor pricing, medium); RazorpayX-style providers include 250 free payouts a month and cap single payouts at ₹5 lakh (vendor page), so larger claims route to the NEFT/RTGS file path automatically.
+
+</TabItem>
+</Tabs>
+
+:::danger[Funds never touch our accounts, in either mode]
+The bank file debits the customer's own current account. In API mode, a regulated partner initiates transfers from the customer's account; we remain an API caller. The moment reimbursement money pools in an account we control, we become a Payment Aggregator candidate (₹15 crore net worth at application, ₹25 crore by year three; RBI, high confidence) or a PPI issuer. The architecture and the legal reading live in [payouts](/phase-1/payouts/); a written legal opinion precedes go-live.
+:::
+
+### Reimburse via payroll
+
+The payroll export is a CSV keyed by employee ID plus net approved amount, one row per employee aggregated across their claims for the run, with a per-claim detail sheet alongside. Finance hands it to whoever runs payroll. Marking the export executed against a payroll run reference flips the included claims to `paid` with `payout_mode: "payroll"`, and employees see "paid with your June salary" on the claim timeline. Zero extra bank operations, but the money waits for the salary cycle, so the expected date shows up front.
+
+## The period-close sweep
+
+Close week starts with spend finance cannot see because it is stuck in approval. The sweep dashboard shows pending approvals by approver: count, oldest item age, and total `amount_paise` at stake per inbox. One click reminds them all, within the cadence rules of the [approver experience](/phase-1/web/approver-experience/) (maximum two reminders per item, IST-aware quiet hours), so the sweep cannot decay into spam. An approve-by date, tied to the close calendar, auto-escalates anything still pending past it. Then finance builds the final batch of the period with everything that made it through.
+
+## Reports and the MIS finance actually asks for
+
+Every report answers a question we found finance asking, unanswered, in incumbent reviews. Every table exports CSV. Tally JV and voucher export, with ledger mapping, is specified in [integrations](/spec/integrations/).
+
+| Finance asks | The surface | The documented gap |
+|---|---|---|
+| "Find the ₹4,180 claim" | Search by exact amount or range, plus merchant, employee, UTR | Expensify users report search-by-amount is missing <span class="pill pill--med">Medium</span> |
+| "Processed, failed, pending this month?" | Throughput counts by `Claim.status` and instruction outcome | Happay admins report missing processed/failed MIS <span class="pill pill--med">Medium</span> |
+| "What is stuck, and how long?" | Aging by state, with outlier flags | Manual cycles run 8+ days in India <span class="pill pill--low">Vendor, directional</span> |
+| "Where is spend going?" | Category, department, cost-center spend, month on month | The standard CFO ask; feeds budget reviews |
+| "Who owes us advances?" | Advances outstanding: open Advance balances by employee, settlement status | Advance is a first-class entity, not a negative claim |
+| "How much ITC are we losing?" | ITC-at-risk total: GST on blocked or GSTIN-missing lines | The India wedge; same engine as the queue badge |
+| "When do credits run out?" | Credit burn and forecast | Prevents the month-end paywall surprise |
+
+Auditors (the read-only `auditor` role) see every report and the full AuditEvent trail. Exports are conveniences, not the system of record: receipts, decisions, and payout evidence are retained for 8 financial years (Companies Act retention, the binding longest).
+
+## Credits: purchase and burn forecast
+
+Finance owns the meter, so the Console carries the whole credit surface: current balance, this month's `consumption` against the `plan_grant`, a burn-rate forecast ("at this rate, out in roughly N days"), and alerts at 50, 80, 95, and 100% of burn (the configurable default). Plan grants (Free through Scale) reset monthly; prepaid Credit Packs cover spikes, are purchasable in-console by UPI, netbanking, or card, carry 12-month validity, and burn expiring-soonest first. The ledger view shows every CreditEntry (`plan_grant`, `pack_purchase`, `consumption`, `expiry`, `adjustment`, `promo_grant`) and exports like everything else. Semantics and the pack ladder live in [credits and metering](/phase-1/credits-and-metering/).
+
+:::caution[Month-end exhaustion is a finance incident]
+At zero balance, new submissions sit in `awaiting_credits`: captured, safe, and outside the approval flow. The Console shows that queue count beside the balance, because claims invisible to approval during close week are a finance problem, not an employee problem. Top-up drains the queue FIFO, instantly.
+:::
+
+## Empty, error, and permission states
+
+| State | Behaviour and microcopy |
+|---|---|
+| Verification queue empty | "All caught up. 14 claims are still in approval." with a link into the sweep view |
+| No BankAccount configured | Batch builder disabled with a setup CTA; bank details are required before the first payout run, never before the first claim |
+| Payee unverified | Claim stays in the queue; fix list entry: "Re-verify Asha's account (penny-drop)" |
+| Return-file rows unmatched | Manual match screen: UTR present, stamped reference garbled; pick the instruction by amount and payee |
+| Wrong role | The finance area routes only for `finance` and `owner`; approvers and employees never see bank data, and beneficiary account numbers are masked to the last four digits outside finance |
+| `auditor` | Read-only everywhere: reports and trails yes; build, execute, and purchase actions absent, not greyed |
+
+## Done means
+
+- Builder-executor separation on batches is server-enforced and covered by tests; no UI path around it.
+- A finance user goes from open queue to a correctly formatted bank file for 50 claims in under five minutes (our target, our derivation).
+- A return-file import flips claims to `paid`, attaches UTRs, and notifies employees with the date, in one action.
+- A failed instruction can be repaired and reissued as a new instruction without the claim re-entering approval or losing history.
+- Every list exports CSV; amount search handles exact values and ranges.
+- Pack purchase to `awaiting_credits` drain completes without a support ticket.
+
+## Sources
+
+- [Expensify reviews via JustUseApp: no search-by-amount](https://justuseapp.com/en/app/471713959/expensify-receipts-expenses/reviews) (review-mined, medium)
+- [Happay reviews on G2: missing MIS, processed vs failed counts](https://www.g2.com/products/happay/reviews) (review-mined, medium)
+- [GBTA: expense-report cost baseline ($58 to process, 19% error rate, $52 + 18 min per fix; 2015-vintage, still industry-cited)](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/) (industry body)
+- [Corpay relay of Webexpenses 2024: 43% say slow reimbursement hurts their work experience](https://www.corpay.com/resources/blog/employee-expense-reimbursement) (survey relay, medium)
+- [FieldAssist: 8+ day manual claim cycles in India](https://www.fieldassist.com/blog/what-is-expense-management-software-top-systems-india) (vendor marketing, directional)
+- [hrsoftwarehyderabad: up to 60% of T&E ITC lost](https://hrsoftwarehyderabad.com/expense-management-software/) (vendor marketing, directional)
+- [HDFC ENet bulk upload manual: file caps and columns](https://www.scribd.com/document/317956116/Upload-Manual-Bulk-Payments-040216) (bank manual via secondary, medium)
+- [Axis Bank PayPro bulk uploads: UTR-level status reports](https://www.axisbank.com/corporate/transaction-banking/cash-management-services/bulk-payment-uploads) (bank, high)
+- [RazorpayX Payouts: rails, ₹5 lakh per-transaction cap, 250 free payouts/month](https://razorpay.com/x/payouts/) (vendor)
+- [RBI (Regulation of Payment Aggregators) Directions, 2025](https://www.fidcindia.org.in/wp-content/uploads/2025/09/RBI-PAYMENT-AGGREGATORS-DIRECTIONS-15-09-25.pdf) (govt, primary)

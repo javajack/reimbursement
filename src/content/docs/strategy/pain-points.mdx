@@ -1,0 +1,103 @@
+---
+title: Verified Pain Points
+description: "The refreshed demand evidence: documented, cited, still-unresolved pains in paid expense software, ranked and mapped to pillars."
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+People already paying for expense software still suffer the same ten failures, and we can cite each one to a bug tracker, vendor KB, forum thread, or survey. The worst cluster is capture and OCR: incumbents emit confidently wrong amounts, coach users instead of fixing cameras, and take minutes to hours to read a bill. The rest is the approval black hole, the unanswered "when do I get paid?", resented pricing meters, India-specific GST gaps, and chronic mobile flakiness. This page ranks the evidence and maps every pain to the dossier page that answers it. It refreshes the v1 demand case in [the problem](/strategy/the-problem/) with 2023-2026 sources, and feeds directly into [the whitespace](/strategy/whitespace/).
+
+## The top 10, ranked
+
+Ranked by frequency across review corpora, app stores, vendor forums, and bug trackers, weighted by financial severity (wrong reimbursements, lost ITC, churn-driving billing) and persona breadth. "Incumbent status" is whether a competent buyer can escape the pain today by purchasing Zoho Expense, Expensify, Concur, Fyle/Sage, Happay, Rydoo, or ExpenseOnDemand.
+
+| # | Pain | Who feels it | Evidence | Incumbent status | Our pillar |
+|---|---|---|---|---|---|
+| 1 | Blurry receipt yields a confidently WRONG amount, no warning flag | Employee, finance | Expensify GitHub issue #45904 (Jul 2024, reproducible in production); community thread on wrong reimbursements <span class="pill pill--high">High</span> | Open bug; the spec inside the issue (red dot, amount 0.00) is the right pattern, unshipped | Honest OCR: low confidence never auto-fills `amount_paise`; [OCR and itemisation](/phase-1/capture/ocr-itemisation/) |
+| 2 | Device-dependent blur: months-long iPhone 15 regression | Employee | Apple Support thread (Oct 2023 to May 2024); users switched to Samsung work phones; Concur acknowledged, fix "planned" <span class="pill pill--high">High</span> | Shipped, acknowledged, slow-fixed | `quality_gate` blur detection with instant retake prompt; [camera](/phase-1/capture/camera/) |
+| 3 | Capture coaching instead of capture engineering | Employee | Expensify guidance: "flat, dark surface, hold steady"; Zoho KB lists wrinkled or faded receipts as user error; Emburse and Payhawk market edge-crop as a differentiator <span class="pill pill--med">Medium</span> | No big-7 core app ships document-scanner-grade capture | Edge detection, de-skew, auto-capture as the core flow; [camera](/phase-1/capture/camera/) |
+| 4 | OCR takes minutes to hours, breaking submit-at-point-of-spend | Employee | Expensify official FAQ: SmartScan takes "a few minutes to a few hours"; Zoho reviewers report about a minute per receipt and hangs <span class="pill pill--med">Medium</span> | Structural: async queues with no time bound or honest progress | Async with an explicit `Scanning` chip, never blocking the form; [OCR and itemisation](/phase-1/capture/ocr-itemisation/) |
+| 5 | Forced manual itemisation, the most hated data-entry task | Employee | Concur forum thread titled "This hotel itemization is a royal pain"; variable nightly rates force duplicate uploads <span class="pill pill--high">High</span> | Worst-in-class at Concur; nobody does line-item OCR well | OCR to LineItem rows, row-sheet editing, manual fallback; [manual entry](/phase-1/capture/manual-entry/) |
+| 6 | The approval black hole: stalled inboxes, no reasons, vanished reports, whole-report bounce | Employee, approver, finance | Fyle blog admits manager inbox is the #1 bottleneck; Happay G2: rejections "without any explanation"; Concur forum: rejected reports invisible to AP; Concur lacks manager bulk approval <span class="pill pill--high">High</span> | Partially solvable via config nobody enables; defaults are wrong | Default-on escalation, `sent_back` with required comment, line-level decisions, shared timeline; [approver experience](/phase-1/web/approver-experience/) |
+| 7 | "When do I get paid?" is unanswered in-product | Employee | Webexpenses 2024 (UK): 43% say slow reimbursement hurts work experience; ~9-day average claim processing <span class="pill pill--med">Medium</span> | Category-wide void; Spendesk markets visibility as a differentiator | Status timeline through `in_payout` to `paid` with expected date; [payouts](/phase-1/payouts/) |
+| 8 | Pricing resentment: per-user fees, scan meters, billing traps | Buyer, finance admin | Expensify: 25 free SmartScans/month then $0.20 each; Zoho free tier: 20 autoscans; Trustpilot: cancellation traps, phantom-seat billing <span class="pill pill--high">High</span> | Structural at incumbents; revenue depends on it | Unlimited seats, metered submissions, soft paywall that queues in `awaiting_credits`; [pricing](/strategy/pricing/) |
+| 9 | India gaps: ITC-grade capture, Indic OCR, Tally, MIS | Finance admin | Zoho autoscan supports 15 languages, zero Indic; vendor claim of up to 60% T&E ITC lost (directional); no clean Tally JV export; no search-by-amount in Expensify, no MIS in Happay <span class="pill pill--med">Medium</span> | Whitespace; India challengers compete on exactly this | GSTIN validation, CGST/SGST/IGST split, ITC_ELIGIBLE rule, Tally JV export; [finance console](/phase-1/web/finance-console/) |
+| 10 | Mobile reliability: OTP loops, upload errors, lost drafts | Employee (field-heavy) | Happay Play Store: OTP rejects valid numbers; Concur users hit server errors on submit; a Smart Receipts user lost months of receipts to sync <span class="pill pill--med">Medium</span> | Chronic across India and global incumbents | Offline-first outbox, idempotent uploads, magic-link auth; [capture pipeline](/spec/capture-pipeline/) |
+
+<p class="source-note">Sources: GitHub, Apple Support Communities, Zoho KB, Concur Community, Fyle blog, G2/Capterra/Trustpilot/JustUseApp via search snippets, Corpay-relayed Webexpenses survey. Ranking is our synthesis.</p>
+
+## The capture cluster is the headline
+
+Pains 1 through 5 are one story: the industry treats capture quality as the user's problem and OCR as best-effort magic. Expensify's own bug tracker specifies the safe behavior (flag low confidence, show 0.00) and ships the unsafe one (a plausible wrong number an employee gets reimbursed against). Concur's answer to a hardware regression was months of "fix planned" while users changed phones. The official Expensify advice is lighting and hand-steadiness, which is coaching, not software.
+
+Meanwhile Emburse markets "smart border cropping" and Payhawk markets an "AI Camera" precisely because no big-7 core app does it. That is the demand signal for our capture ladder: file-input as the universal primary path, the enhanced viewfinder with `frame_analysis` and `quality_gate` as Android-first progressive enhancement, and server-side `crop_correct`. The trust claim that falls out is "never silently wrong": confidence-flagged fields, mandatory confirmation of merchant, date, and total, and a one-tap manual LineItem fallback when extraction fails (the image stays attached as evidence, and a failed extraction never costs an extra credit).
+
+:::tip[The wedge in one demo]
+Scan a crumpled fuel bill live. Edge detection finds it, the `quality_gate` rejects the blurry first attempt with a retake prompt, extraction lands in seconds with doubtful fields flagged, and the employee confirms three fields. Every incumbent failure above is a cheap, demo-able contrast. The full flow is specified in [camera](/phase-1/capture/camera/) and the [capture pipeline spec](/spec/capture-pipeline/).
+:::
+
+## Approvals and the payment void
+
+Pain 6 is the admitted bottleneck of the category: Fyle's own practitioner blog names the manager inbox as the #1 delay, and the fixes incumbents offer (reminder emails, escalation) ship off by default and admin-configured. The downstream insults compound it: rejections arrive with no reason, a rejected report disappears from AP's view until resubmission so finance cannot even answer questions about it, and one bad line bounces the whole report into the GBTA correction loop. Our answer ships defaults, not options: SLA timers with auto-escalation on, `sent_back` requires a comment, decisions are line-level (`approved`, `capped`, `rejected`) so one flagged LineItem never bounces a Claim, resubmission after `sent_back` is free, and the status timeline is shared across employee, approver, and finance. See [the approval engine](/phase-1/web/approval-engine/).
+
+Pain 7 is the cheapest retention feature in the category. 43% of UK employees say slow reimbursement hurts their experience at work (Webexpenses 2024, relayed by Corpay, medium confidence), against a ~9-day average processing cycle; Indian vendor marketing claims 8+ day manual cycles, directionally consistent with Happay Play Store complaints about money withdrawn but not disbursed. No incumbent answers the question inside the product. We answer it structurally: the Claim timeline runs `submitted` through `in_payout` to `paid`, and the bank-file export event ("included in the file generated on this date") is the visible paid-proxy even on the pure-file payout path.
+
+## Pricing as a documented grievance
+
+Pain 8 is not abstract positioning, it is Expensify's loudest negative theme: Trustpilot reviews describe being billed for phantom users for years, annual-plan lock-in, and a platform "designed to be confusing." The free tier's 25 SmartScans per month (account-wide, then $0.20 per scan) is reportedly exhausted within two weeks of normal business use; Zoho's free plan caps at 20 autoscans and 3 users; Play Store reviewers additionally report autoscan being pulled from the free app without notice (snippet-mediated, may reflect a later change). This is the direct validation of our model: unlimited users and approvers on every plan including `Free`, the submission as the only meter, and a soft paywall where capture continues, submissions queue in `awaiting_credits`, and nothing is ever lost or silently dropped. The ladder and arithmetic live in [pricing](/strategy/pricing/) and the mechanics in [credits and metering](/phase-1/credits-and-metering/).
+
+## The India gaps are the moat
+
+Pain 9 has a primary-source anchor: Zoho's own KB lists its 15 autoscan languages verbatim, and not one is Indic, while Google Cloud Vision has 9 GA Indic languages. Regional-language fuel, food, and local-travel bills therefore fall back to manual entry in the India market leader's budget product. On the finance side, ITC requires the employer's name and GSTIN on the supplier invoice, which casual employee receipts lack; one Hyderabad vendor pegs up to 60% of T&E ITC as lost, a marketing number we carry as directional only. Add the absence of a clean Tally JV export, no search-by-amount in Expensify, and missing MIS in Happay, and the finance-admin buyer's complaints are concrete and unaddressed. Our response: GSTIN format validation (Luhn-mod-36) at capture, per-line CGST/SGST/IGST split, the ITC_ELIGIBLE rule tagging eligible versus Sec 17(5)-blocked lines for finance, and Tally JV export plus search-by-amount and processed/failed/pending MIS treated as launch-blocking, not roadmap. Details in [integrations](/spec/integrations/) and [policy and rules](/phase-1/onboarding/policy-and-rules/).
+
+## What every loop costs
+
+The industry-cited cost baseline, labelled honestly: a 2015 GBTA Foundation/HRS study still quoted by 2024-2026 sources puts processing at about $58 and 20 minutes per expense report, finds 19% of reports contain errors, and prices each fix at about $52 and 18 more minutes. Dated, but it remains the only widely cited baseline, and it is the quantitative case for first-pass-correct capture: every pain above either creates a correction loop or is one. A 2024 Rho survey (~500 mid-market employees) adds texture: roughly 75% spend over 15 minutes per report and only 29% have automation access.
+
+<p class="source-note">Source: GBTA Foundation/HRS (2015 study, industry-cited through 2026); Rho 2024 survey (vendor-published). Medium confidence on currency, high on direction.</p>
+
+## How good is this evidence?
+
+Honest grading, because this page is the demand foundation under [the verdict](/strategy/verdict/).
+
+:::caution[Read the provenance before the number]
+G2, Capterra, Trustpilot, JustUseApp, and Play Store pages bot-block direct fetching; most review quotes here arrived via search-result snippets, so verbatim phrasing carries paraphrase risk and should be re-verified before appearing in published marketing copy. Reddit was effectively un-minable, so practitioner-forum voice is under-sampled. The India quantitative claims (60% ITC loss, 8+ day cycles) are vendor marketing, directional only. JustUseApp safety scores are NLP composites, not editorial ratings.
+:::
+
+Two further caveats. First, complaint mining over-samples angry users: these products hold broadly positive store ratings, so the pains are wedges, not proof that incumbents fail their customers wholesale. Second, incumbents are moving: Expensify's open-source repo shows active fixes to the exact bugs cited, Fyle is being absorbed into Sage, and Zoho iterates its autoscan limits. "Unsolved" is a statement about mid-2026 that must be re-checked at build time. What does not move quickly is the structural stuff: per-user pricing, scan meters, and coaching-instead-of-capture are business-model and architecture choices, and those are where [the competitor analysis](/strategy/competitors/) shows the durable openings.
+
+## Where each pain gets solved
+
+The connective tissue: every ranked pain has exactly one home in this dossier where the fix is specified to build depth.
+
+| Pain | Solved in |
+|---|---|
+| 1. Wrong-amount OCR | [OCR and itemisation](/phase-1/capture/ocr-itemisation/): confidence routing, mandatory trio confirmation |
+| 2-3. Blur and coaching | [Camera](/phase-1/capture/camera/) and the [capture pipeline](/spec/capture-pipeline/): `frame_analysis`, `quality_gate`, `crop_correct` |
+| 4. Slow OCR | [OCR and itemisation](/phase-1/capture/ocr-itemisation/): async honesty, notify-on-complete |
+| 5. Forced itemisation | [Manual entry](/phase-1/capture/manual-entry/): LineItem row-sheet, smart defaults |
+| 6. Approval black hole | [Approver experience](/phase-1/web/approver-experience/) and [approval engine](/phase-1/web/approval-engine/): escalation defaults, line-level outcomes |
+| 7. Payment void | [Payouts](/phase-1/payouts/) and [submit and track](/phase-1/capture/submit-and-track/): the visible timeline |
+| 8. Pricing resentment | [Pricing](/strategy/pricing/) and [credits and metering](/phase-1/credits-and-metering/): the soft paywall |
+| 9. India gaps | [Policy and rules](/phase-1/onboarding/policy-and-rules/), [finance console](/phase-1/web/finance-console/), [integrations](/spec/integrations/) |
+| 10. Mobile reliability | [Capture pipeline](/spec/capture-pipeline/): offline outbox, idempotency, magic-link auth |
+
+Verdict on the demand evidence: <span class="pill pill--build">Conditional Build</span> against pains 1-8, with High confidence on 1, 2, 5, 6, and 8 and Medium on 3, 4, and 7 (per the table above), and against pain 9 with Medium confidence on magnitude but high confidence on direction. Next, [the whitespace](/strategy/whitespace/) turns this list into the positioning, and [pricing](/strategy/pricing/) turns pain 8 into the business model.
+
+<CardGrid>
+  <LinkCard title="Whitespace" description="Where these pains compound into a position incumbents cannot copy cheaply." href="/strategy/whitespace/" />
+  <LinkCard title="Camera" description="The capture flow that retires pains 1 through 3, specified screen by screen." href="/phase-1/capture/camera/" />
+</CardGrid>
+
+## Sources
+
+- [Expensify/App GitHub issue #45904: blurry receipt shows random amount](https://github.com/Expensify/App/issues/45904) (primary, fetched directly)
+- [Apple Support Communities: blurry expense receipts on SAP Concur, iPhone 15](https://discussions.apple.com/thread/255243765) (primary, fetched directly)
+- [SAP Concur Community: hotel itemization "royal pain" thread](https://community.concur.com/t5/Concur-Expense-Forum/This-hotel-itemization-is-a-royal-pain-in/m-p/37320) (via search snippets)
+- [Zoho Expense KB: when does auto scanning fail (language list verbatim)](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/) (primary vendor source, fetched directly)
+- [Expensify Community FAQ: why is SmartScan taking a long time](https://community.expensify.com/discussion/4715/faq-why-is-smartscan-taking-a-long-time) (official statement; forum frozen Jul 2024, archive before citing)
+- [Fyle blog: expense approval bottlenecks](https://www.fylehq.com/blog/expense-approval-bottlenecks) (practitioner source)
+- [Corpay: employee expense reimbursement guide, Webexpenses 43% stat](https://www.corpay.com/resources/blog/employee-expense-reimbursement) (secondary relay of 2024 survey)
+- [SaaSPricePulse: Expensify true cost, SmartScan limits and fees](https://www.saaspricepulse.com/tools/expensify) (aggregator)
+- [Trustpilot: Expensify reviews, billing complaints](https://www.trustpilot.com/review/www.expensify.com) (via search snippets)
+- [GBTA: how much do expense reports really cost a company](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/) (2015 study, industry-cited baseline)

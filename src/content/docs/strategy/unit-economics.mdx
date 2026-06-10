@@ -1,0 +1,136 @@
+---
+title: Unit Economics
+description: "COGS per submission, margins per pack, free-tier exposure, and the path to default-alive on credit revenue."
+---
+
+import { LinkCard } from '@astrojs/starlight/components';
+
+A credit sells for ₹5.00-9.98 and costs ₹1.0-2.5 to serve, so every rung of the ladder in [Pricing](/strategy/pricing/) clears 50% gross margin at the ₹2.5 worst-case COGS and 70-85% on the midline; the ₹3.1 stress bound takes Enterprise to 38% gross, which is why the ₹4 floor exists. The model is default-alive at double-digit paying-company counts on infrastructure alone; the real survival line is team cost, and the only acquisition motion the contribution math permits is self-serve. This page shows the arithmetic, every assumption labelled, with the frequency caveat carried honestly: per-employee submission volume (2-6/month) is an unbenchmarked estimate <span class="pill pill--low">Low</span>.
+
+## What one submission costs
+
+One credit covers OCR on up to 5 receipt images, storage, the full approval workflow, payout-file generation, and exports. The stack below prices the average claim at ~2.5 receipt pages (the capacity assumption in [Non-functionals](/spec/non-functionals/)).
+
+| Cost line | Per submission | Basis | Provenance |
+| --- | --- | --- | --- |
+| OCR, LLM-vision path (default) | ₹0.5-2.0 | 2.5 pages × ₹0.2-0.8/page; Gemini Flash class lands at USD 0.0005-0.003/doc | Vendor token pricing + our derivation <span class="pill pill--med">Medium</span> |
+| OCR, Document AI Expense Parser (fallback) | ≈ ₹2.13 | 2.5 pages × ≈ ₹0.85/page ($0.10 per 10 pages at ₹85/USD) | Vendor <span class="pill pill--high">High</span> for the price itself |
+| Object storage (originals + corrected copies) | under ₹0.05 | 200-500 KB/page compressed, S3-class, amortised over retention | THESIS canon, our derivation |
+| Compute, Postgres, bandwidth | ₹0.2-0.5 | Queue workers, RLS queries, exports | THESIS canon, our derivation |
+| Notifications | ₹0.1-0.4 | WhatsApp utility template ₹0.115-0.145 + 18% GST per nudge where enabled; email ≈ ₹0.13 at the Postmark ceiling; ~1 nudge + 2 digest emails per claim | Vendor rate cards <span class="pill pill--med">Medium</span>, re-verify at build |
+| Support, amortised | ₹0.1-0.3 | Step cost, not per-unit: founder time below ~300 companies (₹0 cash), part-time support amortised at the 1,000-company scenario | Our guess <span class="pill pill--low">Low</span> |
+| **Total** | **₹1.0-2.5 canon (₹2.5 worst case); ₹3.1 stress bound** | Midline holds on LLM-vision; Document-AI-everywhere breaches the top | THESIS canon + non-functionals envelope |
+
+<p class="source-note">Sources: Google Document AI pricing, Gemini API pricing, Meta/BSP WhatsApp rate cards, Postmark (vendor); composition is our derivation. The ₹3.1 stress bound is the all-in upper bound from the cost envelope in /spec/non-functionals/.</p>
+
+OCR is the swing line, which is why the extractor sits behind a provider-agnostic interface (argued in [Architecture](/spec/architecture/)): LLM-vision at ₹0.2-0.8/page is the default, the ₹0.85/page dedicated parser is the quality fallback, and the v1 finding stands that LLM-vision beats dedicated parsers (≈₹670-840 per 1,000 docs) by roughly 3-20x while handling thermal paper and Devanagari better <span class="pill pill--med">Medium</span> (vendor pricing, vendor accuracy claims).
+
+Payouts cost us approximately nothing on the default path: the bank bulk-payment file is generated software, executed by the customer in their own net-banking. The optional payout-API path (₹1.75-5/txn, vendor indicative) is per-customer and priced into those deals, never into the base credit. Funds never touch our books; see [Money movement](/compliance/money-movement/).
+
+## Margin per pack
+
+Gross margin per credit at each rung, computed at COGS midline ₹1.5 and worst case ₹2.5 (our derivation from the table above).
+
+| Pack | Price (ex-GST) | Credits | Effective ₹/credit | GM at ₹1.5 COGS | GM at ₹2.5 COGS |
+| --- | --- | --- | --- | --- | --- |
+| Top-up | ₹499 | 50 | ₹9.98 | 85% | 75% |
+| Starter | ₹1,999 | 250 | ₹8.00 | 81% | 69% |
+| Growth | ₹6,999 | 1,000 | ₹7.00 | 79% | 64% |
+| Scale | ₹24,999 | 4,500 | ₹5.56 | 73% | 55% |
+| Enterprise | ₹74,999 | 15,000 | ₹5.00 | 70% | 50% |
+
+<p class="source-note">Ladder is canonical from THESIS-V2; margins are our derivation. Consistent with the canon summary: 67-75% gross at ₹5/credit, 80-90% at ₹8-10.</p>
+
+:::tip[The ₹4 floor]
+Never price below ₹4/credit, even in enterprise deals. At the ₹2.5 COGS top that still preserves 37.5% gross, and it keeps headroom for Phase 2 payout-API costs. Discounts come as bonus credits, not lower unit prices: bonus credits protect rate integrity.
+:::
+
+GST runs 18% on top of all prices; quoted figures are ex-GST, and our own vendor GST is a real cash cost partially recoverable as ITC. Prepaid packs create deferred revenue and breakage accounting that needs CA signoff before launch (carried caveat from the pricing research).
+
+## Free-tier exposure
+
+Free forever means unlimited seats plus 20 submissions per company per month. The worst case is bounded by construction:
+
+| Variable | Worst case | Bound |
+| --- | --- | --- |
+| Per free company per month | 20 × ₹1.0-2.5 = ₹20-50 | The 20-credit monthly grant, no rollover |
+| 1,000 free companies | ₹20,000-50,000/month | Linear; assumes every company burns all 20, which pilots never do |
+| Pre-submission scans | Free but capped | max(20, 3 × remaining credits) scans/month per company |
+| Image stuffing | Bounded | 5 images per claim inside 1 credit; +1 credit per additional 5 (the DocuSign envelope-stuffing guard) |
+| Idle seats | ≈ ₹0 | A user who never submits is a row in Postgres and nothing else; this is why unlimited seats is a free promise to make |
+
+Mechanics of the cap and the soft paywall (claims in `awaiting_credits`, receipts in `queued`, the one-tap admin nudge) live in [Credits and metering](/phase-1/credits-and-metering/). The exposure that matters is the ratio of free companies to paying ones, which is the conversion sensitivity below.
+
+## Verification costs
+
+Penny-drop verification of each BeneficiaryAccount costs ≈ ₹3 per successful check plus 18% GST (Setu published price, <span class="pill pill--high">High</span>; Cashfree corroborates). It is one-time per beneficiary, sits inside onboarding, and amortises to noise: a 25-employee company costs ≈ ₹75 once, against ₹700/month of Growth-rung revenue. PAN/GSTIN verification of vendors (₹1-3 indicative) is Phase 2 and stays out of Phase 1 COGS entirely.
+
+## Payback by channel
+
+Contribution per paying company depends on burn. Scenarios at COGS midline ₹1.5/credit, our derivation, frequency-caveated <span class="pill pill--low">Low</span>:
+
+| Scenario | Submissions/month | Pack mix | Revenue/month | Contribution/month |
+| --- | --- | --- | --- | --- |
+| 20-person agency | 60 | Starter (₹8.00) | ₹480 | ≈ ₹390 |
+| 25-person SMB (the sales-math anchor) | 100 | Growth (₹7.00) | ₹700 | ≈ ₹550 |
+| 60-person field-sales company | 240 | Growth (₹7.00) | ₹1,680 | ≈ ₹1,320 |
+
+Against the v1 CAC benchmarks (upGrowth, single consultancy calibrated to ₹10-30 Cr ARR firms, <span class="pill pill--low">Low</span>; use the channel ranking, not the digits):
+
+| Channel | CAC (v1, low confidence) | Payback at ₹550/month contribution |
+| --- | --- | --- |
+| PLG / self-serve | ₹500-1,500 | 1-3 months |
+| Content / SEO | ₹40K-80K | 73-145 months: does not pay back at this ACV unless one asset acquires many companies |
+| Partnerships / channel | ₹50K-1.5L | Never at flat CAC; the CA/Tally-reseller channel must be revenue-share per company instead |
+| Outbound / SDR | ₹2L-4L | Never |
+
+<p class="source-note">CAC: upGrowth and productgrowth.in via the v1 research (analyst/blog, low confidence). Contribution: our derivation. The benchmarks were calibrated to ₹4-8L ACVs; our ACV is roughly a tenth of that, which is exactly why only self-serve survives the division.</p>
+
+The conclusion is a GTM decision, not a pricing one: self-serve onboarding (first claim in 15 minutes, no consultant) is the acquisition engine, with channel partners on revenue share. That motion is specified in [Go-to-market](/strategy/gtm/).
+
+## Default-alive arithmetic
+
+The cost envelope in [Non-functionals](/spec/non-functionals/) prices 100 companies at ≈ ₹19,000-49,000/month all-in and notes that below roughly 300 paying companies the fixed floor dominates. Read as a fixed base: managed Postgres, two always-on containers, object storage, observability, and the status page come to ≈ ₹30,000-50,000/month <span class="pill pill--low">Low</span> (our derivation, consistent with that envelope). Companies needed to cover a ₹40,000 base, at 100 submissions/company/month:
+
+| Rung | Contribution/company/month | Companies to cover ₹40,000 infra |
+| --- | --- | --- |
+| Top-up (₹9.98) | ≈ ₹848 | 47 |
+| Starter (₹8.00) | ≈ ₹650 | 62 |
+| Growth (₹7.00) | ≈ ₹550 | 73 |
+| Scale (₹5.56) | ≈ ₹406 | 99 |
+| Enterprise (₹5.00) | ≈ ₹350 | 115 |
+
+The honest survival number: roughly 60-100 paying companies at observed pack mix keeps the infrastructure alive. People are the real line. Every ₹1 lakh/month of team cost requires ≈ 180 additional Growth-rung companies (₹1,00,000 ÷ ₹550, our arithmetic). A two-person team drawing modest salaries needs a few hundred paying companies, which is the scale the [Verdict](/strategy/verdict/) treats as the Phase 1 success bar.
+
+:::note[Default-alive, defined]
+Default-alive here means variable margin covers fixed cash burn with no new funding. Credits are prepaid, so revenue is collected before the COGS it funds is incurred: working capital runs negative in our favour, the structural advantage of the recharge model.
+:::
+
+## Sensitivity
+
+Three shocks, what they do, and what holds the line. Our derivation throughout.
+
+| Shock | Effect | Margin at Growth (₹7.00) | What holds |
+| --- | --- | --- | --- |
+| OCR cost ×2 | COGS rises to ≈ ₹1.5-4.6/submission | 34-79%; the ₹4 enterprise floor breaks in the worst case | Provider-agnostic `OCRProvider`: fall back to Enterprise OCR (≈ ₹0.13/page) plus a text-only LLM pass; reprice Enterprise deals at the next renewal |
+| Frequency halves (2/employee/month) | The 25-person anchor drops to 50 subs/month; contribution falls to ≈ ₹275; payback doubles | Unchanged per credit | Margin per credit is untouched; the damage is to ACV and payback. The 20/month free grant then covers a 10-person company forever, so the free tier shrinks (this is the carried pack-sizing caveat: validate frequency with design partners before locking the ladder) |
+| Conversion 2% instead of 5% | Free subsidy per payer: 49 free companies × ₹20-50 worst case = ₹980-2,450/month, versus ₹380-950 at 5% | Wiped out at full free-tier burn | Worst case assumes every free company maxes 20 credits every month, which observed pilots will not do; the fair-use caps, the burn alerts, and the employee nudge loop exist precisely to push conversion above this line. If real conversion sits at 2% with high free burn, cut the grant before cutting prices |
+
+:::caution[The two numbers to watch from week one]
+Track realised COGS per submission (target inside ₹1.0-2.5) and free-to-paid company conversion (target 5%+). Everything else in this page is derivable from those two plus the pack mix. If either drifts for two consecutive months, the response is a ladder change, not a discount.
+:::
+
+The economics close because three v1 decisions carried into v2: no float and no cards (nothing to subsidise, nothing regulated; see [Money movement](/compliance/money-movement/)), LLM-vision OCR as the default extractor, and payout by bank file rather than per-transaction rails. Break any one and a ₹5-10 credit has nothing to absorb the leak.
+
+<LinkCard title="Verdict" description="What these numbers mean for the build decision and the Phase 1 success bar." href="/strategy/verdict/" />
+
+## Sources
+
+- [Google Cloud Document AI pricing](https://cloud.google.com/document-ai/pricing) (vendor): Expense Parser $0.10 per 10 pages, the ₹0.85/page fallback-OCR anchor; Enterprise OCR $1.50/1k pages.
+- [Gemini Developer API pricing](https://ai.google.dev/gemini-api/docs/pricing) (vendor): Flash/Flash-Lite token pricing behind the USD 0.0005-0.003/doc LLM-vision estimate.
+- [AWS Textract pricing](https://aws.amazon.com/textract/pricing/) (vendor): AnalyzeExpense at $8-10 per 1,000 docs, the dedicated-parser cost LLM-vision undercuts.
+- [Setu bank account verification](https://setu.co/data/kyc/bank-account-verification/) (vendor): ≈ ₹3 per successful penny-drop, the firm public anchor for beneficiary verification.
+- [Zoho Expense India pricing](https://www.zoho.com/in/expense/pricing/) (vendor): ₹99/user/month Standard, min 5 users, 20 autoscans/user; the per-seat anchor in the sales arithmetic.
+- [Meta WhatsApp Business Platform pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing) (vendor): per-message billing since Jul 1, 2025; utility ₹0.115-0.145 via India BSP rate cards.
+- [Postmark pricing](https://postmarkapp.com/pricing) (vendor): $15 per 10,000 emails, the transactional-email cost ceiling.
+- [upGrowth CAC benchmarks for Indian B2B SaaS](https://upgrowth.in/cac-benchmarks-indian-b2b-saas-arr-band-2026/) (analyst, low confidence): the channel-CAC figures, calibrated to ₹10-30 Cr ARR firms; use the ranking, not the digits.

@@ -27,6 +27,23 @@ function rehypeBasePaths() {
 				if (fix(node.properties[attr])) node.properties[attr] = BASE + node.properties[attr];
 			}
 		}
+		// MDX component usage (e.g. <LinkCard href="/spec/api/">) and raw JSX <a href>
+		// arrive as mdxJsxFlowElement / mdxJsxTextElement with an attributes array.
+		if (
+			(node.type === 'mdxJsxFlowElement' || node.type === 'mdxJsxTextElement') &&
+			Array.isArray(node.attributes)
+		) {
+			for (const attr of node.attributes) {
+				if (
+					attr &&
+					attr.type === 'mdxJsxAttribute' &&
+					(attr.name === 'href' || attr.name === 'src') &&
+					fix(attr.value)
+				) {
+					attr.value = BASE + attr.value;
+				}
+			}
+		}
 		if (Array.isArray(node.children)) node.children.forEach(walk);
 	};
 	return (tree) => walk(tree);
@@ -47,7 +64,7 @@ export default defineConfig({
 			logo: { src: './src/assets/mark.svg', alt: 'Kharcha' },
 			favicon: '/favicon.svg',
 			description:
-				'A research-backed build dossier for an India-first employee & vendor expense-reimbursement SaaS.',
+				'A research-backed product and build dossier for a pure-software, employee-first expense-reimbursement SaaS for India.',
 			customCss: ['./src/styles/custom.css'],
 			components: {
 				ThemeSelect: './src/components/ThemeSelect.astro',
@@ -63,64 +80,98 @@ export default defineConfig({
 					label: 'Start Here',
 					items: [
 						{ label: 'Overview', link: '/' },
-						{ slug: 'overview/executive-summary' },
-						{ slug: 'overview/the-problem' },
+						{ slug: 'start/vision-and-scope' },
+						{ slug: 'start/how-to-read' },
 					],
 				},
 				{
-					label: 'Market & Opportunity',
+					label: 'Phase 1 · Employee Reimbursement',
 					items: [
-						{ slug: 'market/size' },
-						{ slug: 'market/competitors-india' },
-						{ slug: 'market/competitors-global' },
-						{ slug: 'market/pain-points' },
-						{ slug: 'market/whitespace' },
+						{ slug: 'phase-1/overview' },
+						{ slug: 'phase-1/personas-and-journeys' },
+						{ slug: 'phase-1/end-to-end-flow' },
+						{
+							label: 'Capture',
+							items: [
+								{ slug: 'phase-1/capture/camera' },
+								{ slug: 'phase-1/capture/ocr-itemisation' },
+								{ slug: 'phase-1/capture/manual-entry' },
+								{ slug: 'phase-1/capture/submit-and-track' },
+							],
+						},
+						{
+							label: 'The Web App',
+							items: [
+								{ slug: 'phase-1/web/employee-portal' },
+								{ slug: 'phase-1/web/approver-experience' },
+								{ slug: 'phase-1/web/approval-engine' },
+								{ slug: 'phase-1/web/finance-console' },
+							],
+						},
+						{
+							label: 'Onboarding & Config',
+							items: [
+								{ slug: 'phase-1/onboarding/company-onboarding' },
+								{ slug: 'phase-1/onboarding/configuration-model' },
+								{ slug: 'phase-1/onboarding/policy-and-rules' },
+							],
+						},
+						{ slug: 'phase-1/credits-and-metering' },
+						{ slug: 'phase-1/payouts' },
+						{ slug: 'phase-1/edge-cases' },
+						{ slug: 'phase-1/ops-runbooks' },
 					],
 				},
 				{
-					label: 'Users & Buyers',
-					items: [{ slug: 'users/personas' }, { slug: 'users/buyers-icp' }],
-				},
-				{
-					label: 'Product',
+					label: 'Engineering Spec',
 					items: [
-						{ slug: 'product/workflow' },
-						{ slug: 'product/maker-checker' },
-						{ slug: 'product/rule-engine' },
-						{ slug: 'product/non-reimbursables' },
-						{ slug: 'product/ocr' },
-						{ slug: 'product/onboarding-kyc' },
-						{ slug: 'product/payouts' },
-						{ slug: 'product/edge-cases' },
-						{ slug: 'product/mvp-scope' },
+						{ slug: 'spec/architecture' },
+						{ slug: 'spec/capture-pipeline' },
+						{ slug: 'spec/data-model' },
+						{ slug: 'spec/api' },
+						{ slug: 'spec/state-machines' },
+						{ slug: 'spec/config-schema' },
+						{ slug: 'spec/rule-schema' },
+						{ slug: 'spec/integrations' },
+						{ slug: 'spec/security-and-compliance' },
+						{ slug: 'spec/non-functionals' },
 					],
 				},
 				{
-					label: 'Compliance & Risk',
+					label: 'Phase 2 · Vendors',
+					items: [
+						{ slug: 'phase-2/overview' },
+						{ slug: 'phase-2/vendor-onboarding' },
+						{ slug: 'phase-2/vendor-tax-engine' },
+						{ slug: 'phase-2/payouts-and-ap' },
+					],
+				},
+				{
+					label: 'Compliance',
 					items: [
 						{ slug: 'compliance/regulatory-map' },
 						{ slug: 'compliance/money-movement' },
 						{ slug: 'compliance/data-protection' },
-						{ slug: 'compliance/audit-retention' },
+						{ slug: 'compliance/audit-and-retention' },
 					],
 				},
 				{
-					label: 'Business',
+					label: 'Strategy',
 					items: [
-						{ slug: 'business/pricing' },
-						{ slug: 'business/freemium' },
-						{ slug: 'business/gtm' },
-						{ slug: 'business/unit-economics' },
-						{ slug: 'business/integrations' },
-						{ slug: 'business/roadmap' },
-						{ slug: 'business/risks' },
-						{ slug: 'business/verdict' },
+						{ slug: 'strategy/the-problem' },
+						{ slug: 'strategy/market' },
+						{ slug: 'strategy/competitors' },
+						{ slug: 'strategy/pain-points' },
+						{ slug: 'strategy/whitespace' },
+						{ slug: 'strategy/pricing' },
+						{ slug: 'strategy/gtm' },
+						{ slug: 'strategy/unit-economics' },
+						{ slug: 'strategy/verdict' },
 					],
 				},
 				{
 					label: 'Reference',
 					items: [
-						{ slug: 'reference/rule-schema' },
 						{ slug: 'reference/bank-files' },
 						{ slug: 'reference/glossary' },
 						{ slug: 'reference/sources' },

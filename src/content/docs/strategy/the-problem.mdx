@@ -1,0 +1,106 @@
+---
+title: The Problem
+description: "The employee-reimbursement job, the two-sided pain, and why it is still unsolved by software people already pay for."
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Reimbursement hurts on both sides of the ledger: the employee floats personal money and waits, finance burns hours and leaks GST. v1 of this dossier established that the pain is real. v2 starts from a sharper finding: most target companies already pay for expense software, and the pain survives anyway, in documented, reproducible failure classes. That residue, not greenfield absence, is the market. This page states the job, the two-sided baseline, and the six unresolved failures the rest of the dossier is built to kill.
+
+## The job, in four concrete scenes
+
+Anchor on what actually happens before any feature list. Phase 1 serves exactly these moments; they differ by who pays, who approves, and what the tax engine must do with the bill.
+
+| Scene | Who paid | What the moment demands |
+| --- | --- | --- |
+| Field travel, city to city | A sales or service field agent covering fuel, autos, and chai daily | Capture at the point of spend on a mid-range Android, offline-tolerant upload, payout fast enough that next week's travel is not self-financed |
+| Team lunch | A team lead covering one bill for six people | One Claim, one Receipt, line-item attribution; GST captured per line; food and beverages usually blocked ITC under Sec 17(5) |
+| Client event spend | A salesperson hosting at a customer event | A mixed bill where some lines are reimbursable and some are not; per-line policy caps; clean evidence for finance |
+| Conference tickets on a personal card | A developer who put ₹38,000 on a personal card | A claim that ends in a payout, not a card reconciliation; receipt plus business purpose; an honest answer to "when do I get paid?" |
+
+<p class="source-note">Source: synthesized from the v1 personas and edge-case research, re-scoped to Phase 1 (our synthesis, medium confidence).</p>
+
+Vendor reimbursement (a vendor invoicing reimbursable costs, with TDS sections and RCM in play) is a different tax object and a different product surface. v1 mixed it into the core flow; v2 deliberately defers it to [Phase 2](/phase-2/overview/). Phase 1 is the employee job, end to end, done properly.
+
+:::note[Why line items are non-negotiable]
+A restaurant, hotel, or event bill routinely mixes reimbursable with non-reimbursable lines, and GST-eligible with blocked-ITC lines. Header-level modelling cannot express that, which is why a Claim decomposes into LineItem records, each carrying its own category, tax split, ITC eligibility, and `approved_amount_paise`. The team lunch above is the canonical case.
+:::
+
+## Side one: the employee floats personal money
+
+The employee has already paid the merchant; every further day is an interest-free loan they did not agree to give. Indian vendor literature puts manual cycles at 30 to 45 days, and the v2 evidence adds something worse: even inside deployed software, "when do I get paid?" has no in-product answer, category-wide. Status opacity generates HR and finance inquiry load, and for field teams paying daily travel out of pocket it reads as a reason to quit.
+
+| Signal | Figure | Provenance |
+| --- | --- | --- |
+| Manual reimbursement cycle, India | 30 to 45 days | OneFinOps (vendor blog, directional) |
+| Average claim-processing cycle | ~9 days; Indian vendor marketing claims 8+ days manual vs under 48 hours automated | Vendor blogs via v2 approval research (Medius/Teampay relay, medium); FieldAssist (vendor, low) |
+| Employees saying slow reimbursement hurts their experience of work | 43% | Webexpenses UK survey 2024, relayed by Corpay (medium; UK sample, directional for India) |
+| Payout ETA shown in-product | Absent across the category; Happay Play Store reviewers report money "withdrawn but not disbursed" | Review and forum mining (medium) |
+
+<p class="source-note">Sources: OneFinOps, FieldAssist, Corpay/Webexpenses, Happay Play Store listing. Vendor-sourced figures are directional, not audited.</p>
+
+## Side two: finance pays in hours and leaked GST
+
+The standard cost baseline is GBTA/HRS: about $58 and 20 minutes to process one expense report, 19% of reports contain errors, and each fix costs another $52 and 18 minutes. The study is 2015-vintage and still the figure the industry cites in 2024-2026 sources; treat it as a dated but load-bearing anchor, not fresh data.
+
+The India-specific load is GST. Input tax credit needs a supplier tax invoice carrying the company's name and GSTIN, which a casual employee receipt lacks by default; Sec 17(5) blocks ITC on food and beverages, outdoor catering, rent-a-cab, and club or fitness spend; and ITC for a financial year must be claimed by 30 November of the following year. One vendor pegs T&E ITC loss at up to 60%. That is marketing, but the mechanism is statute, and the leak is real paise.
+
+| Signal | Figure | Provenance |
+| --- | --- | --- |
+| Cost to process one expense report | ~$58 and about 20 minutes | GBTA/HRS study (2015-vintage, still industry-cited) |
+| Reports containing errors | 19%; each fix costs another $52 and 18 minutes | GBTA/HRS (2015-vintage) |
+| Finance hours on expenses, mid-size India | 40 to 60 hours/month chasing receipts and reconciling | OneFinOps (vendor blog, soft) |
+| T&E ITC lost without GST-grade capture | Up to 60%; example ₹21.6 lakh/year lost on ₹2 crore spend at 18% GST | hrsoftwarehyderabad (vendor marketing, directional only) |
+| Month-end overrun when ~10% of claims have unclear documents | 2 to 3 weeks past close | AIAccountant (vendor blog, soft) |
+
+<p class="source-note">Sources: GBTA, OneFinOps, hrsoftwarehyderabad, AIAccountant. Every soft figure stays labelled wherever it is reused.</p>
+
+:::danger[Never launder these into facts]
+The 60% ITC figure and the month-end overruns are vendor estimates. Use them to size the opportunity, never to make compliance promises. The defensible anchors are the rules themselves: the Sec 17(5) blocked categories, the GSTIN-on-invoice conditions, the 30 November ITC deadline. Build to the rule, cite the rule, label every percentage as soft.
+:::
+
+## The v2 twist: they already pay, and it still hurts
+
+v1 asked whether the pain justified a product. The v2 research answered a harder question: what still fails inside Zoho Expense, Expensify, SAP Concur, Fyle, Happay, Rydoo, and ExpenseOnDemand, mined in mid-2026 from bug trackers, vendor KBs, app stores, forums, and review sites covering 2023-2026. Six failure classes recur and none of the seven has fully solved any of them. The head-to-head detail lives in [competitors](/strategy/competitors/); the full ranked inventory in [pain points](/strategy/pain-points/).
+
+| # | Failure class | The evidence | Confidence |
+| --- | --- | --- | --- |
+| 1 | Capture fails silently or wrongly | Expensify's open bug #45904: a blurry receipt scans into a confidently wrong "random amount" with no warning flag. Concur shipped a months-long iPhone 15 blurry-camera regression; users switched phones. No big-7 incumbent ships document-scanner-grade edge detection in its core flow; they coach instead ("flat, dark surface, hold steady") | <span class="pill pill--high">High</span> |
+| 2 | OCR is slow and dishonest | SmartScan officially takes "a few minutes to a few hours". Misreads of dates, amounts, and vendors force re-keying (snippet-mediated, medium). Forced hotel itemisation is the most hated data-entry task on Concur's own forums | <span class="pill pill--high">High</span> |
+| 3 | The approval black hole | The manager inbox is the admitted #1 bottleneck (Fyle's own blog). Rejections arrive without reasons; rejected reports vanish from AP visibility until resubmission; one bad line bounces the whole report; Concur lacks manager-level bulk approval | <span class="pill pill--high">High</span> |
+| 4 | The payout void | "When do I get paid?" is unanswered in-product across the category; 43% of employees say slow reimbursement hurts their experience of work; ~9-day average cycles | <span class="pill pill--med">Medium</span> |
+| 5 | Pricing resentment | Per-user fees stacked with scan meters: Expensify gives 25 free SmartScans a month then charges $0.20 a scan; Zoho caps autoscans at 20; Trustpilot documents overbilling and cancellation traps | <span class="pill pill--high">High</span> |
+| 6 | India gaps | Zoho's autoscan language list includes zero Indic scripts while Google Cloud Vision has 9 GA Indic languages (primary-source KB, high); GSTIN-grade capture with CGST/SGST/IGST split is rarely automated (the 60% ITC claim above, directional); no clean Tally JV export; finance lacks search-by-amount and MIS | <span class="pill pill--med">Medium-high</span> |
+
+<p class="source-note">Source: v2 software-pain research (raw2/research-pain-points-software.md), primary bug trackers and vendor KBs where marked; see Sources.</p>
+
+Class 5 is the one pricing answers head-on: every plan in this dossier, `Free` included, ships unlimited users and approvers; the meter is submissions per company; and at zero balance nothing is lost, because capture continues, submissions queue in `awaiting_credits`, and a top-up drains the queue. The full ladder, `Free` through `Starter`, `Growth`, and `Scale`, is argued in [pricing](/strategy/pricing/).
+
+:::caution[Carry the caveats]
+Review sites were bot-blocked, so most quotes are search-snippet-mediated and carry paraphrase risk. The India stats (60% ITC loss, 8-plus-day cycles) are vendor marketing. The GBTA baseline is 2015-vintage. Incumbents are actively fixing the cited bugs, and complaint mining over-samples angry users: these products still rate roughly 4.2 to 4.7 on app stores (secondary sources, directional). The pains are wedges, not proof that incumbents fail companies wholesale.
+:::
+
+## The wedge question
+
+The question this dossier answers is no longer "does the pain exist". It is: why does the pain survive inside paid software, and what must a software-only, India-first product do differently to displace a ₹99-per-user incumbent? The v2 answer, argued page by page: capture that is deterministic, not coached; OCR that is honest, with field-level confidence and a manual LineItem fallback behind `extraction_failed`, never a silently wrong amount; escalation and per-line decisions on by default, with a `sent_back` loop that resubmits free instead of bouncing whole reports; a visible payout timeline that finally answers "when do I get paid?"; policy evaluated per line with exactly six rule actions (allow, flag, warn, cap, block, route); and a meter on submissions, not people. Each commitment maps to a documented complaint above. The v1 verdict stands and v2 fixes the shape: <span class="pill pill--build">Conditional Build</span>.
+
+Where the gaps sit unowned, and why the incumbents are structurally unlikely to close them, is the subject of [whitespace](/strategy/whitespace/). What we actually build against them is [Phase 1](/phase-1/overview/).
+
+<CardGrid>
+  <LinkCard title="Pain Points" description="The ranked, evidence-backed inventory of unresolved failures." href="/strategy/pain-points/" />
+  <LinkCard title="Whitespace" description="Which gaps nobody owns, and why they persist." href="/strategy/whitespace/" />
+  <LinkCard title="Phase 1 Overview" description="The product that answers each failure class." href="/phase-1/overview/" />
+</CardGrid>
+
+## Sources
+
+- [Expensify App GitHub issue #45904: blurry receipt scan shows random amount](https://github.com/Expensify/App/issues/45904) (primary bug tracker, Jul 2024)
+- [Apple Support Communities: blurry expense receipts on SAP Concur, iPhone 15](https://discussions.apple.com/thread/255243765) (primary user thread, Oct 2023 with May 2024 follow-up)
+- [Zoho Expense KB: when does auto scanning fail?](https://www.zoho.com/us/expense/kb/home/auto-scan-fail/) (primary vendor KB; verbatim language list, zero Indic scripts)
+- [Expensify Community FAQ: why is SmartScan taking a long time?](https://community.expensify.com/discussion/4715/faq-why-is-smartscan-taking-a-long-time) (official minutes-to-hours statement; forum frozen Jul 2024, archive before citing)
+- [Fyle blog: expense approval bottlenecks](https://www.fylehq.com/blog/expense-approval-bottlenecks) (practitioner admission of the manager-inbox black hole)
+- [GBTA: how much do expense reports really cost a company?](https://gbta.org/how-much-do-expense-reports-really-cost-a-company/) (2015-vintage $58/19%/$52 baseline, still industry-cited)
+- [Corpay: employee expense reimbursement guide](https://www.corpay.com/resources/blog/employee-expense-reimbursement) (relay of the 2024 Webexpenses 43% stat)
+- [SaaSPricePulse: Expensify true cost](https://www.saaspricepulse.com/tools/expensify) (25 free SmartScans, $0.20 overage, tier prices)
+- [hrsoftwarehyderabad: expense management software](https://hrsoftwarehyderabad.com/expense-management-software/) (60% ITC-loss claim; vendor marketing, directional only)
+- [OneFinOps: employee expense management in India](https://onefinops.com/blog/employee-expense-management-guide-india) (30 to 45 day cycles, 40 to 60 finance hours/month; vendor blog)

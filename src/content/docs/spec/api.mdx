@@ -1,0 +1,442 @@
+---
+title: API Reference
+description: "The REST surface: conventions, every endpoint grouped by resource, hot-path examples, errors, and webhooks."
+---
+
+import { CardGrid, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
+
+One surface, no privileged clients: the PWA, the Console, email one-tap actions, and customer integrations all speak the same REST API under `/api/v1`. This page is the binding endpoint catalog for Phase 1; an implementing agent should build from these tables plus the [data model](/spec/data-model/) without asking questions. Entity names, state names, and credit semantics come verbatim from THESIS v2 and win every conflict.
+
+## Conventions
+
+| Convention | Contract |
+| --- | --- |
+| Base URL | `/api/v1`, single region (Mumbai). Paths are kebab-case resources, for example `/claims/{clm_id}/line-items`. |
+| Auth | `Authorization: Bearer ...`. Session JWTs for the apps (OTP or magic-link login); scoped, company-bound API keys for integrations. |
+| Tenancy | Every key and JWT resolves to one Company; Postgres row-level security enforces isolation, so a foreign id behaves exactly like a missing id (404). |
+| Idempotency | `Idempotency-Key` honored on every POST. Same key plus same body replays the stored response; same key plus a different body is a 409. Keys live 24 hours. |
+| Money | Integer paise, never floats: `amount_paise: 184700` is ₹1,847.00. `currency` defaults to `INR`. |
+| IDs | Prefixed ULIDs: `co_`, `usr_`, `mem_`, `clm_`, `li_`, `rcp_`, `apr_`, `adv_`, `pob_`, `pin_`, `cre_`, `ba_`, `bene_`, `rule_`, `evt_`. |
+| Time | ISO 8601 UTC everywhere (`2026-06-10T09:41:22Z`). Clients localise to IST. |
+| Fields | snake_case JSON. Clients must ignore unknown fields. |
+| Pagination | Cursor-based: `?cursor=...&limit=100`, `limit` capped at 100. Responses wrap in an envelope. |
+| Errors | RFC 7807 `application/problem+json`, catalog below. |
+| Webhooks | HMAC-SHA256 signed, `X-Kharcha-Signature`, at-least-once delivery. |
+
+List envelope:
+
+```json
+{ "data": [], "next_cursor": "djE6Y2xtXzAxSlhHM1FS", "has_more": true }
+```
+
+Roles referenced in the tables are `Membership.roles` values: `owner`, `admin`, `finance`, `approver`, `employee`, `auditor` (read-only). A user can hold several; the listed role is the minimum that unlocks the call.
+
+## Endpoints by resource
+
+### Auth and session
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| POST | `/auth/otp/request` | public | Email a 6-digit OTP. Identical response whether or not the address exists (no enumeration); hard rate limit, 5 per hour per email (our default). |
+| POST | `/auth/otp/verify` | public | Exchange email plus OTP for a session JWT and the user's membership list; multi-company users pick the active company. |
+| GET | `/me` | any | Current user, memberships, roles, active company context. The PWA calls this on every cold start. |
+
+### Company and configuration
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| GET | `/company` | `admin`, `finance` | Profile plus the active configuration version. |
+| GET | `/company-config` | `admin` | The current configuration document, whole, with its version. Domains: `org`, `categories`, `policy_tables`, `approval`, `credits`, `payouts`, `notifications`, `locale`. Shapes live in the [config schema](/spec/config-schema/). |
+| PUT | `/company-config` | `admin` | Whole-document replace carrying the client's last-seen version; a stale version is a 409 `CFG_VERSION_STALE`. Full graph validation (cycles, orphans, deactivated references) runs before commit; every commit bumps the config version. |
+| POST | `/company-config/validate` | `admin` | Validate a candidate document without committing; returns errors and warnings. |
+| POST | `/company-config/simulate-claim` | `admin` | Dry-run the resolver: employee, amount, category in; rendered approval chain and firing rules out. Persists nothing. |
+| GET | `/company-config/versions` | `admin`, `auditor` | Immutable version history. Each Claim pins the `policy_version` it ran under. |
+
+### Memberships and users
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| GET | `/memberships` | `admin`, `finance` | List members with roles, department, manager, status (`active`, `pending`, `deactivated`). |
+| POST | `/memberships/invite` | `admin` | Invite by email with a roles array; sends a 7-day magic link. Idempotent per email. |
+| POST | `/memberships/import` | `admin` | CSV bulk import (name, work email, employee ID, department, manager email, branch, role). `"dry_run": true` returns the validation grid, deduped on email plus employee ID, without writing. |
+| POST | `/company/domain-capture` | `owner` | Start DNS TXT domain verification so matching sign-ups auto-join as `employee`. |
+| PATCH | `/memberships/{mem_id}` | `admin` | Change roles, department, manager, grade; deactivate. Role changes write AuditEvents. |
+
+### Receipts
+
+Uploads are accepted unconditionally, including at zero credit balance (`Receipt.status` becomes `queued`); nothing captured is ever lost. Pre-submission OCR is free while the balance is positive, under the fair-use cap of `max(20, 3 × remaining credits)` scans per month; at zero balance pre-submission OCR pauses entirely and receipts hold in `queued`. Failed extraction never consumes a credit.
+
+Upload is the presigned three-step: `POST /receipts` returns the id and a presigned PUT URL, the client PUTs the compressed page to storage, then calls `complete`.
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| POST | `/receipts` | `employee` | Step one: JSON meta in; 201 with a `rcp_` id and a short-lived presigned PUT URL out. The offline outbox replays this call with its stored `Idempotency-Key`, so duplicates are impossible; a 403 on an expired presign re-requests a fresh URL with the same key. Hard cap 20 MB per image (Vision original limit; clients compress to roughly 200-500 KB). |
+| POST | `/receipts/{rcp_id}/complete` | `employee` | Step three, after the client PUTs the page to storage: confirms the bytes landed, sets `status: uploaded` (or `queued` at zero balance), and enqueues async extraction. Storage PUT failures are network-class retryable. |
+| GET | `/receipts/{rcp_id}` | uploader, `finance` | Status, extraction payload, field-level confidences. Poll while `processing` or subscribe to `receipt.extracted`. |
+| POST | `/receipts/{rcp_id}/retry-extract` | uploader | Re-run after `extraction_failed`. Free. |
+| GET | `/receipts?status=extraction_failed` | `employee`, `finance` | The scan-failed queue: per-receipt reason, bulk retry, one-tap manual-entry handoff pre-filled with whatever was extracted. |
+
+### Claims
+
+The claim is the metered unit: one credit per submission, up to 5 receipt images inside it, plus one credit per additional 5 (the anti-batching guard). Resubmission after `sent_back` is free.
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| POST | `/claims` | `employee` | Create a `draft`. |
+| POST | `/claims/{clm_id}/line-items` | `employee` | Add a LineItem, extracted or manual; GST fields (taxable value, rate, CGST/SGST or IGST) per line. |
+| PATCH | `/claims/{clm_id}/line-items/{li_id}` | `employee` | Edit; legal only in `draft` or `sent_back`. |
+| DELETE | `/claims/{clm_id}/line-items/{li_id}` | `employee` | Remove; same state guard. |
+| POST | `/claims/{clm_id}/policy-precheck` | `employee` | Evaluate rules without submitting: per-line and claim outcomes (`allow`, `flag`, `warn`, `cap`, `block`) plus the resolved chain preview shown on the submit screen. Free, no state change. |
+| POST | `/claims/{clm_id}/submit` | `employee` | The metered call. Consumes the credits required (1, plus 1 per additional 5 receipt images beyond 5) and moves to `submitted`, or parks at `awaiting_credits` when balance is 0. Hot path below. |
+| POST | `/claims/{clm_id}/resubmit` | `employee` | After `sent_back`; same claim, same credit, back to `submitted`. |
+| POST | `/claims/{clm_id}/cancel` | `employee` | Any pre-decision state. No automatic credit refund; admins can post a ledger `adjustment`. |
+| GET | `/claims/{clm_id}` | participant | Claim, line items, receipts, snapshotted chain, `approved_amount_paise`. |
+| GET | `/claims/{clm_id}/timeline` | participant | Ordered AuditEvents plus the expected pay date. Powers "where is my money". |
+| GET | `/claims` | role-scoped | Filters: `status`, `employee_id`, `department_id`, `category`, `submitted_after/before`, and amount search (`amount_paise`, `amount_paise_min`, `amount_paise_max`). Search-by-amount is a named finance gap in the incumbent set, so it is first-class here. |
+
+### Approvals
+
+The approver surface mirrors the [approver experience](/phase-1/web/approver-experience/): exactly two primary verbs, Approve and Send back with a required comment; line-level actions one tap deeper.
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| GET | `/approvals/inbox` | `approver` | My `active` steps, exceptions-first: flag counts, approve-recommended and needs-review badges, SLA countdowns. |
+| POST | `/approvals/{apr_id}/approve` | `approver` | Approve the step; optional comment. Self-approval is rejected server-side. |
+| POST | `/approvals/{apr_id}/send-back` | `approver` | Comment required (422 without it). Claim moves to `sent_back`; employee notified with the reason. |
+| POST | `/approvals/{apr_id}/reject` | `approver` | Hard reject with a required comment (422 without it). Claim moves to `rejected`, remaining pending steps end `skipped`; the credit is not refunded. |
+| POST | `/approvals/{apr_id}/reject-lines` | `approver` | Per-line `rejected` or `capped` with rationale; remaining approved lines proceed, `approved_amount_paise` recomputed. |
+| POST | `/approvals/bulk-approve` | `approver` | Array of step ids. Zero-flag guard: any step whose claim carries unresolved policy flags is refused; response returns per-item verdicts. |
+| POST | `/approvals/delegate` | `approver` | Time-bound out-of-office or standing delegate; decisions audit as "as delegate of". |
+| GET | `/a/{token}` | signed token | One-tap email approval: renders the decision card. Never mutates (hot path below). |
+| POST | `/a/{token}/confirm` | signed token | Executes `approve` or `send_back` with comment. Single-use, amount-bounded, expires with the step; above the step-up threshold it returns 303 to web login. |
+
+### Rules and policies
+
+Rule bodies follow the [rule schema](/spec/rule-schema/): six action verbs, AND/OR condition trees, versioned.
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| GET | `/rules` | `admin`, `finance` | List with scope, action, priority, enabled, version. |
+| POST | `/rules` | `admin` | Create. India built-ins (GSTIN_FORMAT, PER_DIEM_CAP, RECEIPT_REQUIRED_ABOVE, DUPLICATE_SUSPECT, ITC_ELIGIBLE) ship pre-seeded. |
+| GET | `/rules/{rule_id}` | `admin`, `finance` | Current version plus version history. |
+| PATCH | `/rules/{rule_id}` | `admin` | Edits create a new version; in-flight claims keep their submission snapshot. |
+| POST | `/rules/{rule_id}/enable` | `admin` | Toggle on without editing; `/disable` is the mirror. The always-matching fallback approval rule cannot be disabled or deleted. |
+| DELETE | `/rules/{rule_id}` | `admin` | Soft delete: disabled and retained for audit. |
+| POST | `/rules/test` | `admin` | Run a candidate rule against a sample or recent claims; returns would-be outcomes, persists nothing. |
+
+### Credits
+
+Semantics in full on [credits and metering](/phase-1/credits-and-metering/); the API only exposes them.
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| GET | `/credits/balance` | `admin`, `finance` | Balance, burn rate, forecast ("out in ~N days"), queued-claim count. |
+| GET | `/credits/ledger` | `admin`, `finance`, `auditor` | Cursor-paginated CreditEntry list: `plan_grant`, `pack_purchase`, `consumption`, `expiry`, `adjustment`, `promo_grant`. Balance is the ledger sum; consumption drains expiring-soonest first. |
+| GET | `/credits/packs` | `admin` | Catalog: Top-up ₹499 = 50, Starter ₹1,999 = 250, Growth ₹6,999 = 1,000, Scale ₹24,999 = 4,500, Enterprise ₹74,999 = 15,000; ex-GST, 12-month validity. |
+| POST | `/credits/purchase` | `admin`, `owner` | Buy a pack via UPI, netbanking, or card. Hot path below. |
+| GET, PATCH | `/credits/auto-top-up` | `admin`, `owner` | Threshold, pack, monthly spend cap, one-click off. Off by default. |
+| POST | `/credits/nudge-admin` | `employee` | The one-tap "remind your admin" from a queued claim; throttled to one nudge per employee per day. |
+
+:::caution[Month-end is the failure mode]
+Claims in `awaiting_credits` are not in the approval flow and not visible to approvers. The API surfaces this loudly (`queue_position`, `credits.exhausted` webhook, banner state in `/credits/balance`) because silent month-end exhaustion becomes a finance incident.
+:::
+
+### Payouts
+
+Two modes, one invariant: funds never touch our accounts. Flow detail on [payouts](/phase-1/payouts/).
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| GET, POST | `/bank-accounts` | `finance` | Company source accounts; each carries its bank's bulk-file format. PATCH `/bank-accounts/{ba_id}` updates or deactivates. |
+| POST | `/beneficiary-accounts` | `employee` | Register a payout account (account number, IFSC like `HDFC0001234`). Any edit demotes it to unverified. |
+| POST | `/beneficiary-accounts/{bene_id}/verify` | `employee`, `finance` | Trigger penny-drop (about ₹3 per check, Setu <span class="pill pill--high">High</span>). Async: result lands via the partner's webhook to us; clients poll the GET or subscribe to `beneficiary.verified`. |
+| POST | `/payout-batches` | `finance` | Build from `approved` claims by filter; included claims stay `approved` (reserved) while the batch is `building` and move to `in_payout` when the batch exports or executes. Only verified beneficiaries are admitted (409 otherwise). |
+| GET | `/payout-batches`, `/payout-batches/{pob_id}` | `finance` | List and detail with PayoutInstruction rollups. |
+| POST | `/payout-batches/{pob_id}/generate-file` | `finance` | Render the bank bulk file; returns a short-lived signed download URL. Deterministic and idempotent; moves `building` to `exported`. |
+| POST | `/payout-batches/{pob_id}/mark-executed` | `finance` | Finance confirms upload and authorization in their own net banking; `exported` to `executed`. |
+| POST | `/payout-batches/{pob_id}/import-utr` | `finance` | Upload the bank return file or paste UTRs. Matched instructions become `paid`, claims `paid`; unmatched rows queue for manual match. Batch reaches `reconciled` when nothing is unresolved. |
+| POST | `/payout-instructions/{pin_id}/reissue` | `finance` | Repair loop: a new PayoutInstruction (new `pin_`) on the same claim in a new `building` batch, audited as `instruction.reissued` linking old to new; account-level failures first demote the BeneficiaryAccount. |
+| POST | `/payout-batches/{pob_id}/execute` | `finance` | Payout-API mode only (per-customer opt-in, partner fees roughly ₹1.75-5 per transaction <span class="pill pill--med">Medium</span>, vendor pages). `building` to `executing`; results stream in as `payout.instruction.paid`. `Idempotency-Key` mandatory so retries never double-pay. |
+
+### Exports
+
+Exports are async jobs: POST returns 202 with an export id; poll or wait for the completion event, then download.
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| POST | `/exports/tally-jv` | `finance` | Tally JV XML for a period or batch, ITC-eligibility tagged per Sec 17(5). |
+| POST | `/exports/payroll-csv` | `finance` | Reimburse-via-payroll CSV keyed by employee ID. |
+| POST | `/exports/claims-csv` | `finance`, `auditor` | Filtered claims register with line items and GST fields. |
+| GET | `/exports/{export_id}` | requester | Job status plus a signed download URL on completion. |
+
+### Webhook endpoints and events
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| GET, POST | `/webhook-endpoints` | `admin` | CRUD; signing secret shown once at creation. |
+| PATCH, DELETE | `/webhook-endpoints/{id}` | `admin` | Rotate secret, edit event subscriptions, disable. |
+| POST | `/webhook-endpoints/{id}/test` | `admin` | Deliver a signed ping event. |
+
+Delivery is at-least-once with exponential backoff for 24 hours, then the endpoint is disabled and the admin alerted. Consumers must dedupe on event id; ordering is not guaranteed. Every payload shares one skeleton:
+
+```json
+{
+  "id": "evt_01JXG6QSR2D8K4MB7TPV5WNZ3H",
+  "type": "claim.submitted",
+  "api_version": "v1",
+  "created_at": "2026-06-10T10:02:11Z",
+  "company_id": "co_01JXF8ZT4Q9W2N6KD3HB5RVMPS",
+  "data": {
+    "claim_id": "clm_01JXG5K2W7Q9T4N6XD8BP3MRHV",
+    "status": "submitted",
+    "claimed_amount_paise": 184700,
+    "currency": "INR"
+  }
+}
+```
+
+| Event | Fires when | Key `data` fields |
+| --- | --- | --- |
+| `claim.submitted` | Credit consumed, claim entered the workflow | `claim_id`, `claimed_amount_paise` |
+| `claim.approved` | Final step approved | `approved_amount_paise`, line outcomes |
+| `claim.sent_back` | Approver sent back with comment | `step_id`, `comment` |
+| `claim.rejected` | Terminal rejection | `reason` |
+| `claim.paid` | UTR or payroll reference confirmed | `utr`, `payment_mode` |
+| `approval.escalated` | SLA breach moved a step up the ladder | `from`, `to`, `sla_hours` |
+| `receipt.extracted` | OCR finished | `receipt_id`, confidence summary |
+| `receipt.extraction_failed` | OCR failed; manual path open | `reason` |
+| `credits.low` | A burn-alert threshold crossed (default 50/80/95/100) | `balance`, `threshold`, `forecast_days` |
+| `credits.exhausted` | Balance 0, queue forming | `queued_count` |
+| `payout.batch.exported` | Bank file generated; batch left `building` | `batch_id`, `instruction_count`, `total_amount_paise` |
+| `payout.instruction.paid` | UTR matched from return file or partner webhook | `instruction_id`, `utr` |
+| `payout.instruction.failed` | Return file or partner reported a failure; repair queue | `instruction_id`, `reason` |
+| `payout.batch.completed` | API-mode batch reached a terminal state | `paid`, `failed` counts |
+| `beneficiary.verified` | Penny-drop name match passed | `beneficiary_account_id`, `name_match` |
+
+### Admin and ops
+
+| Method | Path | Role | Purpose and notes |
+| --- | --- | --- | --- |
+| GET | `/audit-events` | `admin`, `auditor` | Append-only query by actor, entity, action, date range. Records role-at-decision-time and channel (web, email-link, WhatsApp). |
+| GET, POST, DELETE | `/api-keys` | `owner`, `admin` | Scoped keys (`read`, `claims:write`, `exports`); secret shown once. |
+| POST | `/ops/requeue-extraction` | `admin` | Runbook hook: re-drive receipts stuck in `processing` after an OCR provider incident. |
+| POST | `/ops/replay-webhooks` | `admin` | Re-deliver events in a time window after a consumer outage. |
+
+## Hot paths
+
+Five worked examples with realistic Indian data; everything else on the surface behaves the same way.
+
+### 1. Upload a receipt
+
+```http
+POST /api/v1/receipts HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+Idempotency-Key: 9f8a3c1e-0d42-4f6b-bb1a-7c2d5e9a4f10
+Content-Type: application/json
+
+{ "page_index": 0, "captured_at": "2026-06-10T09:41:22Z", "source": "camera", "content_type": "image/jpeg" }
+
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "id": "rcp_01JXG2B7Q9T4N6WD8KP3M5RZHV",
+  "upload": {
+    "method": "PUT",
+    "url": "https://files.kharcha.example/rcp_01JXG2B7.../page-1.jpg?sig=...",
+    "expires_in_seconds": 600
+  }
+}
+```
+
+Step two is the client's PUT of the compressed page (about 280 KB) straight to storage at that presigned URL. Step three confirms it:
+
+```http
+POST /api/v1/receipts/rcp_01JXG2B7Q9T4N6WD8KP3M5RZHV/complete HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+
+HTTP/1.1 200 OK
+
+{ "id": "rcp_01JXG2B7Q9T4N6WD8KP3M5RZHV", "status": "uploaded", "claim_id": null }
+```
+
+The acknowledgements are immediate; extraction is async (`processing`, then `extracted` or `extraction_failed`). The PWA outbox stores the `Idempotency-Key` with the blob, so offline replays after a dead zone cannot double-upload; storage PUT failures retry as network errors, and a 403 on an expired presign re-requests a fresh URL through the same `POST /receipts` idempotency key.
+
+### 2. Submit a claim, and the soft paywall
+
+```http
+POST /api/v1/claims/clm_01JXG5K2W7Q9T4N6XD8BP3MRHV/submit HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+Idempotency-Key: 5b1e7d20-3c9f-4a81-9e64-2f8b0c7d1a55
+```
+
+<Tabs>
+<TabItem label="Credits available">
+
+```json
+{
+  "id": "clm_01JXG5K2W7Q9T4N6XD8BP3MRHV",
+  "status": "submitted",
+  "claimed_amount_paise": 184700,
+  "currency": "INR",
+  "credit": { "consumed": 1, "entry_id": "cre_01JXG7P4T9W2Q6KN8DB3HM5RVZ", "balance_after": 142 },
+  "approval_chain": [
+    { "step": 1, "approver": "manager", "status": "active" },
+    { "step": 2, "approver": "finance", "status": "pending" }
+  ]
+}
+```
+
+</TabItem>
+<TabItem label="Balance is zero">
+
+```json
+{
+  "id": "clm_01JXG5K2W7Q9T4N6XD8BP3MRHV",
+  "status": "awaiting_credits",
+  "claimed_amount_paise": 184700,
+  "currency": "INR",
+  "queue_position": 7,
+  "credit": { "consumed": 0, "balance_after": 0 },
+  "actions": { "nudge_admin": "/api/v1/credits/nudge-admin" }
+}
+```
+
+</TabItem>
+</Tabs>
+
+:::note[Why 200 with awaiting_credits, not 402]
+The request succeeded: the claim is durably accepted and will enter the workflow unchanged, FIFO, the moment credits arrive. A 4xx would train HTTP clients, retry middleware, and error monitoring to treat the soft paywall as a failure (retries, error toasts, dropped drafts), and 402 has no standard semantics anyway. `awaiting_credits` is a state on the resource, not a transport error; clients render it like any other status. An idempotent retry of the same submit returns the same body either way.
+:::
+
+### 3. Approve from email with a magic token
+
+```http
+GET /a/3kfX9tWq7Lp2 HTTP/1.1
+
+HTTP/1.1 200 OK
+(decision card: amount, merchant, date, flags, Approve / Send back)
+
+POST /a/3kfX9tWq7Lp2/confirm HTTP/1.1
+Content-Type: application/json
+
+{ "action": "approve", "comment": "" }
+
+HTTP/1.1 200 OK
+
+{ "step_id": "apr_01JXG6D3K9Q2T7WN4XB8P5MRHV", "result": "approved", "claim_status": "in_review", "next_step": "finance" }
+```
+
+:::danger[GET never mutates]
+Email security scanners prefetch every link in a message. A GET that approves is therefore an auto-approval vulnerability, which is why the contract is GET-renders-then-POST-confirms. Tokens are single-use, bound to one ApprovalStep and its amount, expire with the step, and decisions above the step-up threshold get a 303 to authenticated web instead.
+:::
+
+### 4. Build a payout batch and download the bank file
+
+```http
+POST /api/v1/payout-batches HTTP/1.1
+Idempotency-Key: 7c41aa02-58d3-4f19-b2e6-90cd14f7ab38
+Content-Type: application/json
+
+{ "bank_account_id": "ba_01JXFB3M8K2Q6TW4ND7HV5RPZC", "filters": { "approved_before": "2026-06-11T12:30:00Z" } }
+
+HTTP/1.1 201 Created
+
+{ "id": "pob_01JXFA2Z6WQ4H8SD3KM5R7TBVN", "status": "building", "instruction_count": 23, "total_amount_paise": 41872500 }
+```
+
+```http
+POST /api/v1/payout-batches/pob_01JXFA2Z6WQ4H8SD3KM5R7TBVN/generate-file HTTP/1.1
+
+HTTP/1.1 200 OK
+
+{
+  "status": "exported",
+  "file": {
+    "format": "hdfc_enet",
+    "rows": 23,
+    "sha256": "9b1c4e72d0a8f3b6c5e9d2a7f4b8c1e69b1c4e72d0a8f3b6c5e9d2a7f4b8c1e6",
+    "download_url": "https://files.kharcha.example/pob_01JXFA.../hdfc-enet.csv?sig=...",
+    "expires_in_seconds": 600
+  }
+}
+```
+
+Finance uploads the file in their own net banking, calls `mark-executed`, and later `import-utr` with the bank's return file; matched rows flip claims to `paid` with their UTR (for example `HDFCN26061012345`) on the employee timeline.
+
+### 5. Buy a credit pack
+
+```http
+POST /api/v1/credits/purchase HTTP/1.1
+Idempotency-Key: e2d90b77-46c1-4b3a-8f25-c61a09d8e4f3
+Content-Type: application/json
+
+{ "pack": "growth", "payment_method": "upi" }
+
+HTTP/1.1 201 Created
+
+{
+  "order_id": "ord_growth_2026_06_10_0042",
+  "pack": "growth",
+  "credits": 1000,
+  "amount_paise": 699900,
+  "gst_paise": 125982,
+  "total_paise": 825882,
+  "payment": { "status": "pending", "upi_intent": "upi://pay?pa=kharcha@icici" }
+}
+```
+
+₹6,999 plus 18% GST is ₹8,258.82, hence `total_paise: 825882`. On payment confirmation the ledger gains a `pack_purchase` entry (12-month validity, consumed expiring-soonest first) and the `awaiting_credits` queue drains FIFO automatically; queued claims become `submitted` without any client action.
+
+## Error catalog
+
+Every error is `application/problem+json`. `type` is a stable URI slug; never parse `detail`.
+
+```json
+{
+  "type": "https://kharcha.example/problems/invalid_state_transition",
+  "title": "Claim cannot be submitted",
+  "status": 409,
+  "detail": "Claim clm_01JXG5K2W7Q9T4N6XD8BP3MRHV is in_review; submit is only valid from draft.",
+  "instance": "/api/v1/claims/clm_01JXG5K2W7Q9T4N6XD8BP3MRHV/submit",
+  "current_status": "in_review"
+}
+```
+
+| Problem type | Status | When | Retryable |
+| --- | --- | --- | --- |
+| `validation_failed` | 422 | Body fails schema or field validation; `errors` array carries JSON pointers (a missing send-back comment lands here). | No, fix the payload |
+| `invalid_state_transition` | 409 | Action illegal in the current status; legal moves are in the state machines. | No |
+| `idempotency_key_reuse` | 409 | Same `Idempotency-Key`, different body. | No, new key |
+| `not_found` | 404 | Unknown id, or another tenant's id (RLS makes these indistinguishable by design). | No |
+| `authentication_required` | 401 | Missing or expired JWT or API key. | After re-auth |
+| `forbidden` | 403 | Role lacks the action: `auditor` writes, an employee on someone else's claim, self-approval. | No |
+| `beneficiary_unverified` | 409 | Batch build touched a claim whose payee account is unverified. | After verification |
+| `payload_too_large` | 413 | Receipt image above the 20 MB cap. | No, compress |
+| `rate_limited` | 429 | Limit exceeded; honor `Retry-After`. | Yes, after the header |
+| `provider_unavailable` | 503 | Downstream OCR or payment partner outage. | Yes, backoff, same `Idempotency-Key` |
+
+Credit exhaustion is deliberately absent: it is never an error. Submission at zero balance returns 200 with `awaiting_credits`, and uploads always succeed.
+
+## Rate limits
+
+Launch defaults, ours, enforced per company and per credential, tunable upward on Scale plans and for Enterprise-pack customers. Responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `Retry-After` on 429.
+
+| Scope | Default limit |
+| --- | --- |
+| Session JWT, general | 600 requests/min per user |
+| API key, general | 300 requests/min per key, burst 60 per 10 s |
+| `POST /receipts` | 60/min per user |
+| `POST /auth/otp/request` | 5/hour per email |
+| `GET /a/{token}` and confirm | 30/min per IP |
+
+## Versioning policy
+
+The major version lives in the path. Within `/api/v1`: new endpoints, new optional fields, and new webhook event types are non-breaking, and clients must ignore what they do not recognise. Status enums on existing resources are frozen contracts; the state names in this dossier will not be renamed or extended within v1, because exhaustive client switches depend on them. Webhook payloads pin `api_version` per endpoint. Breaking changes ship only as `/api/v2` running side by side, with at least 12 months of overlap and `Deprecation` plus `Sunset` headers on v1 from announcement day.
+
+The guards behind every 409 on this page are formalised next, in the transition tables.
+
+<CardGrid>
+<LinkCard title="State machines" description="Every status, transition, guard, and side effect behind these endpoints." href="/spec/state-machines/" />
+<LinkCard title="Integrations" description="Webhook consumers, Tally export detail, payout partners, email-in." href="/spec/integrations/" />
+</CardGrid>

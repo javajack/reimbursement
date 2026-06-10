@@ -1,0 +1,122 @@
+---
+title: Edge Cases and Hard Realities
+description: "Advances, per-diem, mileage, mixed bills, FX, duplicates, clawbacks, dead approvers, and the month-end crunch: each with its product answer."
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+A reimbursement product earns trust on the happy path and keeps it on the ugly ones: the advance that outlives its trip, the manager who resigned mid-approval, the thermal receipt longer than a phone frame, the credit balance that hits zero in close week. Phase 1 treats these as a finite, specified list, not future support tickets. Two schema decisions absorb most of the pain; the rest is the master table below, each row pointing at the page that owns the behavior. Vendor-side hard cases (TDS, RCM, the MSME 45-day clock) are deliberately absent: they live in [Phase 2](/phase-2/overview/).
+
+## Two decisions do most of the work
+
+First: model the expense at the LineItem, not the claim header. One hotel folio mixes lodging with minibar; one GST invoice mixes ITC-eligible services with blocked food lines under Sec 17(5). Each LineItem carries its own category, GST detail, and reimbursable marking, and lines individually end `approved`, `capped`, or `rejected`; a claim with any approved line proceeds with `approved_amount_paise ≤ claimed_amount_paise`. Partial approval, mixed bills, and partial coverage are not features bolted on later; they fall out of the schema.
+
+Second: hard cases get their own records, never new claim states. Advances live on Advance, recoveries on a recovery record, metering on the CreditEntry ledger. Claim.status stays an eleven-state machine an approver can reason about (the transition tables live in [State machines](/spec/state-machines/)), and every odd path lands in an AuditEvent rather than a mystery.
+
+:::tip[The unlock, carried from v1]
+Line-item granularity is still the single highest-leverage schema decision. Each line carries its own reimbursable marking, category, GST fields, and outcome; that one choice unlocks partial approval, mixed-bill coverage, and clean ITC tagging. <span class="pill pill--high">High</span>
+:::
+
+## The master table
+
+Edge case, why it exists, what the product does, where the contract lives. Rows marked "and below" get a deeper treatment on this page.
+
+| Edge case | Why it happens | Product behavior | Specified in |
+| --- | --- | --- | --- |
+| Cash advance / imprest | Field staff hold company money before receipts exist; India petty-cash floats typically run ₹5,000 to ₹20,000 (vendor, indicative) <span class="pill pill--med">Med</span> | Advance record with its own lifecycle: issued against a per-employee exposure cap, claims net against the outstanding balance, excess returned or topped up; advance-scope rules can `block` over-cap issuance | [Data model](/spec/data-model/) and below |
+| Per-diem vs actuals | Flat daily rates and receipt-backed actuals coexist on one trip | Per-diem lines rated by city tier × grade with partial-day rules; `PER_DIEM_CAP` caps overshoot; receipts waived below `RECEIPT_REQUIRED_ABOVE`; unspent per-diem is taxable to the employee (Sec 10(14)/Rule 2BB, govt), surfaced as an informational note for payroll, never computed by us | [Policy and rules](/phase-1/onboarding/policy-and-rules/) |
+| Mileage | India has no statutory per-km rate; employers set their own, commonly near ₹5/km car and ₹3/km two-wheeler (vendor, indicative) <span class="pill pill--med">Med</span> | Policy rate per vehicle type; amount = distance × rate enforced via `cap`; mandatory logbook fields (date, route, purpose, distance) preserved as the Sec 10(14) defence | [Policy and rules](/phase-1/onboarding/policy-and-rules/) |
+| Split / shared bill | One colleague pays for the table | Exactly one payer claims the bill; colleagues are tagged on the line for context and audit; no cross-claim amount splitting in Phase 1 | [Data model](/spec/data-model/) |
+| Mixed personal + business lines | One invoice, two natures (minibar inside lodging) | Employee or approver marks lines non-reimbursable; rules evaluate per line; the claim proceeds on approved lines only, partial coverage by construction | [OCR and itemisation](/phase-1/capture/ocr-itemisation/), [Rule schema](/spec/rule-schema/) |
+| Foreign-currency expense | Foreign SaaS subscriptions and the odd overseas trip | Line stores original currency, amount, rate, and rate source (company-configurable; RBI/FBIL reference for reporting, AD-bank TT for settlement); settlement and payout are always INR `amount_paise` | [Configuration model](/phase-1/onboarding/configuration-model/) |
+| Duplicates | Same bill twice, across employees, or lightly altered | Three layers: capture-time perceptual hash, submission-time dismissible warning on date+amount collision, `DUPLICATE_SUSPECT` firing `flag` for approver and finance | [OCR and itemisation](/phase-1/capture/ocr-itemisation/) and below |
+| Clawback / recovery | A paid claim later proves wrong | Separate recovery record referencing claim and lines; settles by netting against a future payout or a payroll-deduction export line; claim states never reopen | [Payouts](/phase-1/payouts/), [Data model](/spec/data-model/) |
+| Dead or missing approvers | Resignations, vacant levels, submitter doubling as approver | Company fallback approver, `rule_gap` admin queue, audited delegation, prevent-self-approval with skip-up; submission never blocks on routing | [Approval engine](/phase-1/web/approval-engine/) and below |
+| Claim on behalf of a colleague | EAs file for executives; shared devices in the field | Explicit on-behalf permission; submitter and reimbursed employee recorded separately; payout goes to the claimant's BeneficiaryAccount; the AuditEvent names the actual actor | [Data model](/spec/data-model/) |
+| Multi-branch GSTIN (lite) | GST registration is per state; branches under one PAN are distinct persons (statute, high) | Company keeps a GSTIN list; claims and lines carry a branch tag feeding `ITC_ELIGIBLE` (informational in Phase 1); ISD distribution stays out until Phase 2 | [Configuration model](/phase-1/onboarding/configuration-model/), [Regulatory map](/compliance/regulatory-map/) |
+| Month-end crunch | Claims, approvals, and credit exhaustion all cluster at close | Period-close sweep tooling plus burn alerts at 50/80/95/100% with a forecast; see the caution below | [Approver experience](/phase-1/web/approver-experience/) and below |
+| Offline conflicts | The phone outbox replays after a dead zone; the laptop already uploaded the same receipt | Client idempotency keys on every upload (`Idempotency-Key` honored on all POSTs) dedupe replays exactly; cross-device copies fall to the perceptual-hash layer | [Capture pipeline](/spec/capture-pipeline/) |
+| Capture hard cases | Long thermal receipts, forwarded HEIC, screenshots, 20 MB originals | Multi-shot pages, magic-byte sniffing with HEIC decode, screenshot fraud signal (`flag`, never `block`), client compression with server-side downscale fallback | [Camera](/phase-1/capture/camera/) and below |
+| Credit hard cases | Balance hits zero mid-submission; grants expire while claims wait | `awaiting_credits` holds the claim consuming nothing; any credit arrival drains the queue FIFO, spending expiring-soonest first | [Credits and metering](/phase-1/credits-and-metering/) and below |
+
+<p class="source-note">Source: v1 edge-case synthesis (vendor and statute sources, 2024 to 2026) rescoped to employee-only Phase 1; capture and credit rows from v2 research and THESIS-V2 contracts.</p>
+
+## Advances: money before receipts
+
+The gap between issuing an advance and seeing receipts is the field-sales black box. Phase 1 models expense advances only; salary advances belong to payroll and stay on a separate ledger (vendor guidance, medium). The Advance record (`adv_` IDs) runs its own lifecycle alongside claims:
+
+<Steps>
+
+1. Finance issues an Advance against a per-employee exposure cap; an advance-scope rule can `block` issuance above it.
+2. The employee spends and captures receipts as usual, offline tolerated.
+3. At approval, the claim nets against the outstanding Advance; only the delta above it becomes a PayoutInstruction.
+4. Excess is returned to the company and recorded against the Advance (never as a negative payout); overspend pays out normally.
+5. The Advance closes at zero outstanding; finance dashboards track aging of open advances.
+
+</Steps>
+
+## Duplicate or honest resubmission?
+
+Detection runs in three layers. Layer one at capture: a perceptual hash over the corrected image catches re-uploads, including the two-device offline case. Layer two at submission: a date plus amount collision raises a dismissible warning with Keep both / Keep one verbs; silent auto-merge happens only inside tight tolerances (Fyle precedent: amount tolerance 0.0002, five-day date window). Layer three is the `DUPLICATE_SUSPECT` rule firing `flag` on the approver card and the finance queue. Publish the matching rule in help docs, Brex-style, so nobody is surprised by it.
+
+The detector must distinguish fraud from persistence. A `sent_back` claim resubmitted is the same claim and the same credit: free, and never a duplicate. A rejected claim is terminal; when its receipt reappears on a new claim, the warning shows the prior claim and its status and offers resubmit-as-new with lineage attached, so the approver sees history instead of a fraud flag. `DUPLICATE_SUSPECT` fires hard only when the prior claim is active or paid. And because AI-generated receipts went from roughly zero to about 14% of fraudulent documents in about a year (AppZen, Sep 2025) <span class="pill pill--med">Medium</span>, deterministic checks (GSTIN checksum, totals arithmetic) stay in front of every auto-accept.
+
+## When the approver does not exist
+
+Approval chains rot in real organisations. A vacant manager slot resolves to nobody: the claim routes to the company fallback approver and surfaces on the admin dashboard flagged `rule_gap`. A last-level approver leaving mid-flight cannot strand claims: chains snapshot at submission, deactivating a user triggers graph validation, and in-flight claims keep their snapshot until an admin uses the explicit re-route action. Delegation comes in three audited forms (time-bound out-of-office delegate without account access, standing delegate, admin-assigned), every decision attributed "as delegate of". Delegation resolves one hop and never cascades: if the delegate is also away, the ApprovalStep `escalated` path takes over toward the fallback. When the submitter is the approver, prevent-self-approval (ON by default) marks the step `skipped` and the claim skips up a level; the SAP KB 1944022 self-approval deadlock is the cautionary tale.
+
+:::danger[Routing invariant]
+A claim is never blocked at submission because routing failed. Worst case it routes to the admin queue flagged `rule_gap`, visible and actionable. Empty approver slots are an admin alert, not an employee error.
+:::
+
+## The month-end crunch
+
+Claims, approvals, and payout runs all pile into close week, so the product ships sweep tooling rather than hoping: a pending-by-approver dashboard, one-click remind-all, and approve-by dates tied to the close calendar, on top of the standing cadence (48-hour SLA, 24 hours above the high-value threshold, at most two reminders per item, IST-aware quiet hours).
+
+:::caution[The close-week collision]
+Credit exhaustion clusters in exactly the same week, and claims in `awaiting_credits` are NOT in the approval flow. Forty claims sitting queued during close means finance misses the payout cut-off and the soft paywall becomes a finance incident. So exhaustion is loud by design: admin alerts at 50/80/95/100% burn, a forecast ("out in ~N days"), a banner on every queued claim, the one-tap "remind your admin" nudge, and top-ups that drain the queue FIFO instantly. Bill shock churns customers (73% of bill-shocked customers churn within 90 days; Recurly-cited, directional) <span class="pill pill--med">Medium</span>; silent queues would too. Details in [Credits and metering](/phase-1/credits-and-metering/).
+:::
+
+## Capture hard cases
+
+- **Long thermal receipts.** A 30-line pharmacy receipt does not fit one frame, stitching is unreliable, and dewarping curled paper is research-grade. The honest answer is multi-shot: overlapping segments captured as pages of one Receipt in the multi-page tray, each passing its own `quality_gate`. Fair use applies: up to 5 images ride inside one credit, so a 7-image claim costs 2 credits, stated before submit.
+- **WhatsApp-forwarded HEIC.** iOS transcodes camera-roll picks to JPEG on the way into the file input, but images forwarded through WhatsApp, AirDropped, or picked from the Files app can arrive as true HEIC (practitioner-verified, high). The server sniffs magic bytes, decodes HEIC where it can, and otherwise rejects with a plain instruction ("please send as a photo"), identically on upload and email-in paths.
+- **Screenshot of a photo.** Sometimes legitimate (an e-receipt screenshot), sometimes a re-captured altered bill. The client records capture source (camera vs library) before the EXIF-stripping re-encode at `compress`; the server adds heuristics such as absent camera metadata on a claimed camera capture. The outcome is a fraud signal on the decision card: `flag`, never `block`. <span class="pill pill--flag">Flag</span>
+- **The 20 MB original.** Email-in attachments and library uploads can exceed OCR provider caps (Google Vision rejects files over 20 MB and recommends at least 1024×768; vendor docs, high). The camera path compresses client-side at `compress` (about 2048 px long edge, JPEG q≈0.8, typically 200-500 KB per page; our derivation). Oversized originals downscale server-side; the original stays attached as evidence for the 8-financial-year retention window and OCR runs on the normalized copy. iOS canvas area caps (16.78 megapixels before iOS 18) are why the client processes one page at a time at 12 MP or less.
+
+## Credit hard cases
+
+Submitting at zero balance is not an error. The claim lands in `awaiting_credits`, visible and ordered; uploads continue to be accepted with Receipt.status `queued`; intelligent processing pauses; the employee gets the nudge. Pre-submission OCR is free under the fair-use cap, `max(20, 3 × remaining credits)` scans per month, while the balance is positive; at zero balance it pauses entirely and receipts hold in `queued`.
+
+Expiry during the wait is governed by three precedence rules: claims never expire, credits do; `plan_grant` credits die at period end with an `expiry` entry (no rollover) while `pack_purchase` credits live 12 months; and consumption always takes the expiring-soonest credit first. Two consequences worth stating plainly: queued claims consume nothing until the drain moment, and a `sent_back` resubmission re-enters `submitted` directly even at zero balance, because its credit was already spent.
+
+| Date | Event | Ledger entries | Queue effect |
+| --- | --- | --- | --- |
+| 28 Jun | Balance 0; 12 claims submitted in close week | none | 12 claims land in `awaiting_credits`, order preserved |
+| 29 Jun | Admin buys the Starter pack (₹1,999 = 250 credits) | `pack_purchase` +250, 12-month validity | queue drains FIFO instantly; 12 `consumption` entries against the pack |
+| 1 Jul | Monthly `plan_grant` renews | `plan_grant` + monthly allowance, expires 31 Jul | nothing queued; new submissions consume the grant first, since it expires soonest |
+| 31 Jul | Period ends | `expiry` zeroes any grant remainder; pack balance untouched | none |
+
+Cancellation while in `awaiting_credits` consumes nothing and refunds nothing; there is nothing to refund. Cancelled claims that already consumed a credit are not auto-refunded, but admins can compensate through an `adjustment` entry on the ledger.
+
+## Done means
+
+- Every edge case on this page resolves to a deterministic state outcome; none ends in "contact support".
+- No claim is ever blocked at submission for routing or credit reasons; it lands in a visible queue (`awaiting_credits`, or the admin queue flagged `rule_gap`).
+- A `sent_back` resubmission never triggers the duplicate warning and never consumes a second credit.
+- Clawbacks reconcile to the paisa without mutating any closed claim.
+- A 7-image claim shows "2 credits" before submit, not after.
+- In close week, queue depth, burn forecast, and pending-by-approver are visible on one finance screen.
+
+These behaviors harden into transition tables in [State machines](/spec/state-machines/) and failure drills in [Ops runbooks](/phase-1/ops-runbooks/).
+
+## Sources
+
+- [Petty Cash Accounting, Happay](https://happay.com/blog/petty-cash-accounting/) (vendor): typical India imprest floats of ₹5,000 to ₹20,000.
+- [Vehicle Reimbursement in India, Motolog](https://motolog.app/vehicle-reimbursement-in-india) (vendor): no statutory per-km rate; logbook needed for the Sec 10(14) exemption.
+- [Employees: Benefits allowable, Income Tax Department](https://www.incometaxindia.gov.in/w/employees-benefits-allowable) (govt): Sec 10(14) reimbursements and perquisite treatment.
+- [Taxability of Reimbursement of Expenses, Mysa](https://www.mysa.io/blogs/taxability-reimbursement-expenses-employees-india) (vendor): Sec 17(5) blocked-ITC categories behind line-level ITC tagging.
+- [RBI Reference Rate Archive](https://www.rbi.org.in/scripts/referenceratearchive.aspx) (govt): daily INR reference rates, FBIL-computed since July 2018.
+- [Coping with HEIC in the browser, shkspr.mobi](https://shkspr.mobi/blog/2020/12/coping-with-heic-in-the-browser/) (practitioner): iOS HEIC-to-JPEG transcode and the Files-app leak.
+- [Google Cloud Vision supported files](https://docs.cloud.google.com/vision/docs/supported-files) (vendor docs): 20 MB file cap and 1024×768 OCR recommendation.
+- [Canvas area exceeds the maximum limit, PQINA](https://pqina.nl/blog/canvas-area-exceeds-the-maximum-limit/) (practitioner): iOS canvas area caps driving one-page-at-a-time processing.

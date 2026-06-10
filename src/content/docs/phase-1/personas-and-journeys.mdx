@@ -1,0 +1,127 @@
+---
+title: Personas and Journeys
+description: "The five people who touch a claim, their day-in-life journeys, and the device/network reality the product must respect."
+---
+
+import { LinkCard, Steps } from '@astrojs/starlight/components';
+
+Five people touch every claim on its way from crumpled bill to bank credit: a field employee, an office employee, an approver, a finance admin, and the owner-admin who configured it all. A sixth, the auditor, only reads. The [Phase 1 overview](/phase-1/overview/) fixed what we build; this page fixes who it is for, then walks one real claim through three day-in-life journeys. The design centre: a field employee on a 4-8 GB Android in patchy coverage, and an approver who lives in WhatsApp, not a dashboard.
+
+## The persona map
+
+Personas map onto canonical `Membership.roles` (`owner`, `admin`, `finance`, `approver`, `employee`, `auditor`); one person often holds several: a 20-person agency's owner is admin, finance, and approver at once.
+
+| Persona (role) | Job to be done | Top pains (evidence) | What they value | Device and context |
+| --- | --- | --- | --- | --- |
+| Field employee (`employee`) | Recover daily out-of-pocket cash, from anywhere | Payout latency that drives field attrition (vendor, directional); silent capture failures (Expensify bug #45904: confidently wrong amounts, no warning); "when do I get paid?" unanswered category-wide | Two-tap capture that survives dead zones, a live status timeline, money inside days | 4-8 GB Android (largest RAM segment, 42.3%); Jio consistency ~66%; vernacular preference; often inside WhatsApp's in-app browser |
+| Office employee (`employee`) | Clear expenses without breaking the workday | OCR misreads that force re-keying; hotel itemisation, the most hated data-entry task (Concur forums); opaque status | Email-in forwarding, web submission, multi-page bills, async OCR they can walk away from | Laptop plus mid-range Android on office Wi-Fi; the Console as much as the PWA |
+| Approver / manager (`approver`) | Approve correct claims in seconds; stay covered on leave | The admitted #1 bottleneck is their inbox; WhatsApp side-approvals break the audit trail (vendor); whole-report bounces punish one bad line | A decision card with plain-language flags, exactly two primary actions, delegation and out-of-office | Phone-first: WhatsApp and email, low desktop time; decisions happen between meetings |
+| Finance admin (`finance`) | Verify, batch, pay, reconcile, export; close the month | JV re-keying across ~5 disconnected systems, ~1.5-2 days per handoff (vendor, directional); manual GST/ITC classification (vendor claim: up to 60% of T&E ITC lost, directional); rejected claims vanish from AP visibility; no search-by-amount | The verification queue, the payout-batch builder, their bank's exact file format, UTR reconciliation, Tally export | Desktop Console; Tally on-prem in the same office |
+| Owner / admin (`owner`, `admin`) | Make one product fit their org without consultants; control software spend | Rigid workflows that need professional services to rewire; per-user fees plus scan meters (Zoho Standard ₹99/user/mo with 20 autoscans, vendor page); billing traps | The 15-minute onboarding wizard, simulate-before-activate, burn-rate forecasts, prepaid Credit Packs | Desktop plus phone; pays by UPI or netbanking; owner-led buying below ~200 employees, finance-head-led with an HR co-sponsor above (general B2B research, medium) |
+| Auditor (`auditor`, read-only) | Verify controls and ITC eligibility without meetings | Missing receipts and approval trails; evidence reconstructed from email threads | View-only access, append-only AuditEvent trail with channel, 8 FY retention exports | Desktop, periodic, often external |
+
+<p class="source-note">Pains synthesised from v2 pain-point research and v1 persona research (HROne, MYND, FieldAssist: vendor, directional); device and network figures from StatCounter, IMARC, Opensignal, IAMAI-Kantar (high).</p>
+
+## The device and network reality
+
+Field staff set the engineering floor, and the numbers are unambiguous. <span class="pill pill--high">High</span>
+
+| Reality | The number | Product consequence |
+| --- | --- | --- |
+| Android dominance | 93.2% Android vs 6.7% iOS (StatCounter, May 2026) | Android-first PWA; iOS works in Safari, never gated on install |
+| Mid-RAM fleet | 4-8 GB RAM is the largest segment at 42.3% (IMARC, 2025) | ~150 KiB HTML/CSS plus 300-350 KiB JS gzipped first-load budget (Galaxy A24-class); perspective correction server-side |
+| Network consistency | Jio, the best operator, scores 66.5% Consistent Quality (Opensignal, Oct 2024): roughly a third of image-upload-grade tests miss thresholds | The offline outbox is the normal path, not the exception; ~200-500 KB per page; queue, never block |
+| Data economics | ~USD 0.09/GB; average use 31 GB/month (cable.co.uk 2023 vintage; Nokia MBiT 2025) | Coverage gaps, not data bills, are the constraint |
+| Vernacular | 98% of India's 886M internet users consume Indic-language content; 55% are rural (IAMAI-Kantar, 2024) | Hindi plus 2-3 state languages from day one, icon-first forms, same-day copy fixes on the web stack |
+
+:::tip[The design centre]
+Build capture for the worst phone in the fleet and approval for the busiest thumb in the org; everything else in Phase 1 hangs off those two.
+:::
+
+## Journey 1: a fuel bill, from NH-48 to paid
+
+Ravi sells for Deccan Agro, a 120-person FMCG distributor on the Growth pack (1,000 credits). Tuesday, 11:40, an HPCL pump outside Hubballi: ₹1,840 of diesel (`amount_paise: 184000`), fading thermal paper, one bar of signal.
+
+<Steps>
+
+1. **Capture.** He opens Kharcha from his home screen (the WebAPK prompt was deferred past his first successful submission) and taps Snap bill. The `intake` stage hands off to the native camera on the file-input path: full sensor resolution, zero permission prompts, same behaviour inside WhatsApp's in-app browser. The enhanced viewfinder is progressive enhancement on capable Androids, never a requirement. Spec: [camera capture](/phase-1/capture/camera/).
+
+2. **Queue offline.** The shot passes the `quality_gate` blur check and `compress` produces a ~300 KB JPEG. With no usable signal, `queue_upload` writes the blob to the IndexedDB outbox under an idempotency key; the chip reads "Saved on phone, will upload in coverage". He drives on. Spec: [capture pipeline](/spec/capture-pipeline/).
+
+3. **Sync and extract.** Coverage returns near Dharwad; the outbox replays untouched. The Receipt runs `uploaded` → `processing` → `extracted` while a Scanning chip sits on the draft; he can navigate away and gets notified when fields are ready (target P50 under 5s, vendor-benchmarked). Spec: [OCR and itemisation](/phase-1/capture/ocr-itemisation/).
+
+4. **Review and submit.** He confirms the mandatory trio (merchant, date, total), taps one low-confidence field to zoom the image to its source region, fixes it, picks Fuel/Mileage. Submit consumes one credit and the Claim moves `draft` → `submitted`. At a zero balance it would sit in `awaiting_credits` with a one-tap "remind your admin" nudge: queued, never lost. Spec: [submit and track](/phase-1/capture/submit-and-track/) and [credits and metering](/phase-1/credits-and-metering/).
+
+5. **Track to paid.** His claim screen shows the chain preview (manager-only: ₹1,840 sits under the ₹25,000 finance threshold of the 50-250 template) and a live timeline: `in_review` now, `approved` in Journey 2, `in_payout` in Journey 3, then `paid` with the UTR visible. A `sent_back` costs nothing to resubmit (same claim, same credit). The category's unanswered "when do I get paid?" (43% of employees say slow reimbursement hurts their work experience; Webexpenses UK 2024 <span class="pill pill--med">Medium</span>) is answered on this screen.
+
+</Steps>
+
+## Journey 2: a WhatsApp approval in twenty seconds
+
+Meera manages eleven reps and approves between meetings. Review reality is ceremonial (~15-second rubber stamps; AppZen anecdote), so the product optimises honest speed: flags surfaced, maker-checker intact, out of the way.
+
+<Steps>
+
+1. **The nudge.** A WhatsApp utility template (₹0.115-0.145 plus 18% GST per message; strictly transactional copy, since Meta recategorises chatty utility templates to marketing rates, roughly 6-7x) says one claim awaits her and deep links to the decision card. Signed magic-link buttons in plain HTML email are the universal fallback. Spec: [approver experience](/phase-1/web/approver-experience/).
+
+2. **The card.** Amount ₹1,840, merchant and date, purpose ("Hubballi-Belagavi beat, diesel"), receipt thumbnail, requester context, policy flags in plain language. Ravi's claim fires no rules: approve-recommended <span class="pill pill--allow">allow</span>. A flagged claim shows its outcomes (`flag`, `warn`, `cap`), with per-LineItem reject one tap deeper. Exactly two primary actions: Approve, and Send back with a required comment.
+
+3. **The decision.** She glances at the thumbnail and taps Approve. The button is a signed single-use link bound to this claim and amount; above the high-value threshold it steps up to web login. Her ApprovalStep moves `active` → `approved`. Spec: [approval engine](/phase-1/web/approval-engine/).
+
+4. **The trail.** The AuditEvent records actor, role at decision time, timestamp, and channel (`whatsapp`); the server enforces submitter ≠ approver on every channel. Under the finance threshold the chain completes, the Claim is `approved`, and Ravi is notified before her next meeting. Elapsed: about twenty seconds.
+
+5. **Had she ignored it.** One mid-SLA nudge, a pre-escalation warning against the 48-hour SLA, then auto-escalation to her backup; on leave, her out-of-office delegate would have received it, audit-attributed "as delegate of". Max two reminders per item; IST-aware quiet hours.
+
+</Steps>
+
+:::danger[Product invariant]
+Maker-checker survives every convenience. On any channel (web, email link, WhatsApp) the server rejects a decision whose submitter and approver are the same identity; every decision lands in the append-only audit log with its channel. One tap never means off the record.
+:::
+
+## Journey 3: finance closes the month
+
+Joseph runs finance at Deccan Agro. Month-end is a sweep, a batch, a bank file, a reconcile, and two exports; funds never touch Kharcha.
+
+<Steps>
+
+1. **Sweep.** The pending-by-approver dashboard shows who is sitting on what; one click reminds every laggard, with an approve-by date tied to the close calendar. Spec: [finance console](/phase-1/web/finance-console/).
+
+2. **Verify.** The verification queue holds `approved` claims. ITC_ELIGIBLE tags (informational in Phase 1) separate eligible lines from Sec 17(5)-blocked ones (GSTIN-bearing lodging flows to the GST workpaper, meal lines stay blocked); DUPLICATE_SUSPECT flags get a second look; `cap` outcomes already carry `approved_amount_paise`.
+
+3. **Batch.** He builds a PayoutBatch from verified claims. Every PayoutInstruction needs a verified BeneficiaryAccount; two unverified employees are held back without blocking the rest. He exports the bulk-payment file in his bank's format: `building` → `exported`. Spec: [payouts](/phase-1/payouts/) and [bank file formats](/reference/bank-files/).
+
+4. **Pay and reconcile.** He uploads the file in the company's own net-banking and authorises it there; the pure-software invariant keeps funds off our books. He marks the batch `executed`, imports the return file, UTRs land per instruction, claims move `in_payout` → `paid`, and the batch is `reconciled`. The optional per-customer payout API (Razorpay-style) collapses this step to one click.
+
+5. **Export.** A Tally JV export (Tally's on-prem, XML-over-HTTP reality is an operational fact in this segment) and a category-and-GSTIN MIS report close the loop; claims roll `paid` → `closed`. Spec: [integrations](/spec/integrations/).
+
+</Steps>
+
+:::caution[Month-end and the meter]
+Claims in `awaiting_credits` are not in the approval flow and will not appear in Joseph's sweep. Burn alerts (default thresholds 50/80/95/100%) and the "out in ~N days" forecast keep the meter from emptying in close week; mechanics in [credits and metering](/phase-1/credits-and-metering/).
+:::
+
+## Anti-personas: who Phase 1 does not serve
+
+Saying no is part of the spec. Four buyer shapes recur in pipeline; each would distort Phase 1 if chased now.
+
+| Who | What they ask for | Why we decline | Where it lands |
+| --- | --- | --- | --- |
+| Card-led enterprise | Corporate cards, prepaid wallets, spend float | Cards put funds and licensing on our books; an explicit non-goal in both phases | Never |
+| Committee-bought enterprise (2000+ employees) | SSO, security questionnaires, 11-20 person committees (general B2B research, medium) | Phase 1 is self-serve for the 20-500 band, owner- or finance-head-led; enterprise auth and procurement support come later, demand-driven | Revisit after Phase 1 |
+| Vendor-heavy AP team | Vendor invoices, TDS 194C/194J, MSME 45-day clock, RCM | Distinct tax, KYC, and payout machinery; deliberately fenced out of Phase 1 | [Phase 2](/phase-2/overview/) |
+| Travel-booking-led buyer | Integrated booking plus expense suite | No travel booking in either phase; we trade breadth for capture-to-payout depth | Never |
+
+These rows calibrate sales too: cards-or-SSO asks get a polite no; vendor-payment asks join the Phase 2 waitlist.
+
+<LinkCard title="Next: the end-to-end flow" href="/phase-1/end-to-end-flow/" description="The same journeys joined into one pipeline: capture to paid, with every state transition on the way." />
+
+## Sources
+
+- [StatCounter: India mobile OS share](https://gs.statcounter.com/os-market-share/mobile/india) (measurement, high)
+- [Opensignal: India Mobile Network Experience, Oct 2024](https://insights.opensignal.com/reports/2024/10/india/mobile-network-experience) (analyst, high)
+- [IAMAI-Kantar: Internet in India 2024](https://www.iamai.in/sites/default/files/research/Kantar_%20IAMAI%20report_2024_.pdf) (industry body, high)
+- [IMARC: India smartphone RAM mix](https://www.imarcgroup.com/india-smartphone-market) (analyst, medium)
+- [Alex Russell: The Performance Inequality Gap 2024](https://infrequently.org/2024/01/performance-inequality-gap-2024/) (engineering guidance, high)
+- [HROne: India expense personas and TAT](https://hrone.cloud/blog/expense-management-software-india-hr) (vendor, directional)
+- [FieldAssist: field-sales expense management](https://www.fieldassist.com/blog/what-is-expense-management-software-top-systems-india) (vendor, directional)
+- [MYND: India expense approval workflows](https://www.myndsolution.com/best-practices/setting-up-expense-approval-workflows-in-expense-and-travel-management-in-india/) (vendor, medium)

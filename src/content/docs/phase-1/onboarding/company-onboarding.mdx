@@ -1,0 +1,190 @@
+---
+title: Company Onboarding
+description: "A five-step wizard to a first approved claim in one session, and the checklist that never blocks it."
+---
+
+import { LinkCard, Steps } from '@astrojs/starlight/components';
+
+A new company signs up, accepts India-first defaults, and approves a working claim inside 15 minutes, in the same session, no consultant on a call. That is the entire design brief. Exactly three things are hard-required before the first real claim (one admin, the undeletable fallback approval rule, one active category); everything else, including bank details, defers to a post-wizard checklist that nudges but never blocks. The wizard writes plain configuration records into [the configuration model](/phase-1/onboarding/configuration-model/); there is no setup mode to escape later.
+
+## The bar the wizard must clear
+
+Onboarding benchmarks argue for radical defaulting, not guided tours.
+
+| Benchmark | Value | Design response |
+|---|---|---|
+| Median SaaS time-to-value | 1 day 12 hours 23 minutes (547 companies) | Demo claim approved in-session; first real claim under 24 hours |
+| Median B2B activation rate | 37% (62 companies) | Activation defined as three explicit events, instrumented from day one |
+| Onboarding checklist completion | 19.2% average, 10.1% median (188 companies) | Nothing on the checklist may gate the first claim; nudge contextually |
+
+<p class="source-note">Source: Userpilot 2024 benchmark reports (vendor-published from their own customer base, directional). <span class="pill pill--med">Medium</span></p>
+
+Three rules fall out: first value lands in the first session (day two never comes for most trials), activation gets an explicit three-event definition, and the checklist is a reminder surface, not a gate, because four out of five admins will ignore it.
+
+## The five-step wizard
+
+Every choice is reversible later from Settings.
+
+<Steps>
+
+1. **Account and org basics.** Work email plus a six-digit OTP; no password at signup. Then company name, a size band (it selects the step 2 template), currency prefilled `INR`, financial year prefilled April to March, and a GSTIN field that is present but explicitly skippable. No logo, address, or PAN questions.
+
+2. **Approval template by size.** One of three templates, with a live preview rendering the actual chain for a sample claim as the admin edits names and the ₹25,000 threshold. The preview is the embryo of Simulate-a-claim in [the configuration model](/phase-1/onboarding/configuration-model/); full routing semantics live in [the approval engine](/phase-1/web/approval-engine/).
+
+3. **Categories.** The preloaded India set, all on, toggles only: Local Conveyance, Travel Air/Rail, Lodging, Meals, Fuel/Mileage, Telecom, Office Supplies, Software, Medical, Misc. No category editor inside the wizard; per-category limits and rule overrides live in [policy and rules](/phase-1/onboarding/policy-and-rules/).
+
+4. **Invite up to three people.** Three inline rows: name, work email, manager. Or skip and import later. Invites carry 7-day magic links and land invitees in a Pending state.
+
+5. **The demo claim.** A pre-seeded sample claim from a demo employee sits in the admin's queue. The admin opens the decision card (amount, merchant and date, receipt thumbnail, one deliberate soft flag) and taps Approve. First value is watching the loop run; the full loop is specified in [the end-to-end flow](/phase-1/end-to-end-flow/).
+
+</Steps>
+
+### Microcopy
+
+| Screen | Primary copy | Notes |
+|---|---|---|
+| 1: account | "Enter your work email. We'll send a six-digit code." | Feeds domain capture later; personal domains allowed, discouraged |
+| 1: org basics | "Currency INR. Financial year April to March. Change these only if you must." | India defaults preselected, not asked as questions |
+| 1: GSTIN | "GSTIN (optional). Add it anytime from Settings; you'll want it for GST reports." | Format-checked when present (the GSTIN_FORMAT built-in, Luhn-mod-36) |
+| 2: approvals | "Who approves claims? Pick a starting point. Everything here is editable later." | Preview line: "₹30,000 hotel bill from Priya → her manager → Finance" |
+| 3: categories | "All ten categories are on. Switch off anything you don't reimburse." | Toggles only |
+| 4: invites | "Add up to three people now, or skip and import your whole team later." | Name, work email, manager per row |
+| 5: demo claim | "Asha (sample employee) submitted a claim. Approve it to see how the whole flow works." | Banner: "Sample data. Remove it anytime with one click." |
+| 5: finish | "That's the loop: capture, approve, pay. Invite your team; the next claim is real." | CTA pair: Invite team / Go to dashboard |
+
+### The three templates
+
+| Size band | Default chain | Behaviour |
+|---|---|---|
+| Under 50 | Manager only | The reporting manager approves; finance watches from the console but is not a step |
+| 50-250 | Manager, then finance above ₹25,000 | Claims at or under ₹25,000 end at the manager; larger claims add a finance step |
+| 250 and up | Manager, then department head over the threshold, then finance | Department head joins above the same ₹25,000 default; finance is always final |
+
+Slots are role-abstracted (Manager, Department head, Finance), never named people, so chains survive churn; the ₹25,000 thresholds are defaults and every part is editable later.
+
+### The demo claim, precisely
+
+Demo data is the established cure for empty-state death: Stripe seeds test mode, Notion opens into templates, and onboarding teardowns call the empty day-one dashboard the most common reason a trial dies (Appcues, directional). Our seed: one demo employee (Asha Verma), one claim, one receipt image:
+
+```json
+{
+  "id": "clm_01J9X4QH7SV2K3M4N5P6Q7R8T9",
+  "company_id": "co_01J9X4QH7S8B2C3D4E5F6G7H8J",
+  "is_demo": true,
+  "status": "submitted",
+  "currency": "INR",
+  "claimed_amount_paise": 184350,
+  "purpose": "Client visit, Koramangala",
+  "line_items": [
+    {
+      "id": "li_01J9X4QH7TAB2CD3EF4G5H6J7K",
+      "category": "local_conveyance",
+      "merchant": "Uber India",
+      "expense_date": "2026-06-08",
+      "amount_paise": 48350
+    },
+    {
+      "id": "li_01J9X4QH7TM8N9P0Q1R2S3T4V5",
+      "category": "meals",
+      "merchant": "Sagar Ratna, Indiranagar",
+      "expense_date": "2026-06-08",
+      "amount_paise": 136000,
+      "merchant_gstin": "29ABCDE1234F1Z5"
+    }
+  ],
+  "receipt_ids": ["rcp_01J9X4QH7TW6X7Y8Z9A0B1C2D3"]
+}
+```
+
+Demo rules: `is_demo` rows never consume credits, never appear in exports or reports, never count toward activation. The meals line fires a deliberate `flag`: the ITC_ELIGIBLE built-in tags food and beverages as blocked ITC under Sec 17(5), so the admin sees how a policy flag renders as an exception badge on the decision card before any real claim arrives. The approval is real: the claim walks `submitted` to `in_review` to `approved` exactly as production claims do. "Remove sample data" purges every demo-tagged row (claim, line items, receipt, demo employee) in one click.
+
+Done means: a fresh signup reaches demo-claim approval without leaving the wizard, in under 15 minutes on a mid-range phone; abandonment resumes at the same step; every decision stays editable later with nothing lost.
+
+## Three gates, and nothing else
+
+Before the first real Claim can be submitted, the system requires exactly: a Membership carrying the `admin` role (the wizard creator gets `owner` plus `admin`), the fallback approval rule, and at least one active category. The wizard cannot finish without all three, so the gate never surfaces.
+
+The fallback rule is the load-bearing one. Zoho hard-blocks submission when a claim matches no approval flow; its KB error reads "You cannot submit this expense report as it does not match your organization's approval criteria," and only an admin edit clears it. Fyle ships the opposite invariant: an immovable default rule that routes everything to a primary approver. We adopt the Fyle invariant and make it undeletable.
+
+:::danger[Product invariant: submission never blocks on routing]
+A claim that matches no configured chain still submits. It routes to the admin queue flagged `rule_gap` and surfaces on the admin dashboard. The fallback rule is built in, always matching, and cannot be deleted, only reordered below more specific rules. Routing failures are an admin's problem to tidy, never an employee's reason to stop filing.
+:::
+
+## The post-wizard checklist
+
+Everything that is not a gate lands here, sequenced honestly: value first, compliance chores when actually due.
+
+| Checklist item | What it unlocks | Actually required by |
+|---|---|---|
+| Bank account and bank file format | PayoutBatch export in the customer's bank format | The first payout run, never the first claim ([payouts](/phase-1/payouts/)) |
+| GST details (company and branch GSTINs) | ITC-eligibility tagging, GST-grade reports | The first GST report; claims flow fine without it |
+| Branches | Per-branch GSTIN, approvers, payout accounts | A second entity; single-site companies never touch it |
+| Bulk employee import | The roster beyond the wizard's three invites | Whenever the team outgrows inline invites |
+| Notification channels | WhatsApp nudges, reminder cadence tuning | Optional; email works from the first minute |
+
+:::caution[Design for the 19%]
+Checklist completion averages about 19% (Userpilot 2024, vendor-published), so the checklist is a map, not a mechanism. The product nudges contextually instead: building a PayoutBatch without a verified BankAccount opens bank setup inline; the first extracted merchant GSTIN prompts "Add your GSTIN to tag ITC eligibility"; a fourth inline invite opens the CSV importer; at the soft paywall, employees get the one-tap "remind your admin" nudge from [credits and metering](/phase-1/credits-and-metering/).
+:::
+
+## Building the roster
+
+Three intake paths in expected order: the wizard's inline invites, CSV import, then domain capture.
+
+### CSV import
+
+The downloadable template has seven columns, one row per person:
+
+```text
+name,work_email,employee_id,department,manager_email,branch,role
+Priya Sharma,priya.sharma@acme.in,EMP-0412,Field Sales,rohit.mehta@acme.in,Bengaluru,employee
+Rohit Mehta,rohit.mehta@acme.in,EMP-0119,Field Sales,anita.rao@acme.in,Bengaluru,finance
+```
+
+The `role` column accepts `employee`, `finance`, `admin`, `auditor`; `approver` is never assigned by import, it derives from approval rules and the `manager_email` references that power the Manager slot.
+
+The pipeline is map, validate, fix-in-grid, dry-run, invite. Mapping auto-matches headers with manual override. Validation checks email format, resolves each `manager_email` to another row or an existing Membership, coerces `branch` to an existing branch or offers creation, and dedupes on work email plus employee ID, in-file and against the tenant. Errors are fixed in the grid with one-click fixes (find and replace, picklist coercion), never by re-uploading; OneSchema reports an in-app error-resolution step lifts completed activations by 50% or more (vendor survey). <span class="pill pill--med">Medium</span>
+
+The dry run previews counts before anything sends: "212 will be invited. 3 duplicates skipped. 5 rows need fixes." Invites then go out with 7-day single-use magic links (Fyle's 24-hour links are too aggressive; admins import on Friday, field teams open email midweek), invitees sit in Pending, and a checkbox-select bulk resend covers stragglers.
+
+### Domain capture
+
+Once an admin proves control of `acme.in` via a DNS TXT record, an org policy decides what a matching work-email signup does: auto-join (the user lands in the tenant as `employee`) or request-to-join (admin approves each). Signups that collide with a Pending invite claim that invite rather than duplicating. This is the WorkOS-documented JIT pattern; late joiners self-onboard with zero admin work, which is why step 1 nudges toward work email.
+
+## Instrumenting activation
+
+Activation is three events, not one: a company that captures but never approves, or approves but never pays, has not adopted.
+
+| Milestone | Event | Target | Benchmark (labelled) |
+|---|---|---|---|
+| Demo claim approved | `demo_claim_approved` | Same session, minutes from signup | Median SaaS TTV is about 1.5 days (Userpilot 2024, vendor-published) |
+| First real claim | `first_claim_submitted` | Under 24 hours from signup | Beats the 1.5-day median |
+| First approval | `first_approval_decided` | Under 48 hours | Matches the default 48-hour approval SLA |
+| First payout file | `first_payout_exported` | By the first month-end run | Completes activation |
+| Checklist | `checklist_item_completed` | Expect about 19%; never gate on it | 19.2% average, 10.1% median (Userpilot) |
+
+Activation = `first_claim_submitted` + `first_approval_decided` + `first_payout_exported`, measured against the 37% median benchmark as a range, not a point (the Userpilot dataset shows wide per-segment volatility). <span class="pill pill--med">Medium</span>
+
+The wizard ends on the `Free` plan: unlimited seats, 20 submissions per company per month, a real pilot's worth (a 10-person team filing twice a month fits exactly). If a pilot outruns it, submissions wait visibly in `awaiting_credits` while capture continues; semantics in [credits and metering](/phase-1/credits-and-metering/).
+
+## Fifteen minutes, no consultant
+
+Concur is the foil, cited honestly. G2's synthesized pros and cons say configuring its policies, approval flows, and integrations typically needs trained administrators or consultants; Capterra reviewers call the back end clunky, "completed in an odd way that takes longer than you think it should." Both sites block direct fetching, so the quotes arrived via search snippets; re-verify before public use. <span class="pill pill--med">Medium</span> The structural point survives the caveat: the incumbent configuration benchmark is weeks of services, and even SMB-friendly tools budget free human setup hours.
+
+:::tip[The wedge]
+First claim in 15 minutes, no consultant. Every configuration screen ships only if an Indian SMB office manager could finish it without a support ticket. The three-gate rule, the undeletable fallback rule, and size-based templates make the claim structurally true; Concur's documented stuck-workflow failure modes are the anti-checklist.
+:::
+
+<LinkCard title="Configuration model" description="The surface this wizard writes into: approval matrix, simulate-a-claim, snapshot-at-submission, policy versioning." href="/phase-1/onboarding/configuration-model/" />
+
+## Sources
+
+- [Userpilot, Time to Value benchmark report 2024 (median TTV 1d 12h 23m, 547 companies)](https://userpilot.com/blog/time-to-value-benchmark-report-2024/) (vendor benchmark)
+- [Userpilot, User Activation Rate benchmark 2024 (median 37%)](https://userpilot.com/blog/user-activation-rate-benchmark-report-2024/) (vendor benchmark)
+- [Userpilot, Onboarding Checklist Completion benchmarks (19.2% average, 10.1% median)](https://userpilot.com/blog/onboarding-checklist-completion-rate-benchmarks/) (vendor benchmark)
+- [Zoho Expense KB, approval criteria error on submission (the hard-block anti-pattern)](https://www.zoho.com/us/expense/kb/reports/approval-criteria-error/) (vendor docs)
+- [Fyle Help, Approval workflows (the immovable default rule)](https://www.fylehq.com/help/en/articles/11129811-approval-workflows-on-fyle) (vendor docs)
+- [Fyle Help, Adding new employees (bulk template, 24-hour links, Pending state, bulk resend)](https://help.fylehq.com/en/articles/1205143-add-employees-and-send-invite-emails) (vendor docs)
+- [G2, SAP Concur pros and cons (consultant-dependent configuration; snippet-mediated)](https://www.g2.com/products/sap-concur/reviews?qs=pros-and-cons) (review aggregator)
+- [WorkOS Docs, Domain verification and JIT provisioning](https://workos.com/docs/authkit/users-organizations/users/domain-verification) (vendor docs)
+- [OneSchema, Building a CSV uploader (error-resolution activation lift, vendor survey)](https://www.oneschema.co/blog/building-a-csv-uploader) (vendor survey)
+- [Appcues, SaaS onboarding examples (Stripe test mode, Notion templates, demo-data pattern)](https://www.appcues.com/blog/saas-user-onboarding) (vendor blog)

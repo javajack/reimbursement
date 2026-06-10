@@ -1,0 +1,549 @@
+---
+title: Data Model
+description: "The full entity model with SQL DDL for core tables, RLS, indexes, and the append-only ledgers."
+---
+
+import { CardGrid, FileTree, LinkCard } from '@astrojs/starlight/components';
+
+The whole product fits in one PostgreSQL 16 database: 25 tables in eight modules, every tenant row stamped with `company_id` and fenced by row-level security, and two append-only ledgers (`credit_entries`, `audit_events`) doing the accounting. This page is the normative schema. Status columns are CHECK-pinned to the lifecycles specified on [state machines](/spec/state-machines/); the single-database, RLS-per-tenant decision is argued in [architecture](/spec/architecture/). An implementing agent should be able to create the claims spine (the big-six DDL below) from this page alone; the remaining tables follow the conventions and load-bearing notes here, with their behavioural contracts on the pages that own them ([config schema](/spec/config-schema/), [payouts](/phase-1/payouts/), [credits and metering](/phase-1/credits-and-metering/)).
+
+## Conventions every table follows
+
+- **Primary keys** are `text` holding app-generated prefixed ULIDs (`clm_01JXA8FQ2M9T4VHB6KD3WPRZNE`). The prefix is part of the stored value (Stripe pattern): ids are self-describing in logs, sortable by creation time, and need no sequence coordination.
+- **Money** is `bigint` paise in columns ending `_paise`, with `currency char(3) DEFAULT 'INR'`. Never floats, never rupees, never strings.
+- **Time** is `timestamptz` in UTC. Bill dates are `date` (a bill has no meaningful time of day).
+- **Enums** are `text` plus a CHECK constraint, never native Postgres enums: swapping a CHECK is a cheap two-statement migration; enum surgery is not.
+- **Tenancy**: every table except `companies` and `users` carries `company_id text NOT NULL REFERENCES companies(id)`, the RLS anchor (`companies` is the tenant itself).
+- `updated_at` is trigger-maintained. Tables without it are append-only by design.
+- **jsonb** only where the shape is versioned elsewhere (receipt extraction, rule conditions, chain definitions, audit diffs). Anything the database must constrain (money, statuses, FKs) is a real column.
+- **Deletes**: financial records are never hard-deleted. `ON DELETE CASCADE` exists only from `claims` to `line_items`, and the service layer permits deleting claims only in `draft`.
+
+## Entity map
+
+| Module | Tables (id prefix) | Notes |
+| --- | --- | --- |
+| Identity | `companies` (`co_`), `users` (`usr_`), `memberships` (`mem_`) | Membership joins User to Company with a roles array; all domain FKs point at memberships, never bare users. |
+| Org | `departments` (`dep_`\*), `cost_centers` (`cc_`\*), `grades` (`grd_`\*), `branches` (`br_`\*) | Dimensions referenced by memberships and rules. Deactivated, never deleted. |
+| Claims | `claims` (`clm_`), `line_items` (`li_`), `receipts` (`rcp_`), `advances` (`adv_`) | The spine. Receipts exist before their claim (capture-first); advances net at claim level. |
+| Approvals | `approval_chains` (`chn_`\*), `approval_steps` (`apr_`) | Chains are versioned definitions; steps are the resolved snapshot at submission. |
+| Policy | `rules` (`rule_`), `policy_tables` (`pt_`\*) | Rules carry the six action verbs; policy tables hold effective-dated rates. The canonical Policy entity has no standalone table: it is realized as the versioned rule grouping in [config schema](/spec/config-schema/). |
+| Credits | `credit_entries` (`cre_`) | Append-only meter ledger. Balance is a SUM, never a column. |
+| Payouts | `bank_accounts` (`ba_`), `beneficiary_accounts` (`bene_`), `payout_batches` (`pob_`), `payout_instructions` (`pin_`) | Beneficiaries are verification-gated. Funds never touch our accounts. |
+| Platform | `audit_events` (`evt_`), `notifications` (`ntf_`\*), `api_keys` (`key_`\*), `webhook_endpoints` (`wh_`\*), `idempotency_keys` (no prefix) | `audit_events` is the second append-only ledger. |
+
+Prefixes marked \* are defined by this page; the rest are canonical API conventions. The claims spine and its dependencies:
+
+```text
+companies ──< memberships >── users
+                  │
+                  └──< claims ──< line_items >── receipts (attach after capture)
+                        │  │
+                        │  ├──< approval_steps          (chain_id → approval_chains)
+                        │  ├─── advances (netting)
+                        │  ├─── credit_entries.claim_id (consumption)
+                        │  └──< payout_instructions >── payout_batches ── bank_accounts
+                        │             └── beneficiary_accounts
+                        └─── audit_events (every transition and rule firing)
+```
+
+Load-bearing details outside the big six. `memberships.roles` is `text[]` CHECK-restricted to the six canonical roles (`owner`, `admin`, `finance`, `approver`, `employee`, `auditor`), unique on `(company_id, user_id)`. `approval_chains` stores the match predicate and approver slots as versioned jsonb; exactly one row per company has `is_fallback = true` (partial unique index) and can be neither deleted nor deactivated, so routing always matches something. `rules` columns mirror the rule object: `scope`, `priority`, six-verb `action` CHECK (`allow`, `flag`, `warn`, `cap`, `block`, `route`), `condition` jsonb, `effective_from`/`effective_to`, `version`; the full contract is on [rule schema](/spec/rule-schema/). `policy_tables` holds effective-dated rate rows (`table_name`, `row_key` jsonb, `value` jsonb): the per-diem matrix keyed by city tier, grade, and expense type; mileage keyed by vehicle class. A rate change closes the old row's `effective_to` and inserts a new version; nothing is edited in place. `beneficiary_accounts.verification_status` (`unverified`, `pending`, `verified`, `failed`) gates payouts; penny-drop verification runs about ₹3 per check (Setu pricing, high confidence). `api_keys` stores a SHA-256 hash plus display prefix, never the key. `webhook_endpoints` keeps the per-endpoint HMAC secret. `idempotency_keys` is keyed `(company_id, key)` with a request hash and the canned response; the stored response replays for the full 7 days before purge (the purge horizon must be at least the client outbox replay horizon, so a days-late offline replay still gets its original 201), and a request-body mismatch under the same key returns `409 idempotency_key_reuse` <span class="pill pill--info">Defined here</span>.
+
+## The big six tables
+
+### claims
+
+One claim is one reimbursement request: one credit on entering the workflow, many line items, one terminal amount. `credit_entry_id` points at the first `consumption` ledger row for the claim (consumption can span multiple rows when it drains more than one grant; the full set is found via `credit_entries.claim_id`); it stays NULL through `draft` and `awaiting_credits` and is reused after `sent_back`, because resubmission is free.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | text | no | app | `clm_` ULID |
+| `company_id` | text | no | | FK `companies`; RLS anchor |
+| `claimant_id` | text | no | | FK `memberships` |
+| `title` | text | no | | purpose line on the decision card |
+| `status` | text | no | `'draft'` | 11-state lifecycle enum |
+| `claimed_amount_paise` | bigint | no | `0` | derived: sum of line claims |
+| `approved_amount_paise` | bigint | yes | | set at decision; never exceeds claimed |
+| `currency` | char(3) | no | `'INR'` | |
+| `advance_id` | text | yes | | FK `advances`; netted at decision |
+| `credit_entry_id` | text | yes | | FK `credit_entries`; first consumption row |
+| `submitted_at`, `decided_at`, `paid_at` | timestamptz | yes | | milestone stamps |
+| `legal_hold` | boolean | no | `false` | freezes retention purge |
+| `created_at`, `updated_at` | timestamptz | no | `now()` | `updated_at` trigger-maintained |
+
+```sql
+CREATE TABLE claims (
+  id                    text PRIMARY KEY,
+  company_id            text NOT NULL REFERENCES companies(id),
+  claimant_id           text NOT NULL REFERENCES memberships(id),
+  title                 text NOT NULL,
+  status                text NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft','awaiting_credits','submitted','in_review','sent_back',
+                      'approved','rejected','in_payout','paid','closed','cancelled')),
+  claimed_amount_paise  bigint NOT NULL DEFAULT 0 CHECK (claimed_amount_paise >= 0),
+  approved_amount_paise bigint
+    CHECK (approved_amount_paise >= 0 AND approved_amount_paise <= claimed_amount_paise),
+  currency              char(3) NOT NULL DEFAULT 'INR',
+  advance_id            text REFERENCES advances(id),
+  credit_entry_id       text REFERENCES credit_entries(id),
+  submitted_at          timestamptz,
+  decided_at            timestamptz,
+  paid_at               timestamptz,
+  legal_hold            boolean NOT NULL DEFAULT false,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX claims_company_status_idx ON claims (company_id, status, submitted_at DESC);
+CREATE INDEX claims_open_by_claimant_idx ON claims (claimant_id, updated_at DESC)
+  WHERE status NOT IN ('closed','cancelled','rejected');
+```
+
+### line_items
+
+Lines are where policy bites: rules `cap` or reject individual lines, so a mixed bill partially reimburses without bouncing the whole claim. GST splits are per line; the engine validates that CGST equals SGST and flags mismatches, never silently fixes them. Line `status` ends `approved`, `capped`, or `rejected` (with `pending` before decision <span class="pill pill--info">Defined here</span>).
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | text | no | app | `li_` ULID |
+| `company_id`, `claim_id` | text | no | | FKs; lines die with draft claims |
+| `receipt_id` | text | yes | | NULL on pure manual entry |
+| `category` | text | no | | code validated against company config |
+| `description`, `merchant` | text | yes | | |
+| `expense_date` | date | no | | bill date |
+| `gstin` | text | yes | | as printed; checksum rule fires in engine |
+| `status` | text | no | `'pending'` | `pending`, `approved`, `capped`, `rejected` |
+| `claimed_amount_paise` | bigint | no | | positive |
+| `approved_amount_paise` | bigint | yes | | `cap` writes min(claimed, cap) |
+| `taxable_value_paise`, `cgst_paise`, `sgst_paise`, `igst_paise` | bigint | yes | | per-line GST split |
+| `tax_inclusive` | boolean | no | `true` | inclusive/exclusive toggle |
+| `itc_eligible` | boolean | yes | | NULL = not assessed; informational in Phase 1 |
+| `is_personal` | boolean | no | `false` | personal lines cap to 0 |
+| `flags` | jsonb | no | `'[]'` | rendered rule outcomes; ledger copy in `audit_events` |
+| `created_at`, `updated_at` | timestamptz | no | `now()` | |
+
+```sql
+CREATE TABLE line_items (
+  id                    text PRIMARY KEY,
+  company_id            text NOT NULL REFERENCES companies(id),
+  claim_id              text NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+  receipt_id            text REFERENCES receipts(id),
+  category              text NOT NULL,
+  description           text,
+  merchant              text,
+  expense_date          date NOT NULL,
+  gstin                 text,
+  status                text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','approved','capped','rejected')),
+  claimed_amount_paise  bigint NOT NULL CHECK (claimed_amount_paise > 0),
+  approved_amount_paise bigint
+    CHECK (approved_amount_paise >= 0 AND approved_amount_paise <= claimed_amount_paise),
+  taxable_value_paise   bigint,
+  cgst_paise            bigint,
+  sgst_paise            bigint,
+  igst_paise            bigint,
+  tax_inclusive         boolean NOT NULL DEFAULT true,
+  itc_eligible          boolean,
+  is_personal           boolean NOT NULL DEFAULT false,
+  flags                 jsonb NOT NULL DEFAULT '[]',
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now(),
+  CHECK ((cgst_paise IS NULL) = (sgst_paise IS NULL)),          -- CGST and SGST travel together
+  CHECK (NOT (cgst_paise IS NOT NULL AND igst_paise IS NOT NULL)) -- intrastate or interstate, not both
+);
+
+CREATE INDEX line_items_claim_idx ON line_items (claim_id);
+CREATE INDEX line_items_dupe_idx ON line_items (company_id, expense_date, claimed_amount_paise);
+```
+
+The dupe index backs DUPLICATE_SUSPECT probes (date plus amount collision); receipt-level exact and perceptual hashes live on `receipts`.
+
+### receipts
+
+One row per captured image or page (`page_index` orders multi-page bills). Rows exist before any claim and attach later: capture is free-standing, submission is the meter. `queued` is the application-layer state for credit exhaustion or backlog, deliberately distinct from the client's offline outbox. The fair-use guard counts attached images per claim: 5 per credit, then one more credit per additional 5.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | text | no | app | `rcp_` ULID |
+| `company_id` | text | no | | RLS anchor |
+| `claim_id` | text | yes | | NULL until attached; SET NULL on draft delete |
+| `uploaded_by` | text | no | | FK `memberships` |
+| `status` | text | no | `'uploaded'` | capture lifecycle enum |
+| `storage_key` | text | no | | S3 object key, Mumbai (ap-south-1) bucket |
+| `mime_type` | text | no | | jpeg, png; pdf email-in only (client `POST /receipts` rejects it) |
+| `byte_size` | integer | no | | post-compression, ~200-500 KB/page |
+| `page_index` | smallint | no | `0` | multi-page bills |
+| `sha256` | text | no | | exact-duplicate probe |
+| `perceptual_hash` | text | yes | | near-duplicate probe at capture |
+| `extraction` | jsonb | yes | | merchant, date, GSTIN, lines, tax split, per-field confidence |
+| `failure_reason` | text | yes | | shown in the failed-scan queue |
+| `processed_at` | timestamptz | yes | | |
+| `created_at` | timestamptz | no | `now()` | no `updated_at`: status moves via worker, logged |
+
+```sql
+CREATE TABLE receipts (
+  id              text PRIMARY KEY,
+  company_id      text NOT NULL REFERENCES companies(id),
+  claim_id        text REFERENCES claims(id) ON DELETE SET NULL,
+  uploaded_by     text NOT NULL REFERENCES memberships(id),
+  status          text NOT NULL DEFAULT 'uploaded'
+    CHECK (status IN ('uploaded','queued','processing','extracted','extraction_failed')),
+  storage_key     text NOT NULL,
+  mime_type       text NOT NULL CHECK (mime_type IN ('image/jpeg','image/png','application/pdf')),
+  byte_size       integer NOT NULL,
+  page_index      smallint NOT NULL DEFAULT 0,
+  sha256          text NOT NULL,
+  perceptual_hash text,
+  extraction      jsonb,
+  failure_reason  text,
+  processed_at    timestamptz,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX receipts_worker_queue_idx ON receipts (company_id, created_at)
+  WHERE status IN ('queued','processing');   -- soft-paywall drain + worker scan
+CREATE INDEX receipts_dedupe_idx ON receipts (company_id, sha256);
+```
+
+### approval_steps
+
+Steps are the snapshot: chains resolve role-abstracted slots to concrete approvers at submission, and `chain_version` pins the definition, so in-flight claims keep their routing unless an admin explicitly re-routes. `round` increments on each resubmission after `sent_back`; prior rounds stay for history. Self-approval is service-blocked: `acted_by` may never equal the claim's `claimant_id`.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | text | no | app | `apr_` ULID |
+| `company_id`, `claim_id` | text | no | | FKs |
+| `chain_id` | text | yes | | matched chain; NULL when fallback routed |
+| `chain_version` | integer | no | | snapshot-at-submission |
+| `round` | smallint | no | `1` | bumps on resubmission |
+| `step_index` | smallint | no | | 0-based position in the chain |
+| `approver_id` | text | no | | resolved assignee (FK `memberships`) |
+| `delegate_id` | text | yes | | out-of-office delegate |
+| `status` | text | no | `'pending'` | 9-state step enum |
+| `acted_by` | text | yes | | who actually decided; delegate-attributed |
+| `channel` | text | yes | | `web`, `email_link`, `whatsapp` |
+| `comment` | text | yes | | app-enforced: required on `sent_back` |
+| `sla_due_at`, `acted_at` | timestamptz | yes | | SLA timers, escalation sweeps |
+| `created_at` | timestamptz | no | `now()` | |
+
+```sql
+CREATE TABLE approval_steps (
+  id            text PRIMARY KEY,
+  company_id    text NOT NULL REFERENCES companies(id),
+  claim_id      text NOT NULL REFERENCES claims(id),
+  chain_id      text REFERENCES approval_chains(id),
+  chain_version integer NOT NULL,
+  round         smallint NOT NULL DEFAULT 1,
+  step_index    smallint NOT NULL,
+  approver_id   text NOT NULL REFERENCES memberships(id),
+  delegate_id   text REFERENCES memberships(id),
+  status        text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','active','approved','rejected','sent_back',
+                      'skipped','escalated','delegated','expired')),
+  acted_by      text REFERENCES memberships(id),
+  channel       text CHECK (channel IN ('web','email_link','whatsapp')),
+  comment       text,
+  sla_due_at    timestamptz,
+  acted_at      timestamptz,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (claim_id, round, step_index)
+);
+
+CREATE INDEX approval_steps_inbox_idx ON approval_steps (approver_id, sla_due_at)
+  WHERE status IN ('pending','active');      -- approver inbox + SLA/escalation sweeps
+```
+
+### credit_entries
+
+The meter. Balance is `SUM(amount)` over the ledger, computed on demand, optionally cached and invalidated on append, never stored as a mutable column. Grants are positive rows with `expires_at` (a `plan_grant` expires at period end with no rollover; a `pack_purchase` carries 12-month validity); `consumption` rows are negative and reference the grant they drain, expiring-soonest first. Full semantics, ladder prices, and the soft paywall live on [credits and metering](/phase-1/credits-and-metering/).
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | text | no | app | `cre_` ULID |
+| `company_id` | text | no | | RLS anchor |
+| `type` | text | no | | six canonical entry types |
+| `amount` | integer | no | | sign CHECK-enforced by type |
+| `claim_id` | text | yes | | set on `consumption` |
+| `grant_id` | text | yes | | `consumption`/`expiry` point at their grant |
+| `expires_at` | timestamptz | yes | | grants only |
+| `note` | text | yes | | human reason on `adjustment` |
+| `created_at` | timestamptz | no | `now()` | append-only: no `updated_at` |
+
+```sql
+CREATE TABLE credit_entries (
+  id          text PRIMARY KEY,
+  company_id  text NOT NULL REFERENCES companies(id),
+  type        text NOT NULL
+    CHECK (type IN ('plan_grant','pack_purchase','consumption','expiry','adjustment','promo_grant')),
+  amount      integer NOT NULL CHECK (amount <> 0),
+  claim_id    text REFERENCES claims(id),
+  grant_id    text REFERENCES credit_entries(id),
+  expires_at  timestamptz,
+  note        text,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  CHECK (CASE WHEN type IN ('consumption','expiry') THEN amount < 0
+              WHEN type = 'adjustment'              THEN true
+              ELSE amount > 0 END)
+);
+
+CREATE INDEX credit_entries_balance_idx ON credit_entries (company_id) INCLUDE (amount);
+CREATE INDEX credit_entries_claim_idx ON credit_entries (claim_id)
+  WHERE claim_id IS NOT NULL;                                  -- all consumption rows for a claim
+CREATE INDEX credit_entries_open_grants_idx ON credit_entries (company_id, expires_at)
+  WHERE type IN ('plan_grant','pack_purchase','promo_grant');  -- expiring-soonest consumption order
+```
+
+Consumption writes one row per (claim, grant) pair, each with its own negative `amount` and `grant_id`: a multi-image claim (6 to 10 images costs 2 credits) whose draw spans grants, say the last credit of an expiring `plan_grant` plus one from a pack, produces two rows. `claims.credit_entry_id` records the first such row; the full set is read via `claim_id`. Cancelled claims are not auto-refunded; admins compensate with an `adjustment`.
+
+### payout_instructions
+
+One instruction pays one claim from one verified beneficiary account, inside a batch. The status enum follows the canonical lifecycle on [state machines](/spec/state-machines/): `pending` while the batch builds, `dispatched` once it rides an exported file or is accepted by the payout API, then `paid` or `failed` (`cancelled` while the batch is still building). `utr` is the reconciliation key against the bank statement or return file. Rail selection and per-rail caps (NEFT default; IMPS and UPI limits) are specified on [payouts](/phase-1/payouts/).
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | text | no | app | `pin_` ULID |
+| `company_id`, `batch_id`, `claim_id` | text | no | | FKs |
+| `beneficiary_id` | text | no | | FK `beneficiary_accounts`; must be `verified` |
+| `amount_paise` | bigint | no | | positive; equals claim's approved amount less advance netting |
+| `currency` | char(3) | no | `'INR'` | |
+| `rail` | text | yes | | `neft`, `imps`, `rtgs`, `upi`; set at batch build |
+| `status` | text | no | `'pending'` | 5-state enum below |
+| `utr` | text | yes | | bank UTR on success |
+| `failure_reason` | text | yes | | bank/API error verbatim |
+| `executed_at`, `reconciled_at` | timestamptz | yes | | |
+| `created_at`, `updated_at` | timestamptz | no | `now()` | |
+
+```sql
+CREATE TABLE payout_instructions (
+  id             text PRIMARY KEY,
+  company_id     text NOT NULL REFERENCES companies(id),
+  batch_id       text NOT NULL REFERENCES payout_batches(id),
+  claim_id       text NOT NULL REFERENCES claims(id),
+  beneficiary_id text NOT NULL REFERENCES beneficiary_accounts(id),
+  amount_paise   bigint NOT NULL CHECK (amount_paise > 0),
+  currency       char(3) NOT NULL DEFAULT 'INR',
+  rail           text CHECK (rail IN ('neft','imps','rtgs','upi')),
+  status         text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','dispatched','paid','failed','cancelled')),
+  utr            text,
+  failure_reason text,
+  executed_at    timestamptz,
+  reconciled_at  timestamptz,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX payout_instructions_live_idx ON payout_instructions (claim_id)
+  WHERE status NOT IN ('failed','cancelled');  -- one live instruction per claim
+CREATE INDEX payout_instructions_batch_idx ON payout_instructions (batch_id, status);
+```
+
+Instructions are immutable attempts: a failed or cancelled instruction releases the partial unique index, so a reissue cuts a fresh instruction (a new `pin_`) for the same claim in a new `building` batch without ever double-paying a live one.
+
+## audit_events and the append-only guarantee
+
+Every state transition, rule firing, override, delegation, and config change writes one `audit_events` row: actor, role at decision time, channel, before/after diff, and for rule firings the rule id plus version with the input snapshot. This is the SOX-grade trail finance buyers ask to see; retention is 8 financial years per [audit and retention](/compliance/audit-and-retention/).
+
+```sql
+CREATE TABLE audit_events (
+  id           text PRIMARY KEY,
+  company_id   text NOT NULL REFERENCES companies(id),
+  actor_id     text REFERENCES memberships(id),   -- NULL for system actions
+  actor_role   text,                              -- role at decision time, frozen
+  on_behalf_of text REFERENCES memberships(id),   -- delegation attribution
+  action       text NOT NULL,                     -- 'claim.submitted', 'rule.fired', 'step.approved'
+  entity_type  text NOT NULL,
+  entity_id    text NOT NULL,
+  before       jsonb,
+  after        jsonb,
+  rule_id      text,
+  rule_version integer,
+  channel      text,                              -- web | email_link | whatsapp | api | system
+  ip           inet,
+  user_agent   text,
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX audit_events_entity_idx
+  ON audit_events (company_id, entity_type, entity_id, created_at DESC);
+CREATE INDEX audit_events_time_brin ON audit_events USING brin (created_at);
+```
+
+Append-only is enforced in the database, twice. The REVOKE stops the application role; the triggers stop everything else, including careless migrations.
+
+```sql
+REVOKE UPDATE, DELETE, TRUNCATE ON audit_events, credit_entries FROM app_rw;
+
+CREATE FUNCTION forbid_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION '% is append-only', TG_TABLE_NAME;
+END $$;
+
+CREATE TRIGGER audit_events_append_only
+  BEFORE UPDATE OR DELETE ON audit_events
+  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+CREATE TRIGGER credit_entries_append_only
+  BEFORE UPDATE OR DELETE ON credit_entries
+  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+```
+
+:::danger[Corrections are new rows]
+Nothing in either ledger is ever edited. A wrong credit charge gets an `adjustment` entry; a wrong audit record gets a superseding event referencing the old one. If a migration ever needs to "fix" ledger history, that migration is wrong.
+:::
+
+## Row-level security
+
+Tenant isolation is a database property, not a WHERE clause the API promises to remember. Every tenant table enables and forces RLS with the same policy shape:
+
+```sql
+ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
+ALTER TABLE claims FORCE ROW LEVEL SECURITY;   -- binds the table owner too
+
+CREATE POLICY tenant_isolation ON claims
+  USING      (company_id = current_setting('app.company_id', true))
+  WITH CHECK (company_id = current_setting('app.company_id', true));
+```
+
+The convention: after auth resolves the membership, the API (and every worker job) sets the GUC inside the transaction:
+
+```sql
+SET LOCAL app.company_id = 'co_01J9Z6P2N8XK4QW7R5T3VYBMHD';
+```
+
+:::note[RLS fails closed]
+`current_setting('app.company_id', true)` returns NULL when the GUC is unset, so an unscoped connection matches zero rows. The application connects as `app_rw` (no BYPASSRLS); only the migration role owns DDL. Role-level access within a tenant (an employee sees own claims, finance sees all) stays in the service layer; RLS does tenancy, not authorization.
+:::
+
+## Derived values
+
+Two values are read constantly and easy to corrupt: claim totals and the credit balance.
+
+:::caution[Nothing mutable without a recompute job]
+`claims.claimed_amount_paise` and `approved_amount_paise` are denormalized from `line_items`, recomputed by a single SUM update inside the same transaction as any line mutation. The credit balance is never stored at all: it is `SUM(amount)` over `credit_entries` (the covering index keeps this cheap at SMB volumes), with an optional Redis cache invalidated on append. A nightly job re-derives both and alerts on drift. Drift is a bug; the job is the tripwire, not the fix.
+:::
+
+## Retention and erasure
+
+Financial records (`claims`, `line_items`, `receipts`, `payout_instructions`, both ledgers) are retained 8 financial years, the binding Companies Act window that also covers the GST and Income-Tax clocks. DPDP erasure requests collide with that, and the resolution is anonymize-not-delete: `users` carries `erasure_requested_at` and `anonymized_at`; anonymization rewrites PII columns (name, email, phone) to tombstone values and severs login, while membership ULIDs survive so every financial chain stays intact. Receipt images are financial evidence and stay for the window. `legal_hold` on `companies` and `claims` freezes any purge past the standard clock during proceedings, and post-expiry deletion is itself an audit event. The statute table and litigation-hold mechanics live on [audit and retention](/compliance/audit-and-retention/).
+
+## Worked example: one mixed hotel bill
+
+A two-night client visit: room (ITC-eligible lodging), restaurant food (reimbursable, but ITC blocked under Sec 17(5)(b)), and a personal minibar line capped to zero. Partial coverage falls out of line-item evaluation; the claim proceeds at ₹6,300 of ₹6,900 claimed.
+
+```json
+{
+  "claim": {
+    "id": "clm_01JXA8FQ2M9T4VHB6KD3WPRZNE",
+    "company_id": "co_01J9Z6P2N8XK4QW7R5T3VYBMHD",
+    "claimant_id": "mem_01JA2QK7XR5W8ZTN4HV9BC6DYF",
+    "title": "Client visit, Bengaluru, 18-19 May",
+    "status": "approved",
+    "claimed_amount_paise": 690000,
+    "approved_amount_paise": 630000,
+    "currency": "INR",
+    "credit_entry_id": "cre_01JXA8G0Q4D7M2VNB9TKWXRZHE",
+    "submitted_at": "2026-05-20T09:14:07Z",
+    "decided_at": "2026-05-21T05:32:40Z"
+  },
+  "line_items": [
+    {
+      "id": "li_01JXA8FQ4DN7W2KT5RVB9MZXHE",
+      "category": "lodging",
+      "merchant": "Hotel Annapurna Residency",
+      "expense_date": "2026-05-18",
+      "gstin": "29ABCDE1234F1Z5",
+      "status": "approved",
+      "claimed_amount_paise": 504000,
+      "approved_amount_paise": 504000,
+      "taxable_value_paise": 450000,
+      "cgst_paise": 27000,
+      "sgst_paise": 27000,
+      "itc_eligible": true
+    },
+    {
+      "id": "li_01JXA8FQ5TB4H8WD2NK6VRZMXE",
+      "category": "meals",
+      "merchant": "Hotel Annapurna Residency",
+      "expense_date": "2026-05-18",
+      "gstin": "29ABCDE1234F1Z5",
+      "status": "approved",
+      "claimed_amount_paise": 126000,
+      "approved_amount_paise": 126000,
+      "taxable_value_paise": 120000,
+      "cgst_paise": 3000,
+      "sgst_paise": 3000,
+      "itc_eligible": false,
+      "flags": [
+        { "rule_id": "rule_fnb_itc_block", "rule_version": 3, "action": "flag",
+          "message": "ITC not claimable on F&B under Sec 17(5)(b); reimbursed gross." }
+      ]
+    },
+    {
+      "id": "li_01JXA8FQ6Z9C3PW7TD4HKVNMXE",
+      "category": "misc",
+      "description": "Minibar",
+      "merchant": "Hotel Annapurna Residency",
+      "expense_date": "2026-05-19",
+      "status": "capped",
+      "is_personal": true,
+      "claimed_amount_paise": 60000,
+      "approved_amount_paise": 0,
+      "flags": [
+        { "rule_id": "rule_personal_line", "rule_version": 1, "action": "cap",
+          "message": "Personal line set non-reimbursable." }
+      ]
+    }
+  ],
+  "receipt": {
+    "id": "rcp_01JXA8FP9K2W6TN4DH8VBRZMXE",
+    "claim_id": "clm_01JXA8FQ2M9T4VHB6KD3WPRZNE",
+    "status": "extracted",
+    "mime_type": "image/jpeg",
+    "byte_size": 311284,
+    "page_index": 0,
+    "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+  },
+  "credit_entry": {
+    "id": "cre_01JXA8G0Q4D7M2VNB9TKWXRZHE",
+    "type": "consumption",
+    "amount": -1,
+    "claim_id": "clm_01JXA8FQ2M9T4VHB6KD3WPRZNE",
+    "grant_id": "cre_01JW9D3H7P5T8XK2WQ4VBNZMRE"
+  }
+}
+```
+
+Check the arithmetic an agent should assert in tests: line totals (450000 + 27000 + 27000, 120000 + 3000 + 3000, 60000) sum to the claim's 690000; approved lines sum to 630000; CGST equals SGST on both taxed lines; the consumption row is a single credit because the claim carries one image.
+
+## Migration conventions
+
+<FileTree>
+
+- db/
+  - migrations/
+    - 0001_init_identity.sql
+    - 0002_org_dimensions.sql
+    - 0003_claims_core.sql
+    - 0004_approvals.sql
+    - 0005_policy.sql
+    - 0006_credits_ledger.sql
+    - 0007_payouts.sql
+    - 0008_platform.sql
+    - 0009_rls_policies.sql
+    - 0010_append_only_guards.sql
+  - seeds/
+    - india_categories.sql
+    - policy_table_templates.sql
+
+</FileTree>
+
+- Plain SQL files, sequence-numbered, forward-only. No down migrations in production: restore from backup, then roll forward.
+- One concern per file, run in a transaction. `CREATE INDEX CONCURRENTLY` gets its own non-transactional migration.
+- Growing an enum is a constraint swap: drop the CHECK, add the new one `NOT VALID`, then `VALIDATE CONSTRAINT`. This is the payoff of text-plus-CHECK over native enums.
+- Additive first: new columns are nullable or defaulted; column removal takes two releases (stop writing, then drop).
+- A new tenant table ships its RLS enablement and policy in the same migration; ledger tables ship their append-only guards too. CI fails any table missing `company_id` or a policy, with `companies` and `users` on the explicit allowlist.
+- Seeds (the India category set, policy-table templates) are idempotent upserts, separate from schema migrations.
+
+<CardGrid>
+  <LinkCard title="API" href="/spec/api/" description="Resource shapes over these tables: conventions, endpoints, idempotency, webhooks." />
+  <LinkCard title="Config Schema" href="/spec/config-schema/" description="The company configuration that categories, chains, and policy tables validate against." />
+</CardGrid>

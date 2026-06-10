@@ -1,0 +1,153 @@
+---
+title: Vendor Onboarding and KYC
+description: "The vendor master: PAN, GSTIN, bank verification and Udyam, with maker-checker on the master itself."
+---
+
+import { CardGrid, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Phase 2 opens with a record, not a payment. No vendor invoice enters the tax engine and no rupee leaves the customer's bank until the vendor master has been verified against government rails and approved by someone other than the person who keyed it. Phase 1 already built the approval machinery, audit log, and payout rails (see the [Phase 2 overview](/phase-2/overview/) for the delta framing); the vendor master is the one genuinely new object, and it is a control object, not an address book entry.
+
+## The vendor master record
+
+We derive a new entity, **Vendor** (table `vendors`, ID prefix `ven_`), following the conventions in the [data model](/spec/data-model/). PAN is the spine: universal, cheap to verify, tied directly to TDS and the tax record. The vendor's bank account reuses the BeneficiaryAccount pattern from Phase 1 (verification-gated, whitelist semantics) with `owner_type` set to `vendor`.
+
+| Field | Required | Verified how | Notes |
+|---|---|---|---|
+| `legal_name` | Yes | Echoed back by PAN and GSTIN lookups | Bank name-match scores against this |
+| `pan` | Yes | PAN verification API | Primary identity key; one active vendor per PAN per company |
+| `gstin` | No | GSTIN lookup when present | Optional, but always verified when supplied; many small vendors are unregistered |
+| `udyam_number`, `msme_category` | No | Udyam/KYB lookup | Category is `micro`, `small`, or `medium`; only micro and small arm the Sec 43B(h) 45-day clock |
+| Bank account | Before first payout | Penny-drop or reverse penny-drop | Whitelist-gated; modelled on BeneficiaryAccount |
+| `contact_email`, `contact_phone` | One of the two | Not verified at API level | Receives the magic-link form and remittance advice |
+| `default_tds_section` | Yes | n/a | For example `194C` or `194J`; seeds per-invoice TDS in the tax engine |
+| `status` | System-set | n/a | Lifecycle below |
+
+A `gstin`, when present, gets two free checks before any paid API call: the GSTIN_FORMAT built-in (Luhn-mod-36 checksum, the same rule Phase 1 ships) and a structural cross-check that characters 3 to 12 of the GSTIN equal the vendor's PAN. A mismatch is a data-entry error or a fraud signal; it blocks save with a plain-language message.
+
+```json
+{
+  "id": "ven_01J9ZK3W8PQRS4T5V6XY7ZABCD",
+  "company_id": "co_01J9ZJXQ2M4N6P8R0T1V3W5Y7A",
+  "legal_name": "Sharma Logistics Private Limited",
+  "pan": "ABCDE1234F",
+  "gstin": "29ABCDE1234F1Z5",
+  "udyam_number": "UDYAM-KR-03-0123456",
+  "msme_category": "small",
+  "default_tds_section": "194C",
+  "contact_email": "accounts@sharmalogistics.in",
+  "bank_account": {
+    "account_number_masked": "XXXXXX4321",
+    "ifsc": "HDFC0001234",
+    "verification_status": "verified",
+    "name_match_score": 0.96
+  },
+  "status": "active"
+}
+```
+
+### Vendor lifecycle
+
+| From | Event | To | Guard / side effect |
+|---|---|---|---|
+| `draft` | Maker submits | `pending_verification` | PAN format and GSTIN structural checks pass client-side first |
+| `pending_verification` | All API checks pass | `pending_approval` | Verification outcomes and name-match score stored on the record |
+| `pending_verification` | A check fails | `draft` | Failure reason surfaced to the maker; AuditEvent logged |
+| `pending_approval` | Checker approves | `active` | Checker must differ from maker, enforced server-side; AuditEvent |
+| `pending_approval` | Checker rejects | `draft` | Required comment, mirroring Phase 1 send-back discipline |
+| `active` | Bank detail edited | `pending_verification` | Account drops to `unverified`; penny-drop re-runs, then checker re-approval (the normal `pending_verification` → `pending_approval` cycle) before the next payout |
+| `active` | GSTIN re-check fails, or admin action | `suspended` | In-flight PayoutInstructions for this vendor are held |
+| `suspended` | Re-verified and re-approved | `active` | Full cycle, no shortcuts |
+| Any | Archive | `archived` | History retained 8 financial years (Companies Act, binding longest) |
+
+## The verification stack and what it costs
+
+Four checks, all sourced through KYC aggregators (Cashfree, Setu, Sandbox, Perfios/Karza class), all priced ex-GST. Only the bank-verification figure is a firm public anchor; the rest are indicative list prices to confirm by direct quote before they feed the unit-economics model.
+
+| Check | What it proves | Indicative cost (ex-GST) | Confidence |
+|---|---|---|---|
+| PAN verification | Tax identity, name-on-record | ₹1-3/call via aggregator; direct Protean OPV is ₹12,000/yr, 750 free PANs/day, eligibility-restricted | <span class="pill pill--med">Medium</span> |
+| GSTIN verification | Registration exists, is active, legal name | ₹1-3/call; the GSTN search endpoint itself is near-free | <span class="pill pill--med">Medium</span> |
+| Bank account (penny-drop) | Account exists, holder name matches | ₹3/successful (Setu, Cashfree; 600+ banks, over 97%, vendor-stated) | <span class="pill pill--high">High</span> |
+| Udyam lookup | URN validity plus enterprise category | Sales-gated; budget ₹1-3/call in the KYB bundle | <span class="pill pill--low">Low</span> |
+
+<p class="source-note">Source: Setu and Cashfree published bank-verification pages (vendor, high for the ₹3 anchor); Protean charges page (govt, medium, slab table inferred from FAQ); PAN/GSTIN/Udyam per-call figures are indicative aggregator list prices (vendor-marketing, medium-low).</p>
+
+Our derivation from those list prices: a fully verified GST-registered MSME vendor (PAN + GSTIN + Udyam + penny-drop) costs roughly ₹6-12 ex-GST; a PAN-only unregistered vendor roughly ₹4-6. At a few hundred vendors per customer this is noise; cost never justifies skipping a check. Unlike GSTIN, Udyam exposes no open public API; the KYB aggregator returns the registration number and enterprise category together, and the category, not the bare registration, arms the 45-day clock in the [regulatory map](/compliance/regulatory-map/).
+
+One rail stays off the table: live Aadhaar authentication. Private entities cannot freely run it (the January 2025 MeitY amendment permits only a ministry-sponsored, UIDAI-approved route). PAN plus bank name-match is payout-grade without touching Aadhaar at all.
+
+## Maker-checker on the master itself
+
+The vendor master is a 4-eyes object. Whoever creates or edits a vendor (the maker, typically AP or admin) can never be the one who activates it (the checker, typically finance or owner). The same server-side submitter-is-not-approver enforcement and append-only AuditEvent trail from the [approval engine](/phase-1/web/approval-engine/) apply: every verification outcome, name-match score, and decision lands in the log with actor, role, and timestamp.
+
+:::danger[The fraud chokepoint]
+The most common real-world payables fraud is not a forged invoice; it is a quietly edited bank account on a trusted vendor. Any change to account number or IFSC immediately demotes the account to `unverified`, re-runs penny-drop, and requires fresh checker approval before the next payout. One-time verification is insufficient. No exceptions, no admin override that skips the checker.
+:::
+
+Treat the penny-drop name-match score as a gate, not an auto-approve: an exact match against `legal_name` proceeds to the checker cleanly; a fuzzy match arrives flagged, with the score and both names side by side. Done means: no vendor reaches `active` without a verified PAN and a checker distinct from the maker; no vendor with a bank account on file reaches `active` without a passing or explicitly waived name-match (waiver reason recorded); no PayoutInstruction references a vendor outside `active` or an account that is not `verified`.
+
+## Duplicate vendors: PAN is the collision key
+
+PAN uniqueness among a company's active vendors is a database constraint, not a warning. When a maker keys an existing PAN, the form surfaces the existing master (name, status, last payout) and offers two verbs: use the existing vendor, or open a merge request for the checker. The GSTIN-embeds-PAN cross-check catches the sloppier variant, a GSTIN keyed against the wrong PAN, before money is at stake. Same duplicate philosophy as Phase 1 capture: publish the rule, surface the collision, let a human pick, never silently merge.
+
+## How vendor data gets in
+
+Two paths, sequenced deliberately: internal entry ships first because it needs zero new auth surface; the vendor-facing form follows. No vendor login in early Phase 2: vendors are records and link recipients, not users.
+
+<Tabs>
+<TabItem label="Internal entry (ships first)">
+
+- AP or admin keys the vendor from an invoice, cheque, or email thread.
+- Classic penny-drop is the default: finance already holds the account number and IFSC, and the vendor is not present to authorise a UPI pull.
+- Optional documents (cancelled cheque, GST certificate) attach to the master as evidence, in the same object store as receipts.
+
+</TabItem>
+<TabItem label="Vendor magic-link form (fast follow)">
+
+- A single-use, 7-day magic link (the Phase 1 invite convention) emailed to the vendor contact; the vendor fills PAN, GSTIN, and bank details and uploads documents.
+- Reverse penny-drop fits here: the vendor pays ₹1 from their own UPI handle, auto-refunded within about 48 hours (Setu-documented), roughly 95-97% success (HyperVerge, vendor-stated), nothing keyed by hand.
+- The submission still lands as `pending_verification` then `pending_approval`; self-service changes the maker, never the checker.
+
+</TabItem>
+</Tabs>
+
+## Re-verification is a cadence, not an event
+
+| Check | Trigger | Cadence (our recommendation) |
+|---|---|---|
+| Bank account | Any edit to account number or IFSC | Immediate re-verify plus re-approval, hard gate |
+| GSTIN status | Can be suspended or cancelled after onboarding | Quarterly re-check of active vendors; flag, hold payouts to failures |
+| Udyam category | Vendor can outgrow micro/small or amend its record | Annual re-check, and on any Udyam-number edit; a stale category misprices the 45-day clock |
+| Beneficiary name | Every NEFT/RTGS payout | Free RBI-mandated name look-up (live 1 April 2025) at disbursement, zero cost |
+
+:::tip[Layer the free check at payout]
+Onboarding verification proves the account existed when the vendor was created. The free RBI beneficiary name look-up at the moment of payment catches the stale or edited account that slipped past everything else. Wire it into batch building in [payouts and AP](/phase-2/payouts-and-ap/); it costs nothing and is the last line.
+:::
+
+## Vendor PII under DPDP
+
+A proprietor's PAN, bank account, and phone number are personal data even when the vendor is "a business". The platform is a Data Processor for customer-supplied vendor data; the DPDP penalty ceiling is ₹250 crore (Sec 8(5)), Rules notified 14 November 2025, full obligations around May 2027.
+
+:::caution[Bake it in at capture]
+Purpose-bound collection (verification and payment only), the magic-link form carrying explicit consent text, masked account numbers everywhere except the payout file, erasure on archive subject to the 8-financial-year retention floor. Full treatment in [data protection](/compliance/data-protection/).
+:::
+
+## Where the master feeds next
+
+Every field earns its keep downstream: `gstin` decides RCM and ITC treatment, `default_tds_section` seeds per-invoice deduction, and `msme_category` starts the 45-day clock when an invoice is accepted. Vendor-scoped rules (the same allow, flag, warn, cap, block, route verbs) arrive with the tax engine.
+
+<CardGrid>
+<LinkCard title="Vendor Tax Engine" href="/phase-2/vendor-tax-engine/" description="What PAN, GSTIN, and the TDS default actually drive: TDS, RCM, ITC." />
+<LinkCard title="Payouts and AP" href="/phase-2/payouts-and-ap/" description="Whitelisted vendor accounts feeding PayoutBatch, and the 45-day clock in scheduling." />
+</CardGrid>
+
+## Sources
+
+- [Setu, Bank Account Verification API (₹3/successful)](https://setu.co/data/kyc/bank-account-verification/) (vendor)
+- [Setu, Reverse Penny Drop quickstart (₹1, ~48h refund)](https://docs.setu.co/data/bav/reverse-penny-drop/quickstart) (vendor)
+- [Cashfree, Bank Account Verification (₹3 + GST, 600+ banks)](https://www.cashfree.com/bank-account-verification/) (vendor)
+- [Protean (NSDL), Online PAN Verification charges](https://www.protean-tinpan.com/services/online-pan-verification/pan-verification-charges.html) (govt)
+- [HyperVerge, Reverse Penny Drop 101 (95-97% success)](https://hyperverge.co/blog/reverse-penny-drop-101/) (vendor)
+- [BusinessToday, RBI free beneficiary name look-up for NEFT/RTGS](https://www.businesstoday.in/technology/news/story/you-will-soon-be-able-to-verify-beneficiary-details-during-rtgs-neft-payments-for-free-459083-2024-12-31) (analyst)
+- [Perfios, OneClick Onboarding (KYB: GSTIN/PAN/Udyam)](https://perfios.ai/in/products/oneclick-onboarding/) (vendor)
+- [MeitY, Digital Personal Data Protection Act, 2023 (PDF)](https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf) (primary)

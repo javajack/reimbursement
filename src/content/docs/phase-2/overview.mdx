@@ -1,0 +1,93 @@
+---
+title: "Phase 2 Overview: Vendor Reimbursement"
+description: "What changes when vendors enter: scope, the triggers to start, and the map of what Phase 1 already built for us."
+---
+
+import { LinkCard } from '@astrojs/starlight/components';
+
+Phase 2 is a gate, not a date. Paying vendors against invoices, with TDS, reverse charge, and the MSME 45-day clock handled natively, is the larger market and the eventual acquisition story; it is also a different tax surface, a different buyer, and a heavier verification bill, so it ships as a separately triggered build, never as Phase 1 scope creep. This page fixes what Phase 2 contains, the conditions that start it, and how much of the machine Phase 1 already builds.
+
+## Scope: four pillars, one unchanged invariant
+
+Phase 2 points the claim machine outward. The payee stops being an employee on payroll and becomes an external business that must be verified before it is paid, taxed correctly when it is paid, and paid on a statutory clock. One new entity name enters the canon: Vendor, defined fully in the onboarding delta page.
+
+| Pillar | What it adds | Delta page |
+|---|---|---|
+| Vendor-invoice claims and payouts | A supplier invoice enters as a Claim against a Vendor, flows through capture, itemisation, and approval, and exits in a vendor PayoutBatch | [Payouts and AP](/phase-2/payouts-and-ap/) |
+| Vendor master with KYC | A Vendor entity carrying PAN, GSTIN, bank account, and Udyam registration, verification-gated before the first payout | [Vendor onboarding](/phase-2/vendor-onboarding/) |
+| TDS/RCM tax engine | Determines the TDS section (194C contracts, 194J professional fees), tracks per-vendor thresholds, computes deductions, flags reverse-charge supplies, and raises self-invoices where RCM requires them | [Vendor tax engine](/phase-2/vendor-tax-engine/) |
+| MSME 45-day clock | Ages every payable to a Udyam-flagged micro or small supplier against the Sec 43B(h) deadline, with escalating warnings in the finance views | [Payouts and AP](/phase-2/payouts-and-ap/) |
+
+<p class="source-note">Statutory scope per Sec 194C/194J, RCM, Sec 43B(h) (govt statute, high). The product mapping is our derivation.</p>
+
+The non-goals do not move between phases: no cards, no prepaid instruments, no float, no lending.
+
+:::note[The invariant survives the phase]
+Vendor payouts ride the rails Phase 1 already proves: bank bulk-file export by default, optional per-customer payout API. Funds never touch our accounts in either phase, so the RBI posture argued in [money movement](/compliance/money-movement/) does not change when the beneficiary is a vendor instead of an employee.
+:::
+
+## Why it waited
+
+Three deliberate reasons, not roadmap convenience.
+
+**The tax surface inverts.** Phase 1's tax logic is informational: the ITC_ELIGIBLE built-in tags line items eligible or blocked under Sec 17(5) so finance can review; a wrong tag costs minutes. Vendor invoices flip the stakes. Deduct TDS under the wrong section or miss a reverse-charge liability and the customer carries a real statutory failure. Correctness moves from "finance double-checks" to "the product is the control", and an engine built to that standard is its own project.
+
+**The buyer motion changes.** Phase 1 sells self-serve to admins: first claim in 15 minutes, no consultant. Vendor payments are an accounting control, evaluated by the accounts function and blessed by the company's CA, with reference checks and longer cycles. Running both motions at launch would slow both. [our derivation]
+
+**Verification gets heavier.** Phase 1 COGS is roughly ₹1.0-2.5 per submission, almost all OCR and compute [our derivation, medium]. Phase 2 adds per-vendor KYB (know-your-business verification): PAN and GSTIN checks at roughly ₹1-3 each [indicative] and penny-drop bank verification near ₹3 [Setu, high]. The rupee cost is small (about ₹1,000-1,800 to verify a 200-vendor master once, our arithmetic, excluding the Udyam lookup; with it, [vendor onboarding](/phase-2/vendor-onboarding/) prices the fully verified vendor at ₹6-12, or ₹1,200-2,400 for the same master); the real cost is exception ops (name mismatches, bank changes, re-verification) plus a fraud surface that now includes outsiders, not just employees.
+
+## The start triggers
+
+Phase 2 starts when all three triggers hold, reviewed quarterly against metrics Phase 1 already emits. One trigger alone buys deeper research, not a build.
+
+| # | Trigger | Threshold (our derivation) | Measured by |
+|---|---|---|---|
+| 1 | Demand pull | At least 5 design partners or paying companies ask, unprompted, to pay vendors through the product, or keep pushing supplier invoices through the employee flow | Sales and support notes; supplier invoices spotted at `review_items` |
+| 2 | Phase 1 health | Activation beats the ~37% SaaS median (first real claim within 24 hours of signup) and submissions per active company hold or grow for two consecutive quarters | Product analytics |
+| 3 | Credit economics proven | Blended gross margin inside or above the 67-75% band at observed prices, no deal under the ₹4/credit floor, and the 2-6 submissions/employee/month estimate validated on real cohorts | Billing and cohort data |
+
+The thresholds are forcing functions we chose, not research findings; the activation median, the margin band, and the floor come from the pricing canon behind [credits and metering](/phase-1/credits-and-metering/).
+
+## The reuse map
+
+Phase 1 was built on generic primitives precisely so this table would be short on the right. The claim machine, the meter, and the rails carry over; only the vendor trust and tax layers are new.
+
+| Subsystem | Status in Phase 2 | What changes |
+|---|---|---|
+| Capture pipeline (`intake` through `review_items`) | Unchanged | Email-in is expected to become the dominant intake path (our derivation); vendor PDFs and printed invoices are cleaner than thermal receipts |
+| OCR itemisation | Extended | Same extraction into LineItems; adds invoice number, e-invoice IRN presence, place of supply |
+| Rule engine | Extended | Same six actions (`allow`, `flag`, `warn`, `cap`, `block`, `route`); new vendor scopes carry the TDS/RCM built-ins reserved since v1 |
+| Approval engine | Unchanged | Maker-checker, `sent_back` with required comment, SLA timers, escalation, delegation; AP-specific chains are configuration, not code |
+| Payout batches | Unchanged | Same PayoutBatch states on both the file and API paths from [payouts](/phase-1/payouts/); instructions target verified vendor accounts |
+| Credits and metering | Unchanged | 1 credit = 1 submitted claim, employee or vendor; the `awaiting_credits` soft paywall behaves identically |
+| Audit trail | Unchanged | Append-only AuditEvent with rule id and version snapshots |
+| Vendor entity and KYB | New | PAN, GSTIN, penny-drop bank verification, Udyam status; verification-gated like BeneficiaryAccount, no payout until green |
+| TDS computation | New | Section determination, per-vendor threshold tracking, deductions computed in `amount_paise`, net-of-TDS payout figures |
+| RCM flags | New | Reverse-charge determination on inward supplies |
+| Self-invoice support | New | Buyer-side self-invoice generation, numbering, and storage for RCM purchases |
+| MSME 45-day clock | New | Sec 43B(h) ageing on Udyam-flagged suppliers, surfaced as payout-batch warnings and finance dashboards |
+
+One row deserves emphasis: the meter does not change. A vendor invoice consumes one credit exactly as an employee claim does, so Phase 2 grows revenue on the existing ladder, with no second billing system.
+
+:::caution[Do not blur Phase 1]
+The only Phase 2 artifacts allowed inside Phase 1 are cheap option-preserving ones: the rule `scope` enum stays open for vendor scopes, and payout instructions reference accounts rather than assuming an employee. Nothing else. No vendor columns, no KYB screens, no TDS fields "while we are at it". Phase 1's wedge is first claim in 15 minutes; every vendor-shaped detour erodes it, and a half-built vendor flow is worse than none.
+:::
+
+## The bigger pond
+
+The adjacency thesis carries from v1 intact; it was plank five of [the whitespace](/strategy/whitespace/). Vendor reimbursement is underserved by both the card-led camp and the budget SaaS camp, and it is the on-ramp to AP automation, a market roughly an order of magnitude larger than Indian expense software: global AP automation is sized near USD 6.17B in 2025, growing to about USD 12.46B by 2031 at ~12.4% CAGR, with alternate estimates reaching USD 18.1B by 2034 [analyst, directional] <span class="pill pill--med">Medium</span>, against ~USD 120-350M for Indian expense software [our synthesis] <span class="pill pill--med">Medium</span>.
+
+Two tailwinds make the Indian slice mandate-driven rather than discretionary. GST e-invoicing applies above ₹5 crore turnover [secondary on a govt mandate, medium] <span class="pill pill--med">Medium</span>, with a reported further lowering toward ₹2 crore (Oct 2025) to confirm against the CBIC notification, and cumulative e-invoice generation has crossed 100 crore documents [industry-reported, medium]: the invoices Phase 2 ingests increasingly exist as clean digital records before we see them. And the opening is being actively pursued: Mysa launched in 2025 specifically for Indian AP [vendor signal, medium].
+
+The acquisition story follows. The category consolidates (Happay sold to MakeMyTrip in November 2024 [secondary, high]), and Zaggle, the listed proxy for the card-led camp, earns roughly 75-80% of revenue on interchange with SaaS near 3% [Zaggle Q4FY24 investor presentation, high]; software is the camp's weak limb. A software-only product holding employee reimbursement plus vendor AP workflow and GST-correct exports complements those balance sheets rather than competing with them. The verdict on Phase 2 is <span class="pill pill--build">Conditional Build</span>, gated on the triggers above, not on calendar optimism.
+
+<LinkCard title="Vendor onboarding" description="Start the Phase 2 deltas: the Vendor entity, the KYB ladder, and the verification gates that precede the first payout." href="/phase-2/vendor-onboarding/" />
+
+## Sources
+
+- [AP Automation Market (Mordor Intelligence)](https://www.mordorintelligence.com/industry-reports/ap-automation-market) (analyst): ~USD 6.17B (2025) to ~USD 12.46B (2031), ~12.4% CAGR.
+- [Accounts Payable Automation Market (Custom Market Insights)](https://www.custommarketinsights.com/report/accounts-payable-automation-market/) (analyst): the higher alternate sizing, ~USD 18.1B by 2034.
+- [GST e-invoicing above ₹5 crore turnover (ClearTax)](https://cleartax.in/s/e-invoicing-businesses-above-rs-5-crore-turnover) (secondary on a govt mandate): the ₹5 crore threshold; confirm the reported lowering toward ₹2 crore (Oct 2025) against the CBIC notification.
+- [Top AP automation software for India (Mysa)](https://www.mysa.io/blogs/top-accounts-payable-automation-software-for-india) (vendor): the 2025 India-native AP entrant signal.
+- [Zaggle Q4FY24 Investor Presentation](https://ipo.zaggle.in/wp-content/uploads/2024/05/investor-presentation-zaggle-Q4FY24.pdf) (primary): ~75-80% of revenue from card interchange, SaaS ~3%.
+- [Happay company profile (Latka)](https://getlatka.com/companies/happay) (secondary): the MakeMyTrip acquisition, November 2024.

@@ -1,0 +1,98 @@
+---
+title: The Verdict
+description: "The scored build decision for the v2 scope, the conditions that flip it, and who should build this."
+---
+
+import { LinkCard } from '@astrojs/starlight/components';
+
+Build it, in the v2 shape and only that shape: <span class="pill pill--build">Conditional Build</span>. A pure-software, India-first employee-reimbursement product, monetised on metered submissions with unlimited free seats, money movement never on our books, capture quality as the demo. The same effort aimed at a horizontal Zaggle clone, a card-and-float business, a per-seat price war against Zoho, or a Phase 1 that quietly swallows vendor payouts scores <span class="pill pill--avoid">Avoid</span>. The v1 verdict survives the reframe; what changed is that v2 makes the conditions concrete enough to enforce.
+
+This page closes the strategy arc. It assumes you have read [the problem](/strategy/the-problem/), [the whitespace](/strategy/whitespace/), [pricing](/strategy/pricing/), and [unit economics](/strategy/unit-economics/); it scores the decision, restates the gates, and hands you to the build.
+
+## The scorecard
+
+Scores are out of 5 (5 = strongly favourable to a 2-person team). They are our synthesis of the canonical research set, not a sourced index. v2 moves two scores against v1: regulatory burden improves because the pure-software invariant is now structural, and defensibility is restated honestly as an execution moat.
+
+| Dimension | Score | Why |
+| --- | --- | --- |
+| Market attractiveness | 3 / 5 | Real but modest. India expense-software market ~USD 120-350M today, point estimate ~150-250M, growing ~14-18% (our synthesis plus adversarial check, medium confidence). Small-but-growing is the honest read; "large" is not. |
+| Competitive intensity | 2 / 5 | Crowded and funded: Zaggle listed at ~₹1,303 cr FY25 revenue, Happay inside MakeMyTrip, Zoho anchoring price near zero. The offset: the seven wedges in [the whitespace](/strategy/whitespace/) are documented, unresolved gaps (silent capture failure, dishonest OCR, the approval black hole, payment-status silence, resented pricing, GST/ITC depth, Tally JV export), not hopes. |
+| Defensibility | 3 / 5 | An execution moat, no secrets. Document-scanner-grade capture, India/GST depth, a clean Tally JV export, and the metered-submission model are all copyable in principle; the bet is that incumbents are structurally unlikely to copy the pricing (it cannibalises seats) and have not shipped the capture in a decade of trying. |
+| Regulatory burden | 4 / 5 | Low by design. The pure-software invariant (bank-file export by default, optional customer-credentialed payout API) removes the PA/PPI surface entirely; RBI confirms no authorization is needed when funds never touch our accounts (high confidence). DPDP is a bounded processor-role burden, full obligations ~May 2027. See [money movement](/compliance/money-movement/). |
+| Unit economics | 4 / 5 | Strong. COGS ≈ ₹1.0-2.5 per submission against pack prices of ₹5.00-9.98 per credit gives 67-90% gross margin; the Free tier is COGS-bounded by the 20-submission allowance and the fair-use scan cap. The tax: prepaid credits mean deferred-revenue accounting, breakage, and GST invoicing that need CA signoff. |
+| Founder fit requirements | 4 / 5 | A small, finance-literate, India-based team can ship Phase 1 by buying OCR (vision-LLM behind a provider-agnostic interface), partnering nothing on payouts (file export needs no partner), and spending the scarce engineering on capture and configuration. Fit collapses if the team tries to also be a fintech. |
+| Exit optionality | 4 / 5 | The category's exit path is proven: Happay to CRED (at a ~USD 180M valuation) then MakeMyTrip (Nov 2024), Fyle to Sage (2025). Accounting and travel suites acquire reimbursement assets; clean exports and a boring stack keep the asset acquisition-ready by design. |
+
+<p class="source-note">Scores: our synthesis (low-medium confidence). Underlying figures from THESIS-V2 canonical set and the feasibility research (analyst, vendor, govt, and derived as labelled).</p>
+
+The unweighted average is ~3.4 / 5, marginally better than v1's ~3.3, and for the same structural reason: the dimensions that reward the narrow play (regulation, economics, fit, exit) score high, while the ones that punish breadth (market size, competition) stay low. The verdict lives in that spread. Hold the narrow shape and the high scores apply; broaden and the low ones do.
+
+## The call
+
+<span class="pill pill--build">Conditional Build</span>, with the conditions load-bearing, not decorative.
+
+The reasoning in one breath: incumbents win on distribution, bank partnerships, and interchange plus float (~75-80% of Zaggle's net revenue is card interchange per 9MFY24 disclosures; SaaS is ~3% [filing-derived, high]), not on better software. That revenue pool is closed to an indie team without RBI licensing or a balance sheet. So you compete only where software still decides the deal, and the v2 research shows software still decides plenty: capture that does not silently misread bills, OCR that states its confidence, approvals that do not become a black hole, a meter companies can predict, and GST-grade line items finance can actually use.
+
+The v2 conditions, restated as gates:
+
+| Condition | Meaning in practice |
+| --- | --- |
+| Stay employee-first until the triggers fire | Phase 1 is employee reimbursement end to end. Vendor KYC, TDS/RCM, and vendor payouts wait for [Phase 2](/phase-2/overview/), entered only on pull from paying customers, not roadmap ambition. |
+| Never touch funds | Bank bulk-file export by default; optional payout API runs on the customer's own credentials. No pooling, no float, no PPI. Written legal opinion before go-live regardless. |
+| Keep the meter | 1 credit = 1 claim submitted; unlimited users and approvers free on every plan including `Free`. The soft paywall queues (claims wait in `awaiting_credits`, receipts in `queued`); capture is never blocked and resubmission after `sent_back` is free. Reverting to per-seat pricing deletes the wedge. |
+| Capture quality is the demo | The PWA camera flow, the capture ladder, and honest confidence-routed OCR review are the product's first impression and its hardest-to-fake claim. If the demo bill comes out stretched or misread, nothing downstream matters. |
+
+:::danger[Product invariant]
+Funds never touch an account the platform owns or controls. File hand-off to the customer's bank, or a payout API the customer contracts directly, executed with their credentials. This single invariant is what keeps regulatory burden at 4 / 5 instead of 2 / 5.
+:::
+
+:::tip[The wedge that earns the Build]
+Pricing is product. Unlimited seats plus metered submissions undercuts the seat-priced market at real usage: a 25-employee company at an estimated 4 submissions per employee per month (our derivation; frequency unbenchmarked) burns ~100 credits ≈ ₹700/mo on the Growth pack, against Zoho Standard at 25 × ₹99 = ₹2,475/mo with autoscans still capped at 20 per user. Break-even density is ~14 submissions per user per month, far above observed behaviour (our derivation; per-employee frequency is an unbenchmarked 2-6/month estimate to validate with design partners). Full ladder in [pricing](/strategy/pricing/), mechanics in [credits and metering](/phase-1/credits-and-metering/).
+:::
+
+## The three failure modes, carried and updated
+
+The v1 feasibility research named the predictable ways a 2-person team dies here. v2 retires two of them by construction (the card/float temptation is excluded by the invariant; the Tally two-way-sync support trap is deferred, Phase 1 ships a JV export, not a live sync) and carries three.
+
+| Failure mode | v2 status | Containment |
+| --- | --- | --- |
+| Support burden vs a 2-person team | <span class="pill pill--caution">Live</span> | OCR long-tail and onboarding hand-holding can exceed two people's capacity across many small accounts. Containment: manual entry as a first-class fallback (failed extraction never strands a claim), the 15-minute no-consultant wizard, templates and simulate-before-activate, and the rule engine's six verbs (allow, flag, warn, cap, block, route) as data, not custom code per customer. Cap implementation services; sell software. |
+| Zoho price response | <span class="pill pill--caution">Live</span> | Zoho can lift autoscan caps or cut ₹99 further; it bundles near zero. Containment: the meter is not a discount, it is a different axiom (unlimited seats) that a per-user SKU cannot match without repricing its whole suite, and the ₹4/credit floor keeps margin defensible even under pressure. If Zoho ships true unlimited seats with uncapped scans, the verdict drops to <span class="pill pill--caution">Caution</span> and the play narrows to capture quality plus India depth alone. |
+| iOS and platform risk | <span class="pill pill--build">Contained</span> | India device reality is Android 93.2% / iOS 6.7% (StatCounter, May 2026). The capture ladder makes file-input the universal primary path (immune to WebKit bug 252465), the enhanced viewfinder is Android-first progressive enhancement, and the staged PWA delivery keeps TWA and a Capacitor wrapper as escape hatches only on demonstrated revenue blockage. Platform risk is real but bounded by the stance, not by hope. |
+
+Two smaller flags carry over unchanged: the certification wall (ISO 27001 ~₹5 L first, defer SOC 2 ~₹6-14 L until a US-HQ deal funds it) and premature surface-broadening (deep ERP sync, travel, cards) before a paying deal funds it.
+
+## Who should build this
+
+<span class="pill pill--build">Build</span> if you are:
+
+- A small, finance-literate, India-based team willing to do unglamorous engineering: camera pipelines, GST line-item math in `amount_paise`, bank-file formats, Tally JV exports.
+- Comfortable monetising on software, now as metered submissions rather than seats, and treating the credit ledger and soft paywall as product surface, not billing plumbing.
+- Patient with a realistic indie outcome of ~USD 0.4-1.2M ARR over three years (outer envelope USD 0.5-2M; see [market](/strategy/market/), our derivation, low confidence), funded by margins of 67-90% rather than volume.
+- Planning, eventually, to extend toward vendor payments and AP automation (the larger, GST-mandate-driven adjacency), but only as Phase 2, on customer pull.
+
+## Who should not
+
+<span class="pill pill--avoid">Do not build</span> if you are:
+
+- Hoping to out-fund Zaggle, Happay, or Volopay on a horizontal spend-management play; the interchange pool is structurally closed to you.
+- Drawn to corporate cards, PPI, or float as the model. That is a licensed, capital-intensive fintech, not an indie SaaS.
+- Planning to win on price alone against Zoho's bundled floor, or unwilling to make capture quality an obsession. Without the execution moat there is no moat at all.
+- Expecting a large, ready market with clean evidence. The pain stats are partly vendor marketing, review quotes are snippet-mediated, and submission frequency is unvalidated; design partners come before scale.
+
+## Final word
+
+This is a good business for the right two people doing exactly one disciplined thing: employee reimbursement, software only, metered, with the best bill capture in India. It is a bad business for almost everyone trying to do more. The strategy work is done; the rest of this dossier is the build.
+
+<LinkCard title="Phase 1 overview" description="What ships first, in what order, and what done means." href="/phase-1/overview/" />
+
+## Sources
+
+- [Zaggle FY25 results and interchange split (Finvezto / Compass)](https://compass.finvezto.com/p/zaggle-prepaid-ocean-services-consistently) (analyst)
+- [Zaggle Q4FY24 investor presentation](https://ipo.zaggle.in/wp-content/uploads/2024/05/investor-presentation-zaggle-Q4FY24.pdf) (primary)
+- [RBI FAQs on Prepaid Payment Instruments](https://www.rbi.org.in/commonman/english/scripts/FAQs.aspx?Id=2812) (govt)
+- [Zoho Expense India pricing](https://www.zoho.com/in/expense/pricing/) (vendor)
+- [Fyle / Sage Expense Management pricing and integrations](https://www.fylehq.com/pricing) (vendor)
+- [CRED acquires Happay at ~USD 180M (Inc42)](https://inc42.com/buzz/cred-acquires-corporate-expense-management-startup-happay-at-180-mn-valuation/) (analyst)
+- [Tally integration surface (XML/TDL/ODBC, no cloud API)](https://help.tallysolutions.com/integrate-with-tallyprime/) (vendor)
+- [SOC 2 vs ISO 27001 sequencing and costs for Indian startups (TCSA)](https://www.tcsa.in/resources/soc-2-vs-iso-27001-indian-startups) (analyst)
